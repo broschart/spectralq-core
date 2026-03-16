@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="static/sq1.png" alt="spectralQ Core Edition" width="200">
+  <img src="static/sq1.png" alt="spectralQ Core Edition" width="400">
 </p>
 
 <h1 align="center">spectralQ Core Edition</h1>
