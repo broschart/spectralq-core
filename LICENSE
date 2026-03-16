@@ -1,0 +1,78 @@
+spectralQ Core Edition — License
+
+Copyright (c) 2024-2026 Steven Broschart (https://broschart.net)
+
+================================================================================
+PART 1 — GNU AFFERO GENERAL PUBLIC LICENSE v3.0
+================================================================================
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along
+with this program. If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
+
+The full text of the AGPL-3.0 is available at:
+https://www.gnu.org/licenses/agpl-3.0.txt
+
+
+================================================================================
+PART 2 — PLUGIN EXCEPTION
+================================================================================
+
+As a special exception, the copyright holder grants permission to link or
+combine this program with independent plugin modules that communicate with
+spectralQ exclusively through the documented Plugin API (the classes
+BasePlugin, WatchZonePlugin, AIPlugin and the PluginManager interface defined
+in the "plugins/" package), and to distribute the resulting combination under
+terms of your choice, provided that:
+
+1. You also meet, for each linked or combined independent plugin module, the
+   terms and conditions of the license of that module.
+
+2. Independent plugin modules that use the Plugin API are NOT considered
+   derivative works of spectralQ Core and are NOT subject to the AGPL-3.0
+   license, regardless of whether they are distributed as source code, compiled
+   code, or as part of a larger application.
+
+3. This exception does NOT apply to modifications of the spectralQ Core source
+   code itself (files outside the "plugins/" directory). Any modifications to
+   the core source code remain subject to the AGPL-3.0.
+
+4. If you modify the Plugin API interfaces themselves, the modified interfaces
+   and any code that depends on those modifications are subject to the AGPL-3.0.
+
+This exception is granted to all recipients of spectralQ Core. It allows
+third-party developers to create proprietary, commercial, or otherwise
+independently licensed plugins without being required to release their plugin
+source code under the AGPL-3.0.
+
+
+================================================================================
+PART 3 — TRADEMARK NOTICE
+================================================================================
+
+"spectralQ" and the spectralQ logo are trademarks of Steven Broschart. This
+license does not grant permission to use these trademarks except as required
+for reasonable and customary use in describing the origin of this software.
+Derivative works must not use the "spectralQ" name or logo to imply
+endorsement by the original author without prior written permission.
+
+
+================================================================================
+SUMMARY (not legally binding)
+================================================================================
+
+- You may freely use, modify, and distribute spectralQ Core under AGPL-3.0.
+- If you modify the core and distribute it (or run it as a network service),
+  you must make your modifications available under AGPL-3.0.
+- Plugins that use the Plugin API are NOT affected by the AGPL-3.0. You may
+  license plugins however you wish (proprietary, MIT, GPL, etc.).
+- The original author (Steven Broschart) retains the right to offer spectralQ
+  under alternative commercial licenses (dual licensing).

@@ -39,7 +39,7 @@ BASE_DIR         = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = (
-    os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR}/trends.db")
+    os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR}/spectralq.db")
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-me-in-production")
@@ -803,10 +803,7 @@ def api_plugin_ai_settings():
     # /faq, /about-us, /api/waitlist → public_pages.py (nur MULTI_USER)
 
 
-@app.route("/about")
-@login_required
-def about_page():
-    return render_template("about.html")
+# /about — entfernt (Core Edition)
 
 
 @app.route("/alerts")
@@ -5093,15 +5090,7 @@ def api_project_export_docx(pid):
 # (Scientific Paper Export → plugins/ai/scientific_paper/)
 _REMOVED_SCI_PAPER = True  # Marker: alter Code entfernt, jetzt Plugin
 
-# APA-Tools (ausgelagert nach apa_tools.py)
-from apa_tools import _WZ_CORE_TOOLS, _get_wz_tools, _get_wz_tools_oai, _execute_wz_tool  # noqa: F401
-
-# APA-Stream (ausgelagert nach apa_stream.py)
-from apa_stream import api_ai_project_assist_stream
-app.add_url_rule("/api/ai-project-assist/stream",
-                 endpoint="api_ai_project_assist_stream",
-                 view_func=login_required(api_ai_project_assist_stream),
-                 methods=["POST"])
+# APA (AI Project Assistance) — nur in Enterprise Edition
 
 
 # ---------------------------------------------------------------------------

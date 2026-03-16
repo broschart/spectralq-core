@@ -350,7 +350,7 @@
   <a href="/analysis" id="nav-analysis" data-i18n="nav_analysis">Analyse</a>
   <a href="/events" id="nav-events" data-i18n="nav_events">Ereignisse</a>
   <a href="/alerts" id="nav-alerts" data-i18n="nav_alerts">Alerts</a>
-  <a href="/" id="nav-keywords"><span data-i18n="nav_keywords">Keywords</span><sup id="nav-kw-quota" style="display:none;color:var(--muted);font-size:10px;margin-left:2px;"></sup></a>
+  <a href="/keywords" id="nav-keywords"><span data-i18n="nav_keywords">Keywords</span><sup id="nav-kw-quota" style="display:none;color:var(--muted);font-size:10px;margin-left:2px;"></sup></a>
   <a href="/statistik" id="nav-statistik" style="margin-left:auto;position:relative;padding-bottom:6px;" data-tip=""><span data-i18n="nav_statistik">Statistik</span>
     <span id="nav-llm-bar" style="position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:2px;background:var(--border);overflow:hidden;">
       <span id="nav-llm-fill" style="display:block;height:100%;border-radius:2px;transition:width .4s,background .4s;width:0;background:var(--accent1);"></span>
@@ -473,7 +473,8 @@
 <footer style="margin-top:48px;padding:16px 24px 20px;text-align:center;">
   <hr style="border:none;border-top:1px solid var(--border);margin-bottom:14px;max-width:360px;margin-left:auto;margin-right:auto;" />
   <img class="theme-logo" src="/static/sq3.png" data-dark="/static/sq3.png" data-light="/static/sq1.png" alt="spectralQ" style="height:48px;width:auto;opacity:.5;margin-bottom:6px;" />
-  <div style="font-size:10px;color:var(--muted);letter-spacing:.04em;">&copy; {{ current_year | default(2026) }} Steven Broschart. Alle Rechte vorbehalten.</div>
+  <div style="font-size:10px;color:var(--muted);letter-spacing:.04em;">spectralQ Core Edition &middot; &copy; {{ current_year | default(2026) }} <a href="https://broschart.net" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);">Steven Broschart</a></div>
+  <div style="font-size:9px;color:var(--muted);opacity:.6;margin-top:3px;" data-i18n="footer_license">Open-Source unter AGPL-3.0 mit Plugin-Exception</div>
 </footer>
 
 <div id="toast-container"></div>
@@ -525,7 +526,7 @@
   // Active nav link
   const path = location.pathname;
   document.querySelectorAll("nav a[id^='nav-']").forEach(a => {
-    if ((path === "/" && a.id === "nav-keywords") ||
+    if ((path.startsWith("/keywords") && a.id === "nav-keywords") ||
         (path.startsWith("/analysis") && a.id === "nav-analysis") ||
         (path.startsWith("/events") && a.id === "nav-events") ||
         (path.startsWith("/statistik") && a.id === "nav-statistik") ||
@@ -904,6 +905,7 @@ window._mergeI18n({
     kw_no_project_msg: 'Bitte zuerst ein Projekt anlegen.',
     kw_no_project_desc: 'Um mit der Analyse zu starten, wird ein Projekt ben\u00f6tigt. Dort werden alle Keywords und Ergebnisse organisiert.',
     kw_no_project_btn: 'Projekt anlegen',
+    footer_license: 'Open-Source unter AGPL-3.0 mit Plugin-Exception',
   },
   en: {
     nav_start: 'Start', nav_projects: 'Projects', nav_analysis: 'Analysis',
@@ -915,6 +917,7 @@ window._mergeI18n({
     kw_no_project_msg: 'Please create a project first.',
     kw_no_project_desc: 'A project is required to start analysing. All keywords and results are organised there.',
     kw_no_project_btn: 'Create project',
+    footer_license: 'Open-source under AGPL-3.0 with Plugin Exception',
   },
   fr: {
     nav_start: 'Start', nav_projects: 'Projets', nav_analysis: 'Analyse',
@@ -926,6 +929,7 @@ window._mergeI18n({
     kw_no_project_msg: 'Veuillez d\u2019abord cr\u00e9er un projet.',
     kw_no_project_desc: 'Un projet est n\u00e9cessaire pour commencer l\u2019analyse. Tous les mots-cl\u00e9s et r\u00e9sultats y sont organis\u00e9s.',
     kw_no_project_btn: 'Cr\u00e9er un projet',
+    footer_license: 'Open-source sous AGPL-3.0 avec exception Plugin',
   },
   es: {
     nav_start: 'Start', nav_projects: 'Proyectos', nav_analysis: 'An\u00e1lisis',
@@ -937,6 +941,7 @@ window._mergeI18n({
     kw_no_project_msg: 'Por favor, crea primero un proyecto.',
     kw_no_project_desc: 'Se necesita un proyecto para empezar el an\u00e1lisis. All\u00ed se organizan todas las palabras clave y resultados.',
     kw_no_project_btn: 'Crear proyecto',
+    footer_license: 'C\u00f3digo abierto bajo AGPL-3.0 con excepci\u00f3n de plugins',
   }
 });
 window._mergeI18n({{ plugin_i18n_json | safe }});

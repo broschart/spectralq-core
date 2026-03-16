@@ -225,11 +225,11 @@
 {% endblock %}
 
 {% block content %}
-<div style="margin-bottom:48px;margin-top:-32px;">
+<div style="margin-bottom:16px;margin-top:-32px;">
   <div style="background:var(--bg);margin-left:calc(-50vw + 50%);margin-right:calc(-50vw + 50%);padding:32px;margin-bottom:10px;text-align:center;">
     <img class="theme-logo" src="/static/sq3.png" data-dark="/static/sq3.png" data-light="/static/sq1.png" alt="spectralQ" style="max-width:20%;height:auto;display:inline-block;" />
   </div>
-  <div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;text-align:center;" data-i18n="tagline">Erkenne digitale Verhaltensmuster, bevor es andere tun – Für Journalisten, Strategen und Behörden</div>
+  <!-- tagline entfernt -->
 </div>
 
 <!-- ── Tab-Bar ── -->
@@ -347,25 +347,9 @@
 <div class="db-tab-panel{% if 'project_assistant' not in ai_plugins_enabled %} active{% endif %}" id="db-panel-manual">
 
 <!-- ── Erste Schritte ── -->
-<div class="card" id="card-quickstart" style="margin-top:32px;">
+<div class="card" id="card-quickstart" style="margin-top:12px;">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap;">
     <h2 style="margin:0;" data-i18n="qs_title">Erste Schritte</h2>
-    <a id="qs-video-link" href="#"
-       style="display:inline-flex;align-items:center;gap:6px;font-size:12px;
-              color:var(--muted);border:1px solid var(--border);border-radius:16px;
-              padding:3px 12px;text-decoration:none;transition:color .12s,border-color .12s;"
-       onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'"
-       onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'"
-       data-i18n-title="qs_video_title" target="_blank">
-      ▶ <span data-i18n="qs_video">Einführungsvideo</span>
-    </a>
-    <a href="/about"
-       style="display:inline-flex;align-items:center;gap:6px;font-size:12px;
-              color:var(--muted);border:1px solid var(--border);border-radius:16px;
-              padding:3px 12px;text-decoration:none;transition:color .12s,border-color .12s;"
-       onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'"
-       onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'"
-       data-i18n="qs_about">Was kann man hiermit machen?</a>
   </div>
   <div class="qs-grid">
     <div class="qs-tile qs-tile-1" onclick="qsOpenNewProject()">
@@ -373,15 +357,15 @@
       <div class="qs-tile-desc"  data-i18n="tile1_desc">Projektname und Briefing eingeben — direkt zur Analyse</div>
       <button class="qs-tile-cta" data-i18n="tile1_cta">Hier starten</button>
     </div>
-    <div class="qs-tile qs-tile-2" onclick="qsOpenPicker('analysis')">
-      <div class="qs-tile-title" data-i18n="tile2_title">Bestehendes Projekt analysieren</div>
-      <div class="qs-tile-desc"  data-i18n="tile2_desc">Projekt auswählen und zur Analyse wechseln</div>
-      <button class="qs-tile-cta" data-i18n="tile2_cta">Hier weiterarbeiten</button>
-    </div>
     <div class="qs-tile qs-tile-3" onclick="qsOpenPicker('events')">
       <div class="qs-tile-title" data-i18n="tile3_title">Schlüsselereignisse hinterlegen</div>
       <div class="qs-tile-desc"  data-i18n="tile3_desc">Projekt auswählen und Ereignisse erfassen</div>
       <button class="qs-tile-cta" data-i18n="tile3_cta">Hier ergänzen</button>
+    </div>
+    <div class="qs-tile qs-tile-2" onclick="qsOpenPicker('analysis')">
+      <div class="qs-tile-title" data-i18n="tile2_title">Bestehendes Projekt analysieren</div>
+      <div class="qs-tile-desc"  data-i18n="tile2_desc">Projekt auswählen und zur Analyse wechseln</div>
+      <button class="qs-tile-cta" data-i18n="tile2_cta">Hier weiterarbeiten</button>
     </div>
     <div class="qs-tile qs-tile-4" onclick="qsOpenPicker('report')">
       <div class="qs-tile-title" data-i18n="tile4_title">Analysebericht erstellen</div>

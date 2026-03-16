@@ -1,0 +1,13 @@
+services:
+  spectralq:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - db-data:/app/data
+    env_file:
+      - .env
+    restart: unless-stopped
+
+volumes:
+  db-data:

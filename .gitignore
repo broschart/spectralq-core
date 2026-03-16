@@ -1,8 +1,44 @@
-venv/
+# Python
 __pycache__/
-*.pyc
-trends.db
-app.log
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment and secrets
 .env
+.env.*
+!.env.example
 cookies.json
-=4.9
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+
+# Uploads
+uploads/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Playwright
+playwright-browsers/
