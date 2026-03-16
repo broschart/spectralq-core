@@ -1,0 +1,58 @@
+{
+  "de": {
+    "wz_sidebar_airquality": "Luftqualitaet",
+    "wz_aq_title": "Luftqualitaet & Feinstaub",
+    "wz_aq_source": "Quelle: OpenAQ (globale Sensordaten)",
+    "wz_aq_desc": "Ueberwacht Feinstaubwerte (PM2.5, PM10), Ozon, NO₂, SO₂ und CO weltweit. Ploetzliche Anstiege koennen auf Braende, Explosionen, Industrieunfaelle oder militaerische Aktivitaet hinweisen.",
+    "wz_aq_hint": "Beobachtungsgebiete auf der Karte einzeichnen. Luftqualitaetsdaten werden automatisch von OpenAQ abgerufen.",
+    "wz_aq_count": "Messstationen",
+    "wz_aq_header": "Messstationen in der Zone",
+    "wz_aq_empty": "Keine Messstationen in dieser Region.",
+    "wz_aq_pm25": "PM2.5",
+    "wz_aq_pm10": "PM10",
+    "wz_aq_quality": "Qualitaet",
+    "wz_aq_params": "Parameter",
+    "wz_aq_more": "weitere",
+    "wz_aq_no_key": "OpenAQ API-Key fehlt. Kostenlos registrieren auf openaq.org."
+  },
+  "en": {
+    "wz_sidebar_airquality": "Air Quality",
+    "wz_aq_title": "Air Quality & Particulates",
+    "wz_aq_source": "Source: OpenAQ (global sensor data)",
+    "wz_aq_desc": "Monitors particulate matter (PM2.5, PM10), ozone, NO₂, SO₂ and CO worldwide. Sudden spikes can indicate fires, explosions, industrial accidents or military activity.",
+    "wz_aq_hint": "Draw observation areas on the map. Air quality data will be fetched automatically from OpenAQ.",
+    "wz_aq_count": "monitoring stations",
+    "wz_aq_header": "Monitoring stations in zone",
+    "wz_aq_empty": "No monitoring stations in this region.",
+    "wz_aq_pm25": "PM2.5",
+    "wz_aq_pm10": "PM10",
+    "wz_aq_quality": "Quality",
+    "wz_aq_params": "Parameters",
+    "wz_aq_more": "more",
+    "wz_aq_no_key": "OpenAQ API key missing. Free registration at openaq.org."
+  },
+  "fr": {
+    "wz_sidebar_airquality": "Qualite de l'air",
+    "wz_aq_title": "Qualite de l'air & particules",
+    "wz_aq_source": "Source : OpenAQ",
+    "wz_aq_desc": "Surveille les particules fines, l'ozone, le NO₂ et le CO dans le monde entier.",
+    "wz_aq_hint": "Dessinez des zones d'observation sur la carte.",
+    "wz_aq_count": "stations de mesure",
+    "wz_aq_header": "Stations dans la zone",
+    "wz_aq_empty": "Aucune station dans cette region.",
+    "wz_aq_more": "de plus",
+    "wz_aq_no_key": "Cle API OpenAQ manquante."
+  },
+  "es": {
+    "wz_sidebar_airquality": "Calidad del aire",
+    "wz_aq_title": "Calidad del aire y particulas",
+    "wz_aq_source": "Fuente: OpenAQ",
+    "wz_aq_desc": "Monitorea material particulado, ozono, NO₂ y CO a nivel mundial.",
+    "wz_aq_hint": "Dibuje areas de observacion en el mapa.",
+    "wz_aq_count": "estaciones de medicion",
+    "wz_aq_header": "Estaciones en la zona",
+    "wz_aq_empty": "No hay estaciones en esta region.",
+    "wz_aq_more": "mas",
+    "wz_aq_no_key": "Falta la clave API de OpenAQ."
+  }
+}

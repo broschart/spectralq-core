@@ -1,0 +1,278 @@
+<!-- ═══════════════════════════════════════════════════════════
+     GRANGER-KAUSALITÄT OVERLAY
+═══════════════════════════════════════════════════════════ -->
+<style>
+#gc-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82);
+  display: none; align-items: center; justify-content: center;
+  z-index: 9500; padding: 16px; box-sizing: border-box;
+}
+#gc-dialog {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; width: 96vw; max-width: 1100px;
+  max-height: 85vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#gc-results-wrap {
+  flex: 1; overflow-y: auto; padding: 0 20px 16px;
+}
+.gc-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.gc-row:last-child { border-bottom: none; }
+.gc-sig { font-weight: 700; }
+.gc-sig.yes { color: #22c55e; }
+.gc-sig.no  { color: var(--muted); }
+.gc-arrow { font-size: 16px; font-weight: 700; color: #e879f9; }
+.gc-p { font-variant-numeric: tabular-nums; min-width: 70px; text-align: right; }
+.gc-f { font-variant-numeric: tabular-nums; min-width: 56px; text-align: right; color: var(--accent); font-weight: 600; }
+.gc-lag { background: rgba(232,121,249,.15); color: #e879f9; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.gc-stars { color: #fbbf24; font-weight: 700; }
+</style>
+
+<div id="gc-overlay">
+  <div id="gc-dialog">
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <h2 style="margin:0 0 3px;font-size:16px;font-weight:600;">Granger-Kausalität</h2>
+        <div id="gc-subtitle" style="font-size:12px;color:var(--muted);"></div>
+      </div>
+      {% if 'trend_analysis' in ai_plugins_enabled %}
+      <button id="btn-gc-ai" style="flex-shrink:0;padding:6px 14px;border-radius:6px;border:1px solid rgba(139,92,246,.5);background:none;color:#a78bfa;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">
+        <svg viewBox="0 0 20 16" width="14" height="11" fill="currentColor" style="vertical-align:middle;margin-right:3px;"><text x="1" y="13" font-family="system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="0.5">AI</text></svg> KI-Analyse
+      </button>
+      {% endif %}
+      <button id="btn-gc-close" style="flex-shrink:0;width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;">&times;</button>
+    </div>
+
+    <!-- Controls -->
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        Max. Lag:
+        <input id="gc-maxlag" type="range" min="1" max="20" step="1" value="5"
+               style="width:120px;accent-color:var(--accent);">
+        <strong id="gc-maxlag-val" style="min-width:22px;">5</strong>
+      </label>
+      <button id="btn-gc-run" class="btn btn-ghost btn-sm"
+              style="border-color:rgba(232,121,249,.5);color:#e879f9;font-weight:600;padding:5px 16px;">
+        Testen
+      </button>
+    </div>
+
+    <!-- Status -->
+    <div id="gc-status" style="padding:6px 20px;font-size:11px;color:var(--muted);flex-shrink:0;"></div>
+
+    <!-- Results -->
+    <div id="gc-results-wrap">
+      <div id="gc-results" style="padding-top:4px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  let _lastGcData = null;
+
+  function getSeriesFromChart() {
+    const mc = window._mainChart;
+    if (!mc || !mc.data) return null;
+    const labels = mc.data.labels;
+    const series = mc.data.datasets
+      .filter(d => !d._isEvent && !d._isBand && !d._isSunArc && d.data && d.data.length)
+      .map(d => ({ keyword: d.label, values: d.data.slice(), color: d.borderColor, kwId: d._kwId }));
+    return series.length >= 2 ? { labels, series } : null;
+  }
+
+  async function runGranger() {
+    const statusEl = document.getElementById('gc-status');
+    const resultsEl = document.getElementById('gc-results');
+    const runBtn = document.getElementById('btn-gc-run');
+
+    const data = getSeriesFromChart();
+    if (!data || data.series.length < 2) {
+      statusEl.textContent = 'Mindestens 2 aktive Keywords erforderlich.';
+      resultsEl.innerHTML = ''; return;
+    }
+
+    const maxLag = parseInt(document.getElementById('gc-maxlag').value, 10);
+    const series = data.series;
+
+    // Alle Paare bilden
+    const pairs = [];
+    for (let i = 0; i < series.length; i++) {
+      for (let j = i + 1; j < series.length; j++) {
+        pairs.push({
+          nameA: series[i].keyword,
+          nameB: series[j].keyword,
+          valuesA: series[i].values,
+          valuesB: series[j].values,
+        });
+      }
+    }
+
+    runBtn.disabled = true;
+    statusEl.textContent = `Teste ${pairs.length} Paare mit max. Lag ${maxLag}...`;
+    resultsEl.innerHTML = '';
+
+    try {
+      const res = await fetch('/api/granger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ max_lag: maxLag, pairs }),
+      });
+      const json = await res.json();
+
+      if (!res.ok || json.error) {
+        statusEl.textContent = json.error || 'Fehler beim Test.';
+        runBtn.disabled = false; return;
+      }
+
+      const results = json.results || [];
+      const sigCount = results.filter(r => r.significant).length;
+
+      _lastGcData = { results, maxLag, keywords: series.map(s => s.keyword) };
+
+      document.getElementById('gc-subtitle').textContent =
+        series.map(s => s.keyword).join(', ');
+
+      statusEl.textContent =
+        `${results.length} Beziehungen getestet · ${sigCount} signifikant (p < 0.05) · Max. Lag: ${maxLag}`;
+
+      if (!results.length) {
+        resultsEl.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0;">Keine Ergebnisse.</p>';
+        runBtn.disabled = false; return;
+      }
+
+      // Tabelle
+      let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+        '<thead><tr style="text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;">' +
+        '<th style="padding:6px 8px;">Beziehung</th>' +
+        '<th style="padding:6px 8px;text-align:center;">Lag</th>' +
+        '<th style="padding:6px 8px;text-align:right;">F-Statistik</th>' +
+        '<th style="padding:6px 8px;text-align:right;">p-Wert</th>' +
+        '<th style="padding:6px 8px;text-align:center;">Signifikanz</th>' +
+        '</tr></thead><tbody>';
+
+      for (const r of results) {
+        const sigCls = r.significant ? 'yes' : 'no';
+        const sigTxt = r.significant ? 'Signifikant' : 'n.s.';
+        const pColor = r.best_p < 0.001 ? '#22c55e' : r.best_p < 0.01 ? '#86efac' : r.best_p < 0.05 ? '#fbbf24' : 'var(--muted)';
+        html += `<tr class="gc-row">
+          <td style="padding:6px 8px;">
+            <span style="font-weight:600;">${r.cause}</span>
+            <span class="gc-arrow"> → </span>
+            <span style="font-weight:600;">${r.effect}</span>
+          </td>
+          <td style="padding:6px 8px;text-align:center;"><span class="gc-lag">${r.best_lag}</span></td>
+          <td style="padding:6px 8px;" class="gc-f">${r.best_f.toFixed(2)}</td>
+          <td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums;color:${pColor};font-weight:600;">${r.best_p < 0.001 ? r.best_p.toExponential(2) : r.best_p.toFixed(4)}</td>
+          <td style="padding:6px 8px;text-align:center;" class="gc-sig ${sigCls}">
+            ${sigTxt} <span class="gc-stars">${r.sig_label}</span>
+          </td>
+        </tr>`;
+
+        // Lag-Details aufklappbar
+        if (r.lags && r.lags.length > 1) {
+          html += `<tr><td colspan="5" style="padding:0 8px 6px;">
+            <details style="font-size:11px;color:var(--muted);">
+              <summary style="cursor:pointer;">Alle Lags anzeigen</summary>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
+                ${r.lags.map(l =>
+                  `<span style="padding:2px 7px;border-radius:4px;font-variant-numeric:tabular-nums;` +
+                  `background:${l.p < 0.05 ? 'rgba(34,197,94,.15)' : 'rgba(255,255,255,.04)'};` +
+                  `color:${l.p < 0.05 ? '#22c55e' : 'var(--muted)'};">` +
+                  `Lag ${l.lag}: F=${l.f.toFixed(1)}, p=${l.p < 0.001 ? l.p.toExponential(1) : l.p.toFixed(3)}</span>`
+                ).join('')}
+              </div>
+            </details>
+          </td></tr>`;
+        }
+      }
+      html += '</tbody></table>';
+
+      // Netzwerk-Zusammenfassung
+      if (sigCount > 0) {
+        const sigResults = results.filter(r => r.significant);
+        const hubs = {};
+        for (const r of sigResults) {
+          hubs[r.cause] = (hubs[r.cause] || 0) + 1;
+        }
+        const hubEntries = Object.entries(hubs).sort((a, b) => b[1] - a[1]);
+        html += '<div style="margin-top:12px;padding:10px 14px;border-radius:8px;background:rgba(232,121,249,.08);border:1px solid rgba(232,121,249,.2);font-size:13px;">';
+        html += '<strong style="color:#e879f9;">Netzwerk-Zusammenfassung:</strong> ';
+        html += hubEntries.map(([kw, cnt]) =>
+          `<span style="font-weight:600;">${kw}</span> treibt ${cnt} andere${cnt > 1 ? '' : 's'}`
+        ).join(' · ');
+        html += '</div>';
+      }
+
+      resultsEl.innerHTML = html;
+
+    } catch (e) {
+      statusEl.textContent = `Fehler: ${e.message}`;
+    } finally {
+      runBtn.disabled = false;
+    }
+  }
+
+  function openGc() {
+    const data = getSeriesFromChart();
+    if (!data || data.series.length < 2) {
+      alert('Mindestens 2 aktive Keywords erforderlich.'); return;
+    }
+    document.getElementById('gc-status').textContent = 'Max. Lag einstellen und "Testen" klicken.';
+    document.getElementById('gc-results').innerHTML = '';
+    document.getElementById('gc-overlay').style.display = 'flex';
+  }
+
+  function closeGc() {
+    document.getElementById('gc-overlay').style.display = 'none';
+  }
+
+  // Event Listeners
+  if (document.getElementById('btn-granger')) document.getElementById('btn-granger').addEventListener('click', openGc);
+  document.getElementById('btn-gc-close').addEventListener('click', closeGc);
+  document.getElementById('gc-overlay').addEventListener('click', e => {
+    if (e.target.id === 'gc-overlay') closeGc();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('gc-overlay').style.display === 'flex') closeGc();
+  });
+  document.getElementById('gc-maxlag').addEventListener('input', e => {
+    document.getElementById('gc-maxlag-val').textContent = e.target.value;
+  });
+  document.getElementById('btn-gc-run').addEventListener('click', runGranger);
+
+  // KI-Analyse
+  if (document.getElementById('btn-gc-ai')) document.getElementById('btn-gc-ai').addEventListener('click', () => {
+    if (!_lastGcData || !_lastGcData.results.length) {
+      alert('Noch keine Ergebnisse vorhanden.'); return;
+    }
+    const series = window._collectSeries ? window._collectSeries(null) : [];
+    if (!series.length) { alert('Keine aktiven Datenpunkte.'); return; }
+    const d = _lastGcData;
+    const sigCount = d.results.filter(r => r.significant).length;
+    const context = `Granger-Kausalitätstest: Max. Lag ${d.maxLag}, ${d.results.length} Beziehungen, ${sigCount} signifikant`;
+    const extras = {
+      granger: {
+        max_lag: d.maxLag,
+        keywords: d.keywords,
+        results: d.results.map(r => ({
+          direction: r.direction,
+          best_lag: r.best_lag,
+          best_f: r.best_f,
+          best_p: r.best_p,
+          significant: r.significant,
+          sig_label: r.sig_label,
+        })),
+      }
+    };
+    if (window._openAiWithContext) {
+      window._openAiWithContext(series, context, 'Granger-Kausalität · KI-Analyse', 'gc', extras);
+    }
+  });
+})();
+</script>
+

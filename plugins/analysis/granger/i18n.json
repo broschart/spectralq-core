@@ -1,0 +1,22 @@
+{
+  "de": {
+    "analysis_granger_label": "Granger-Kausalität",
+    "analysis_granger_desc": "Granger-Kausalitätstest zwischen Zeitreihen.",
+    "an_granger": "⇄ Granger-Kausalität"
+  },
+  "en": {
+    "analysis_granger_label": "Granger Causality",
+    "analysis_granger_desc": "Granger causality test between time series.",
+    "an_granger": "⇄ Granger causality"
+  },
+  "fr": {
+    "analysis_granger_label": "Causalité de Granger",
+    "analysis_granger_desc": "Test de causalité de Granger entre séries temporelles.",
+    "an_granger": "⇄ Causalité de Granger"
+  },
+  "es": {
+    "analysis_granger_label": "Causalidad de Granger",
+    "analysis_granger_desc": "Test de causalidad de Granger entre series temporales.",
+    "an_granger": "⇄ Causalidad de Granger"
+  }
+}

@@ -1,0 +1,563 @@
+<!-- ═══════════════════════════════════════════════════════════
+     Outlier Detection Modal
+═══════════════════════════════════════════════════════════ -->
+<style>
+#od-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82);
+  display: none; align-items: center; justify-content: center;
+  z-index: 9400; padding: 16px; box-sizing: border-box;
+}
+#od-dialog {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; width: 96vw; max-width: 1400px;
+  height: 76vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#od-chart-wrap {
+  flex: 1; min-height: 0;
+  padding: 12px 16px 0; background: #111; overflow: hidden;
+}
+#od-list-wrap {
+  overflow-y: auto; max-height: 220px;
+  padding: 0 20px 12px;
+}
+</style>
+
+<div id="od-overlay">
+  <div id="od-dialog">
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:16px 20px;
+                border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <h2 style="margin:0 0 3px;font-size:16px;font-weight:600;" data-i18n="an_od_title">Ausreißer-Erkennung</h2>
+        <div id="od-subtitle" style="font-size:12px;color:var(--muted);
+             overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+      </div>
+      {% if 'trend_analysis' in ai_plugins_enabled %}
+      <button id="btn-od-ai"
+              style="cursor:pointer;background:none;border:1px solid rgba(139,92,246,.5);
+                     border-radius:6px;color:#a78bfa;font-size:12px;
+                     padding:3px 8px;flex-shrink:0;"
+              data-tip="KI-Analyse starten"><svg viewBox="0 0 20 16" width="16" height="13" fill="currentColor" style="vertical-align:middle;margin-right:4px;"><text x="1" y="13" font-family="system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="0.5">AI</text></svg> <span data-i18n="an_ssim_ai_btn">KI-Analyse</span></button>
+      {% endif %}
+      <button id="btn-od-snap"
+              style="cursor:pointer;background:none;border:1px solid var(--border);
+                     border-radius:6px;color:var(--muted);font-size:14px;
+                     padding:3px 8px;flex-shrink:0;display:flex;align-items:center;gap:4px;"
+              data-tip="Als Snapshot speichern"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,12.5 5,7.5 8,9.5 11.5,4.5 14.5,6.5"/></svg></button>
+      <button id="btn-od-close"
+              style="cursor:pointer;background:none;border:none;color:var(--muted);
+                     font-size:22px;line-height:1;padding:0 6px;flex-shrink:0;"
+              data-tip="Schließen">×</button>
+    </div>
+    <!-- Controls -->
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+                padding:10px 20px;border-bottom:1px solid var(--border);
+                flex-shrink:0;background:var(--surface2);">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        <span data-i18n="an_od_method_label">Methode:</span>
+        <select id="od-method"
+                style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);
+                       background:var(--surface);color:var(--text);font-size:12px;">
+          <option value="zscore_global">Z-Score global</option>
+          <option value="zscore_rolling" data-i18n="an_od_zscore_rolling">Z-Score gleitend</option>
+          <option value="iqr">IQR (Tukey)</option>
+        </select>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        <span id="od-threshold-lbl" data-i18n="an_od_threshold_sigma">Schwellenwert (σ):</span>
+        <input id="od-threshold" type="range" min="1" max="4" step="0.25" value="2"
+               style="width:100px;accent-color:var(--accent);">
+        <strong id="od-threshold-val" style="min-width:26px;">2.0</strong>
+      </label>
+      <label id="od-win-wrap"
+             style="display:none;align-items:center;gap:8px;font-size:12px;">
+        <span data-i18n="an_od_window">Fenster:</span>
+        <input id="od-winsize" type="range" min="7" max="90" step="1" value="30"
+               style="width:90px;accent-color:var(--accent);">
+        <strong id="od-winsize-val" style="min-width:22px;">30</strong>
+      </label>
+    </div>
+    <!-- Chart -->
+    <div id="od-chart-wrap">
+      <div id="od-canvas-box" style="position:relative;display:inline-block;vertical-align:top;max-width:100%;">
+        <canvas id="od-canvas" style="display:none;"></canvas>
+        <div id="od-xhair" style="position:absolute;width:1px;background:rgba(255,255,255,0.38);
+                                   pointer-events:none;display:none;"></div>
+        <div id="od-tip"   style="position:absolute;pointer-events:none;display:none;
+                                   background:var(--surface);border:1px solid var(--border);
+                                   border-radius:8px;padding:10px 16px;font-size:15px;line-height:1.6;
+                                   box-shadow:0 2px 16px rgba(0,0,0,.6);white-space:nowrap;z-index:10;
+                                   color:var(--text);"></div>
+      </div>
+    </div>
+    <!-- Status -->
+    <div id="od-status"
+         style="padding:6px 20px;font-size:11px;color:var(--muted);
+                background:var(--surface2);border-top:1px solid var(--border);
+                flex-shrink:0;"></div>
+    <!-- Outlier list -->
+    <div id="od-list-wrap">
+      <div id="od-list" style="padding-top:8px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const GPROP_L = { '':'Web', news:'News', images:window.t('an_gprop_images','Bilder'), youtube:'YouTube', froogle:window.t('an_gprop_shopping','Shopping') };
+  const M = { l: 48, r: 12, t: 12, b: 60 };
+
+  function fmtAx(iso) {
+    if (!iso) return '';
+    const s = String(iso).slice(0, 10).split('-');
+    return s.length === 3 ? `${s[2]}.${s[1]}.${s[0].slice(2)}` : iso;
+  }
+  function fmtAxFull(iso) {
+    if (!iso) return '';
+    const str = String(iso);
+    const date = fmtAx(str);
+    const t = str.length >= 16 ? str.slice(11, 16) : null;
+    return t ? `${date} ${t}` : date;
+  }
+
+  // ── Daten zusammenführen (alle aktiven Reihen des Keywords) ──
+  let _kwId = null;
+
+  function getMergedData() {
+    const kw = _kwId != null
+      ? allKeywords.find(k => k.id === _kwId)
+      : allKeywords.find(k => selectedIds.has(k.id));
+    if (!kw) return null;
+
+    const kwRunEntry    = kwRunData.find(r => r.kw.id === kw.id);
+    const activeRunTags = kwRunEntry
+      ? kwRunEntry.runs.map(r => r.run_tag).filter(rt => (selectedRunTagByKw.get(kw.id) || new Set()).has(rt))
+      : [];
+    if (!activeRunTags.length) activeRunTags.push([...(selectedRunTagByKw.get(kw.id) || new Set())][0] ?? '');
+
+    const accum = {};
+    let anyEntry = null;
+    for (const rt of activeRunTags) {
+      const entry = rawData[`${kw.id}@@${rt}`];
+      if (!entry) continue;
+      anyEntry = entry;
+      entry.data.forEach(p => {
+        if (p.value !== null) {
+          if (!accum[p.date]) accum[p.date] = { sum: 0, cnt: 0 };
+          accum[p.date].sum += p.value;
+          accum[p.date].cnt++;
+        }
+      });
+    }
+    if (!anyEntry) return null;
+
+    const labels = [...allLabels];
+    const values = labels.map(d => {
+      const a = accum[d];
+      return a && a.cnt > 0 ? a.sum / a.cnt : null;
+    });
+    const runLabel = activeRunTags.length === 1
+      ? (activeRunTags[0] || 'Standard')
+      : `${activeRunTags.length} ${window.t('an_ssim_runs_avg','Reihen (gemittelt)')}`;
+    return { values, labels, kwId: kw.id, keyword: anyEntry.keyword || kw.keyword,
+             geo: anyEntry.geo || kw.geo || 'DE', gprop: kw.gprop || '', runLabel };
+  }
+
+  // ── Ausreißer-Algorithmen ─────────────────────────────────────
+  function detectOutliers(values, labels, method, threshold, winSize) {
+    const n = values.length;
+    const outliers = [];
+
+    if (method === 'zscore_global') {
+      const nn = values.filter(v => v !== null);
+      if (nn.length < 3) return { outliers, bands: null };
+      const mean = nn.reduce((a, b) => a + b, 0) / nn.length;
+      const std  = Math.sqrt(nn.reduce((a, v) => a + (v - mean) ** 2, 0) / nn.length);
+      const lo = mean - threshold * std, hi = mean + threshold * std;
+      for (let i = 0; i < n; i++) {
+        if (values[i] === null) continue;
+        const z = std > 0 ? (values[i] - mean) / std : 0;
+        if (Math.abs(z) > threshold)
+          outliers.push({ i, date: labels[i], value: values[i], dev: z,
+                          dir: z > 0 ? 'hoch' : 'niedrig', unit: 'σ' });
+      }
+      return { outliers, bands: { type: 'global', lo, hi } };
+
+    } else if (method === 'zscore_rolling') {
+      const hw = Math.floor(winSize / 2);
+      const rMean = [], rLo = [], rHi = [];
+      for (let i = 0; i < n; i++) {
+        const win = [];
+        for (let d = -hw; d <= hw; d++) {
+          const ii = i + d;
+          if (ii >= 0 && ii < n && values[ii] !== null) win.push(values[ii]);
+        }
+        if (win.length < 3) { rMean.push(null); rLo.push(null); rHi.push(null); continue; }
+        const m = win.reduce((a, b) => a + b, 0) / win.length;
+        const s = Math.sqrt(win.reduce((a, v) => a + (v - m) ** 2, 0) / win.length);
+        rMean.push(m); rLo.push(m - threshold * s); rHi.push(m + threshold * s);
+        if (values[i] !== null) {
+          const z = s > 0 ? (values[i] - m) / s : 0;
+          if (Math.abs(z) > threshold)
+            outliers.push({ i, date: labels[i], value: values[i], dev: z,
+                            dir: z > 0 ? 'hoch' : 'niedrig', unit: 'σ' });
+        }
+      }
+      return { outliers, bands: { type: 'rolling', mean: rMean, lo: rLo, hi: rHi } };
+
+    } else { // IQR
+      const sorted = values.filter(v => v !== null).slice().sort((a, b) => a - b);
+      if (sorted.length < 4) return { outliers, bands: null };
+      const q1 = sorted[Math.floor(sorted.length * 0.25)];
+      const q3 = sorted[Math.floor(sorted.length * 0.75)];
+      const iqr = q3 - q1;
+      const lo = q1 - threshold * iqr, hi = q3 + threshold * iqr;
+      for (let i = 0; i < n; i++) {
+        if (values[i] === null) continue;
+        if (values[i] < lo || values[i] > hi) {
+          const dev = values[i] > hi ? (values[i] - q3) / (iqr || 1)
+                                     : (q1 - values[i]) / (iqr || 1);
+          outliers.push({ i, date: labels[i], value: values[i], dev: values[i] > hi ? dev : -dev,
+                          dir: values[i] > hi ? 'hoch' : 'niedrig', unit: '×IQR' });
+        }
+      }
+      return { outliers, bands: { type: 'iqr', lo, hi } };
+    }
+  }
+
+  // ── Chart ─────────────────────────────────────────────────────
+  function renderChart(values, labels, outliers, bands) {
+    const canvas = document.getElementById('od-canvas');
+    const wrap   = document.getElementById('od-chart-wrap');
+    const W = wrap.clientWidth  - 2;
+    const H = Math.max(wrap.clientHeight - 14, 300);
+    canvas.width = W; canvas.height = H;
+    const { l, r, t, b } = M;
+    const pw = W - l - r, ph = H - t - b;
+    const n  = values.length;
+    const xOf = j => l + (n > 1 ? j / (n - 1) : 0.5) * pw;
+    const yOf = v => t + ph - Math.min(Math.max(v, 0), 100) / 100 * ph;
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H);
+
+    // Grid + Y-Labels
+    ctx.strokeStyle = '#1e1e1e'; ctx.lineWidth = 1;
+    ctx.fillStyle = '#555'; ctx.font = '11px monospace';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let v = 0; v <= 100; v += 20) {
+      const py = yOf(v);
+      ctx.beginPath(); ctx.moveTo(l, py); ctx.lineTo(l + pw, py); ctx.stroke();
+      ctx.fillText(v, l - 3, py);
+    }
+
+    // Threshold bands
+    if (bands) {
+      ctx.save(); ctx.globalAlpha = 0.13; ctx.fillStyle = '#f75f4f';
+      if (bands.type === 'global' || bands.type === 'iqr') {
+        const yLo = yOf(bands.lo), yHi = yOf(bands.hi);
+        ctx.fillRect(l, t, pw, yHi - t);        // zone oben
+        ctx.fillRect(l, yLo, pw, t + ph - yLo); // zone unten
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = '#f75f4f'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(l, yHi); ctx.lineTo(l + pw, yHi); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(l, yLo); ctx.lineTo(l + pw, yLo); ctx.stroke();
+        ctx.setLineDash([]);
+      } else if (bands.type === 'rolling') {
+        ctx.beginPath(); let started = false;
+        for (let j = 0; j < n; j++) {
+          if (bands.hi[j] === null) continue;
+          const x = xOf(j), y = yOf(bands.hi[j]);
+          if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+        }
+        for (let j = n - 1; j >= 0; j--) {
+          if (bands.lo[j] === null) continue;
+          ctx.lineTo(xOf(j), yOf(bands.lo[j]));
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 0.5; ctx.strokeStyle = '#f7d44f';
+        ctx.lineWidth = 1; ctx.setLineDash([3, 2]);
+        ctx.beginPath(); started = false;
+        for (let j = 0; j < n; j++) {
+          if (bands.mean[j] === null) continue;
+          const x = xOf(j), y = yOf(bands.mean[j]);
+          if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+        }
+        ctx.stroke(); ctx.setLineDash([]);
+      }
+      ctx.restore();
+    }
+
+    // Datenlinie
+    ctx.strokeStyle = '#4f8ef7'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); let ls = false;
+    for (let j = 0; j < n; j++) {
+      if (values[j] === null) { ls = false; continue; }
+      const x = xOf(j), y = yOf(values[j]);
+      if (!ls) { ctx.moveTo(x, y); ls = true; } else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Ausreißer-Punkte
+    const outIdx = new Set(outliers.map(o => o.i));
+    for (let j = 0; j < n; j++) {
+      if (values[j] === null) continue;
+      const x = xOf(j), y = yOf(values[j]);
+      if (outIdx.has(j)) {
+        ctx.fillStyle = '#f75f4f';
+        ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    // X-Achse (gedreht, Deutsch)
+    const xStep = Math.max(1, Math.floor(n / 8));
+    ctx.fillStyle = '#777'; ctx.font = '11px monospace';
+    for (let j = 0; j < n; j += xStep) {
+      ctx.save();
+      ctx.translate(xOf(j), H - b + 3);
+      ctx.rotate(-Math.PI / 4);
+      ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+      ctx.fillText(fmtAx(labels[j]), 0, 0);
+      ctx.restore();
+    }
+
+    // Rahmen
+    ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1;
+    ctx.strokeRect(l, t, pw, ph);
+
+    // Hover-State speichern
+    _odRender = { n, labels, values, outliers, l, t, pw, ph, W, H };
+    setupOdHover();
+  }
+
+  // ── Hover-Crosshair ────────────────────────────────────────────
+  let _odRender     = null;
+  let _odHoverReady = false;
+
+  function setupOdHover() {
+    if (_odHoverReady) return;
+    _odHoverReady = true;
+    const canvas = document.getElementById('od-canvas');
+    canvas.style.cursor = 'crosshair';
+
+    canvas.addEventListener('mousemove', e => {
+      if (!_odRender) return;
+      const { n, labels, values, outliers, l, t, pw, ph, W } = _odRender;
+      if (n < 2) return;
+      const x = e.offsetX;
+      if (x < l || x > l + pw) { _hideOdXhair(); return; }
+      const j   = Math.max(0, Math.min(Math.round((x - l) / pw * (n - 1)), n - 1));
+      const xPx = l + j / (n - 1) * pw;
+
+      const xhair = document.getElementById('od-xhair');
+      const tip   = document.getElementById('od-tip');
+
+      xhair.style.left    = xPx + 'px';
+      xhair.style.top     = t + 'px';
+      xhair.style.height  = ph + 'px';
+      xhair.style.display = 'block';
+
+      const label = fmtAxFull(labels[j]);
+      const val   = values[j] != null ? Math.round(values[j]) : '–';
+      const out   = outliers.find(o => o.i === j);
+
+      let html = `<div style="color:var(--muted);font-size:13px;margin-bottom:4px;">${label}</div>`;
+      html += `<div>${window.t('an_od_tooltip_value','Wert:')}&nbsp;<strong style="color:#4f8ef7;">${val}</strong></div>`;
+      if (out) {
+        html += `<div style="color:#ef4444;margin-top:3px;">${window.t('an_od_outlier_marker','⚠ Ausreißer')} · ${out.dir === 'hoch' ? window.t('an_od_high','hoch') : window.t('an_od_low','niedrig')}</div>`;
+      }
+      tip.innerHTML = html;
+
+      if (xPx > W / 2) {
+        tip.style.left  = 'auto';
+        tip.style.right = (W - xPx + 8) + 'px';
+      } else {
+        tip.style.right = 'auto';
+        tip.style.left  = (xPx + 8) + 'px';
+      }
+      tip.style.top     = (t + 4) + 'px';
+      tip.style.display = 'block';
+    });
+
+    canvas.addEventListener('mouseleave', _hideOdXhair);
+  }
+
+  function _hideOdXhair() {
+    const xhair = document.getElementById('od-xhair');
+    const tip   = document.getElementById('od-tip');
+    if (xhair) xhair.style.display = 'none';
+    if (tip)   tip.style.display   = 'none';
+  }
+
+  // ── Erkennung ausführen ───────────────────────────────────────
+  let _timer = null;
+
+  function runDetect() {
+    const info     = getMergedData();
+    const statusEl = document.getElementById('od-status');
+    const listEl   = document.getElementById('od-list');
+    if (!info) {
+      statusEl.textContent = window.t('an_od_no_data','Keine Daten verfügbar.');
+      listEl.innerHTML = ''; return;
+    }
+    const method    = document.getElementById('od-method').value;
+    const threshold = parseFloat(document.getElementById('od-threshold').value);
+    const winSize   = parseInt(document.getElementById('od-winsize').value, 10);
+
+    const { outliers, bands } = detectOutliers(info.values, info.labels,
+                                               method, threshold, winSize);
+    window._lastOdData = { outliers, labels: info.labels, kwId: info.kwId, keyword: info.keyword, method, threshold };
+    const nonNull = info.values.filter(v => v !== null).length;
+    const pct     = nonNull > 0 ? (outliers.length / nonNull * 100).toFixed(1) : '0';
+    statusEl.textContent =
+      `${nonNull} ${window.t('an_od_datapoints','Datenpunkte')} · ${outliers.length} ${window.t('an_od_outliers_label','Ausreißer')} (${pct} %)`;
+
+    document.getElementById('od-canvas').style.display = 'block';
+    renderChart(info.values, info.labels, outliers, bands);
+
+    if (!outliers.length) {
+      listEl.innerHTML =
+        `<p style="color:var(--muted);font-size:12px;padding:8px 0 4px;">${window.t('an_od_no_outliers','Keine Ausreißer bei diesem Schwellenwert.')}</p>`;
+      return;
+    }
+    const isZ = method.startsWith('zscore');
+    listEl.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;">
+        <thead>
+          <tr style="color:var(--muted);font-size:11px;border-bottom:1px solid var(--border);">
+            <th style="padding:5px 8px;text-align:left;font-weight:500;">${window.t('an_od_col_date','Datum')}</th>
+            <th style="padding:5px 8px;text-align:right;font-weight:500;">${window.t('an_od_col_value','Wert')}</th>
+            <th style="padding:5px 8px;text-align:right;font-weight:500;">${window.t('an_od_col_deviation','Abweichung')}</th>
+            <th style="padding:5px 8px;text-align:left;font-weight:500;">${window.t('an_od_col_direction','Richtung')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${outliers
+            .slice().sort((a, b) => Math.abs(b.dev) - Math.abs(a.dev))
+            .map(o => `
+            <tr style="border-bottom:1px solid var(--border)22;">
+              <td style="padding:4px 8px;color:var(--muted);">${fmtAx(o.date)}</td>
+              <td style="padding:4px 8px;text-align:right;font-weight:600;">${Math.round(o.value)}</td>
+              <td style="padding:4px 8px;text-align:right;color:var(--danger,#f75f4f);">
+                ${o.dev > 0 ? '+' : ''}${o.dev.toFixed(2)}&thinsp;${o.unit}
+              </td>
+              <td style="padding:4px 8px;color:${o.dir === 'hoch' ? '#f75f4f' : '#4f8ef7'};">
+                ${o.dir === 'hoch' ? '↑ ' + window.t('an_od_high','hoch') : '↓ ' + window.t('an_od_low','niedrig')}
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  // ── Modal öffnen / schließen ──────────────────────────────────
+  function openOutlier(kwId) {
+    _kwId = kwId != null ? kwId : null;
+    const info = getMergedData();
+    if (info) {
+      const svc = GPROP_L[info.gprop] || info.gprop || 'Web';
+      document.getElementById('od-subtitle').textContent =
+        `${info.keyword} · ${info.geo} · ${svc} · ${info.runLabel}`;
+    } else {
+      document.getElementById('od-subtitle').textContent = window.t('an_ssim_no_kw','Kein Keyword ausgewählt');
+    }
+    document.getElementById('od-method').value          = 'zscore_global';
+    document.getElementById('od-threshold').value       = '2';
+    document.getElementById('od-threshold-val').textContent = '2.0';
+    document.getElementById('od-threshold-lbl').textContent = window.t('an_od_threshold_sigma','Schwellenwert (σ):');
+    document.getElementById('od-winsize').value         = '30';
+    document.getElementById('od-winsize-val').textContent   = '30';
+    document.getElementById('od-win-wrap').style.display    = 'none';
+    document.getElementById('od-canvas').style.display      = 'none';
+    document.getElementById('od-status').textContent        = '';
+    document.getElementById('od-list').innerHTML            = '';
+    document.getElementById('od-overlay').style.display     = 'flex';
+    runDetect();
+  }
+
+  function closeOutlier() {
+    document.getElementById('od-overlay').style.display = 'none';
+  }
+
+  window.openOutlierForKw = openOutlier;
+
+  // ── Event-Listener ────────────────────────────────────────────
+  document.getElementById('btn-od-close').addEventListener('click', closeOutlier);
+  document.getElementById('od-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('od-overlay')) closeOutlier();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' &&
+        document.getElementById('od-overlay').style.display === 'flex') closeOutlier();
+  });
+
+  document.getElementById('od-method').addEventListener('change', e => {
+    const isRolling = e.target.value === 'zscore_rolling';
+    const isIQR     = e.target.value === 'iqr';
+    document.getElementById('od-win-wrap').style.display = isRolling ? 'flex' : 'none';
+    document.getElementById('od-threshold-lbl').textContent =
+      isIQR ? window.t('an_od_threshold_iqr','IQR-Faktor:') : window.t('an_od_threshold_sigma','Schwellenwert (σ):');
+    const th = document.getElementById('od-threshold');
+    if (isIQR) {
+      th.min = '0.5'; th.max = '3'; th.step = '0.25';
+      th.value = Math.min(parseFloat(th.value), 3).toFixed(2);
+    } else {
+      th.min = '1'; th.max = '4'; th.step = '0.25';
+      th.value = Math.max(parseFloat(th.value), 1).toFixed(2);
+    }
+    document.getElementById('od-threshold-val').textContent =
+      parseFloat(th.value).toFixed(1);
+    clearTimeout(_timer); _timer = setTimeout(runDetect, 50);
+  });
+
+  document.getElementById('od-threshold').addEventListener('input', e => {
+    document.getElementById('od-threshold-val').textContent =
+      parseFloat(e.target.value).toFixed(1);
+    clearTimeout(_timer); _timer = setTimeout(runDetect, 200);
+  });
+
+  document.getElementById('od-winsize').addEventListener('input', e => {
+    document.getElementById('od-winsize-val').textContent = e.target.value;
+    clearTimeout(_timer); _timer = setTimeout(runDetect, 300);
+  });
+
+  document.getElementById('btn-od-snap').addEventListener('click', () => {
+    const canvas = document.getElementById('od-canvas');
+    if (!canvas || canvas.style.display === 'none') return;
+    const subtitle  = document.getElementById('od-subtitle').textContent;
+    const method    = document.getElementById('od-method').value;
+    const threshold = document.getElementById('od-threshold').value;
+    const winsize   = document.getElementById('od-winsize').value;
+    if (window.openAnalysisSnap) {
+      window.openAnalysisSnap('outlier', canvas, subtitle,
+        { method, threshold: Number(threshold), winsize: Number(winsize) });
+    }
+  });
+
+})();
+
+// ── Plugin-Registrierung: KI-Analyse-Brücke ──────────────────
+if (window._registerAnalysisPlugin) {
+  window._registerAnalysisPlugin('od', {
+    aiBtnId: 'btn-od-ai',
+    onAi: function() {
+      var data = window._lastOdData;
+      if (!data) return;
+      var series = window._collectSeries ? window._collectSeries(data.kwId) : [];
+      if (!series.length) { alert(window.t('an_cpd_no_data','Keine aktiven Datenpunkte.')); return; }
+      var method = document.getElementById('od-method').value;
+      var threshold = document.getElementById('od-threshold').value;
+      var methodLabels = { zscore_global: 'Z-Score global', zscore_rolling: window.t('an_od_zscore_rolling','Z-Score gleitend'), iqr: 'IQR (Tukey)' };
+      var context = window.t('an_od_method_ctx','Methode:') + ' ' + (methodLabels[method] || method) + ', ' + window.t('an_od_threshold_ctx','Schwellenwert:') + ' ' + threshold;
+      var extras = { od: { outliers: data.outliers.map(function(o) {
+        return { date: o.date, value: o.value, dir: o.dir, dev: Math.abs(o.dev).toFixed(2), unit: o.unit };
+      }) } };
+      window._openAiWithContext(series, context, window.t('an_od_ai_context','Ausreißer-Erkennung · KI-Analyse'), 'od', extras);
+    },
+  });
+}
+</script>
+

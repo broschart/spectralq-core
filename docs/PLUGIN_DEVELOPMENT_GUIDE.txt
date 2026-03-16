@@ -1,0 +1,710 @@
+============================================================================
+  spectralQ — Plugin Development Guide
+  For external developers building WatchZone and Analysis plugins
+============================================================================
+
+
+TABLE OF CONTENTS
+
+  1. Architecture Overview
+  2. Plugin Bundle Structure
+  3. Building a WatchZone Plugin
+     3.1 Minimal Example
+     3.2 Meta Dictionary Reference
+     3.3 live_handler()
+     3.4 history_routes()
+     3.5 api_routes() — Standalone API Endpoints
+     3.6 ai_tools() and ai_tool_handler()
+     3.7 analysis_provider()
+     3.8 Templates (HTML Panel)
+     3.9 JavaScript (Live Renderer)
+     3.10 Internationalization (i18n.json)
+  4. Building an Analysis Plugin
+     4.1 Minimal Example
+     4.2 Meta Dictionary Reference
+     4.3 compute()
+     4.4 api_routes()
+     4.5 Modal Template (templates/_modal.html)
+  5. Shared Helpers
+  6. Testing Your Plugin
+  7. Credential System
+  8. Checklist
+
+
+============================================================================
+1. ARCHITECTURE OVERVIEW
+============================================================================
+
+spectralQ uses a plugin system with three plugin types:
+
+  watchzone   — Real-time geospatial and web monitoring (vessel, seismic, ...)
+  analysis    — Statistical analysis methods (outlier, forecast, ...)
+  ai          — AI-powered features (trend analysis, scientific paper, ...)
+
+All plugins:
+  - Inherit from a type-specific base class
+  - Self-register on import via PluginManager.register()
+  - Are auto-discovered at startup from plugins/<type>/<plugin_id>/
+  - Can be enabled/disabled per user via the Plugins page
+
+The PluginManager (plugins/__init__.py) handles:
+  - Auto-discovery of plugin folders
+  - Auto-loading of i18n.json into meta["i18n"]
+  - Registration of template directories for Jinja2
+  - Per-user enable/disable via AppSetting (opt-out principle)
+
+
+============================================================================
+2. PLUGIN BUNDLE STRUCTURE
+============================================================================
+
+Every plugin is a folder inside its type directory:
+
+  plugins/
+  └── watchzone/                    # Plugin type
+      └── my_sensor/                # Plugin ID = folder name
+          ├── __init__.py           # Plugin class (REQUIRED)
+          ├── _transport.py         # API fetch functions (data layer)
+          ├── _routes.py            # Flask API route handlers (optional)
+          ├── i18n.json             # Translations (auto-loaded)
+          ├── templates/            # Jinja2 fragments (auto-registered)
+          │   └── _panel.html       # Main panel template
+          └── static/               # JS/CSS assets (served at runtime)
+              └── my_sensor.js      # Frontend renderer
+
+  └── analysis/
+      └── my_method/
+          ├── __init__.py           # Plugin class + api_routes()
+          ├── i18n.json             # Translations (de/en/fr/es)
+          └── templates/
+              └── _modal.html       # Complete modal (HTML+CSS+JS)
+
+The folder name MUST match the plugin_id defined in the class.
+
+Template paths use the plugin_id as prefix:
+  meta["panel_template"] = "my_sensor/_panel.html"
+  →  resolves to plugins/watchzone/my_sensor/templates/_panel.html
+
+Static files are served at:
+  /plugins/watchzone/my_sensor/static/my_sensor.js
+  meta["js_file"] = "/plugins/watchzone/my_sensor/static/my_sensor.js"
+
+
+============================================================================
+3. BUILDING A WATCHZONE PLUGIN
+============================================================================
+
+WatchZone plugins provide real-time data for user-drawn geographic zones
+or URL-based monitoring zones.
+
+----------------------------------------------------------------------------
+3.1 Minimal Example
+----------------------------------------------------------------------------
+
+File: plugins/watchzone/my_sensor/__init__.py
+
+  from plugins import PluginManager
+  from plugins.watchzone import WatchZonePlugin
+
+
+  class MySensorPlugin(WatchZonePlugin):
+      plugin_id = "my_sensor"
+
+      meta = {
+          "label": "My Sensor",
+          "icon_svg": '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" '
+                      'stroke="currentColor" stroke-width="2">'
+                      '<circle cx="12" cy="12" r="10"/></svg>',
+          "color": "#10b981",
+          "description": "My custom sensor plugin.",
+          "category": "geo",              # "geo" | "web" | "search"
+          "required_credentials": [],      # e.g. ["my_api_key"]
+          "has_live": True,
+          "has_history": False,
+          "panel_template": "my_sensor/_panel.html",
+          "js_file": "/plugins/watchzone/my_sensor/static/my_sensor.js",
+      }
+
+      def live_handler(self, zone, config, geo, bbox, user_id):
+          # bbox = (min_lon, min_lat, max_lon, max_lat) or None
+          if not bbox:
+              return {"error": "Zone has no valid geometry"}
+
+          # Fetch your data here
+          items = [{"lat": 48.2, "lon": 11.8, "value": 42, "label": "Sensor A"}]
+
+          return {
+              "zone_id": zone.id,
+              "zone_name": zone.name,
+              "zone_type": "my_sensor",
+              "count": len(items),
+              "items": items,
+          }
+
+
+  PluginManager.register(MySensorPlugin())
+
+That's it. The plugin will appear in the sidebar, be toggleable per user,
+and the Live button will call your live_handler().
+
+----------------------------------------------------------------------------
+3.2 Meta Dictionary Reference
+----------------------------------------------------------------------------
+
+  REQUIRED KEYS:
+    label                   Display name in sidebar and plugin list
+    icon_svg                Inline SVG string (18x18)
+    color                   Hex color for sidebar icon and zone outlines
+    description             Short description for plugin management page
+    category                "geo" (map-based), "web" (URL-based), "search"
+    has_live                True if plugin supports live data fetching
+    has_history             True if plugin provides time series for analysis
+    panel_template          Jinja2 template path: "<plugin_id>/_panel.html"
+    js_file                 Static JS path: "/plugins/watchzone/<id>/static/<id>.js"
+
+  OPTIONAL KEYS:
+    required_credentials    List of AppSetting keys needed (e.g. ["my_api_key"])
+    overlay_template        Extra modal template
+    live_header_template    Buttons injected into live popup header
+    live_side_panels_template  Side panels next to live map
+    live_map_inset_template    Elements inside the live map
+    live_undermap_template     Buttons below the live map
+
+  INHERITED (from BasePlugin, usually auto-loaded from i18n.json):
+    i18n                    {de: {...}, en: {...}, fr: {...}, es: {...}}
+
+----------------------------------------------------------------------------
+3.3 live_handler(zone, config, geo, bbox, user_id)
+----------------------------------------------------------------------------
+
+Called when user clicks "Live" on a zone.
+
+  Arguments:
+    zone        WatchZone SQLAlchemy model instance
+                  zone.id, zone.name, zone.zone_type, zone.geometry, zone.config
+    config      dict — parsed zone.config JSON (user-defined settings)
+    geo         dict — parsed zone.geometry GeoJSON
+    bbox        tuple (min_lon, min_lat, max_lon, max_lat) or None
+    user_id     int
+
+  Must return:
+    dict — will be JSON-serialized and passed to your JS renderer
+
+  Convention:
+    {
+      "zone_id": int,
+      "zone_name": str,
+      "zone_type": "my_sensor",   # must match plugin_id
+      "count": int,
+      "items": [...]              # your data
+    }
+
+  On error:
+    {"error": "Human-readable message"}
+
+----------------------------------------------------------------------------
+3.4 history_routes()
+----------------------------------------------------------------------------
+
+Define additional API endpoints for historical data (used in analysis
+triangulation).
+
+  Returns:
+    list of {"suffix": str, "handler": callable}
+
+  The handler receives (zone, args, user_id):
+    zone    WatchZone model instance
+    args    request.args (ImmutableMultiDict)
+    user_id int
+
+  The route is auto-registered as:
+    GET /api/watchzones/<int:zid>/<suffix>
+
+  Example:
+
+    def history_routes(self):
+        return [{"suffix": "my-sensor-history", "handler": self._history}]
+
+    def _history(self, zone, args, user_id):
+        from flask import jsonify
+        date_from = args.get("from", "")
+        date_to = args.get("to", "")
+        # fetch historical data...
+        return jsonify({"zone_id": zone.id, "data": [...]})
+
+----------------------------------------------------------------------------
+3.5 api_routes() — Standalone API Endpoints
+----------------------------------------------------------------------------
+
+Define standalone API endpoints that are not zone-specific.
+These are auto-registered at startup via _register_wz_api_routes().
+
+  Returns:
+    list of {"rule": str, "handler": callable, "methods": [str]}
+
+  The handler is wrapped with @login_required automatically.
+
+  Example:
+
+    def api_routes(self):
+        from plugins.watchzone.my_sensor._routes import api_sensor_data
+        return [{"rule": "/api/my-sensor/data", "handler": api_sensor_data}]
+
+  The route handler goes in _routes.py:
+
+    # plugins/watchzone/my_sensor/_routes.py
+    from flask import request, jsonify
+
+    def api_sensor_data():
+        from flask_login import current_user
+        # ... your endpoint logic
+        return jsonify({"data": [...]})
+
+  The _transport.py pattern:
+    Put API fetch logic (HTTP calls to external services) in _transport.py.
+    Route handlers in _routes.py import from _transport.py.
+    This keeps data access separate from Flask request handling.
+
+----------------------------------------------------------------------------
+3.6 ai_tools() and ai_tool_handler()
+----------------------------------------------------------------------------
+
+Expose your plugin's data to the AI Project Assistant (APA).
+
+  ai_tools() returns a list of Anthropic-format tool definitions:
+
+    def ai_tools(self):
+        return [{
+            "name": "my_sensor_data",
+            "description": "Fetches sensor data for a region.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "zone_id": {"type": "integer"},
+                    "bbox": {"type": "array", "items": {"type": "number"}},
+                },
+            },
+        }]
+
+  ai_tool_handler(tool_name, inputs, user_id) executes the tool call:
+
+    def ai_tool_handler(self, tool_name, inputs, user_id):
+        if tool_name != "my_sensor_data":
+            return {"error": f"Unknown tool: {tool_name}"}
+        # resolve bbox, fetch data, return dict
+        return {"count": 5, "data": [...]}
+
+The APA will automatically discover and use these tools in conversations.
+
+----------------------------------------------------------------------------
+3.7 analysis_provider()
+----------------------------------------------------------------------------
+
+Enable your plugin's data as a triangulation source in the analysis view.
+
+    def analysis_provider(self):
+        return {
+            "data_types": ["my_sensor"],
+            "history_endpoint_suffix": "my-sensor-history",
+        }
+
+  Returns None (default) if no analysis integration needed.
+
+  "data_types" controls which checkboxes appear in the triangulation panel.
+  "history_endpoint_suffix" must match a suffix from history_routes().
+
+----------------------------------------------------------------------------
+3.8 Templates (HTML Panel)
+----------------------------------------------------------------------------
+
+File: plugins/watchzone/my_sensor/templates/_panel.html
+
+  <div id="panel-my_sensor" class="wz-panel" style="display:none;">
+    <div class="wz-main-header">
+      <h2 data-i18n="wz_my_sensor_title">My Sensor</h2>
+      <p class="wz-panel-desc" data-i18n="wz_my_sensor_desc">
+        Description of what this plugin does.
+      </p>
+    </div>
+    <div class="wz-main-body">
+      <div id="wz-map-my_sensor" class="wz-map-container" style="height:500px;"></div>
+      <div class="wz-hint" id="wz-hint-my_sensor" data-i18n="wz_my_sensor_hint">
+        Draw zones on the map to start monitoring.
+      </div>
+      <div class="wz-zone-list" id="wz-zones-my_sensor"></div>
+    </div>
+  </div>
+
+  IMPORTANT:
+  - The outer div id MUST be "panel-<plugin_id>"
+  - Map container id: "wz-map-<plugin_id>"
+  - Hint id: "wz-hint-<plugin_id>"
+  - Zone list id: "wz-zones-<plugin_id>"
+  - Use data-i18n attributes for translatable text
+
+----------------------------------------------------------------------------
+3.9 JavaScript (Live Renderer)
+----------------------------------------------------------------------------
+
+File: plugins/watchzone/my_sensor/static/my_sensor.js
+
+  (function() {
+  "use strict";
+  var WZ = window.WZ;
+
+  function _renderLive(data) {
+    var items = data.items || [];
+
+    // Update the live popup count
+    document.getElementById("wz-live-count").textContent =
+      items.length + " readings";
+
+    // Clear existing map markers
+    if (WZ._liveMarkers) WZ._liveMarkers.clearLayers();
+
+    // Render content in live popup
+    var content = document.getElementById("wz-live-content");
+    if (!items.length) {
+      content.innerHTML = '<p style="text-align:center;color:var(--muted);">No data.</p>';
+      return;
+    }
+
+    // Add markers to map
+    items.forEach(function(item) {
+      var m = L.marker([item.lat, item.lon]);
+      if (WZ._liveMarkers) WZ._liveMarkers.addLayer(m);
+    });
+
+    // Fit map to markers
+    if (WZ._liveMap && WZ._liveMarkers && WZ._liveMarkers.getLayers().length) {
+      WZ._liveMap.fitBounds(WZ._liveMarkers.getBounds(), {padding: [30,30]});
+    }
+
+    // Render table/list
+    content.innerHTML = '<table>...</table>';
+  }
+
+  WZ.registerPlugin("my_sensor", {
+    renderer: _renderLive,
+    // Optional capabilities:
+    has_map: true,           // false for URL-based plugins (website, wayback)
+    has_live_map: true,      // show map in live popup
+    has_heatmap: false,      // enable heatmap toggle button
+    has_refresh_bar: false,  // show auto-refresh bar
+    default_source: null,    // default source for new zones
+  });
+
+  })();
+
+  KEY GLOBALS:
+    WZ._liveMarkers   — L.LayerGroup for live popup map markers
+    WZ._liveMap        — L.Map instance in live popup
+    WZ._esc(str)       — HTML-escape helper
+    WZ._anomalyBadge(score) — colored score badge HTML
+    window._t(key, fallback) — i18n translation function
+
+----------------------------------------------------------------------------
+3.10 Internationalization (i18n.json)
+----------------------------------------------------------------------------
+
+File: plugins/watchzone/my_sensor/i18n.json
+
+  {
+    "de": {
+      "wz_sidebar_my_sensor": "Mein Sensor",
+      "wz_my_sensor_title": "Mein Sensor",
+      "wz_my_sensor_desc": "Beschreibung...",
+      "wz_my_sensor_hint": "Zonen auf der Karte zeichnen."
+    },
+    "en": {
+      "wz_sidebar_my_sensor": "My Sensor",
+      "wz_my_sensor_title": "My Sensor",
+      "wz_my_sensor_desc": "Description...",
+      "wz_my_sensor_hint": "Draw zones on the map."
+    },
+    "fr": { ... },
+    "es": { ... }
+  }
+
+  Convention: prefix all keys with "wz_<plugin_id>_"
+  The file is auto-loaded into meta["i18n"] at startup.
+  Keys are merged into the global frontend i18n object.
+  Access in JS: window._t("wz_my_sensor_title", "My Sensor")
+  Access in HTML: data-i18n="wz_my_sensor_title"
+
+
+============================================================================
+4. BUILDING AN ANALYSIS PLUGIN
+============================================================================
+
+Analysis plugins provide statistical methods that operate on keyword
+time series data. They appear in the analysis popup and/or the lab.
+
+----------------------------------------------------------------------------
+4.1 Minimal Example
+----------------------------------------------------------------------------
+
+File: plugins/analysis/my_method/__init__.py
+
+  from plugins import PluginManager
+  from plugins.analysis import AnalysisPlugin
+
+
+  class MyMethodPlugin(AnalysisPlugin):
+      plugin_id = "my_method"
+
+      meta = {
+          "label": "My Method",
+          "icon_svg": '<svg viewBox="0 0 24 24" width="18" height="18" .../>',
+          "color": "#f59e0b",
+          "symbol": "M",
+          "description": "Custom statistical analysis.",
+          "default_show_in": ["popup"],     # "lab", "popup", or both
+          "button_id": "btn-my-method",
+          "requires_multi_kw": False,       # True = needs >= 2 keywords
+          "popup_handler": "openMyMethodForKw",
+          "popup_badges": [["my_method_badge", "Result"]],
+      }
+
+      def api_routes(self):
+          return [{
+              "rule": "/api/my-method",
+              "handler": self._handle,
+              "methods": ["POST"],
+          }]
+
+      def compute(self, body):
+          from plugins.analysis._helpers import load_series
+
+          labels, series = load_series(body)
+          if not series:
+              return {"error": "No data", "_status": 400}
+
+          s = series[0]
+          values = [v for v in s["values"] if v is not None]
+          if not values:
+              return {"error": "No non-null values", "_status": 400}
+
+          # Your analysis logic here
+          mean = sum(values) / len(values)
+
+          return {
+              "keyword": s["keyword"],
+              "mean": round(mean, 2),
+              "count": len(values),
+              "summary": f"Mean value: {mean:.1f} over {len(values)} data points.",
+          }
+
+      def _handle(self):
+          from flask import request, jsonify
+          body = request.get_json(force=True, silent=True) or {}
+          result = self.compute(body)
+          status = result.pop("_status", 200)
+          return jsonify(result), status
+
+
+  PluginManager.register(MyMethodPlugin())
+
+----------------------------------------------------------------------------
+4.2 Meta Dictionary Reference
+----------------------------------------------------------------------------
+
+  REQUIRED:
+    label               Display name
+    color               Hex color for button/badge
+    symbol              Single character or emoji for button
+    description         Short description
+    default_show_in     ["popup"], ["lab"], or ["popup", "lab"]
+
+  OPTIONAL:
+    button_id           CSS id for the analysis button
+    requires_multi_kw   True if analysis needs >= 2 active keywords
+    popup_handler       JS function name called on popup button click
+    popup_badges        [["i18n_key", "fallback"], ...] for result badges
+    icon_svg            SVG string (18x18)
+    required_credentials  API keys needed (usually empty for analysis)
+    modal_template      Path to modal HTML: "my_method/_modal.html"
+                        Auto-included in analysis.html via {% include %}
+
+----------------------------------------------------------------------------
+4.3 compute(body)
+----------------------------------------------------------------------------
+
+The core computation function. Receives the request body as dict.
+
+  Input (body):
+    From database:
+      {"keyword_ids": [1, 2, 3]}
+      {"keyword_ids": [1], "run_tag": "latest"}
+
+    From JSON (e.g. APA calling directly):
+      {"data": [{"keyword": "test", "values": [10, 20, ...], "dates": ["2024-01-01", ...]}]}
+
+  Use load_series(body) to normalize both input formats:
+    from plugins.analysis._helpers import load_series
+    labels, series = load_series(body)
+    # labels = ["2024-01-01", "2024-01-02", ...]
+    # series = [{"keyword": "test", "values": [10, 20, ...], "kwId": 1}, ...]
+
+  Return:
+    Success: {"keyword": "...", "result": ..., "summary": "..."}
+    Error:   {"error": "message", "_status": 400}
+
+  The "_status" key is popped by the handler and used as HTTP status code.
+
+----------------------------------------------------------------------------
+4.4 api_routes()
+----------------------------------------------------------------------------
+
+Define HTTP endpoints for your analysis method.
+
+  Returns: list of {"rule": str, "handler": callable, "methods": [str]}
+
+  The handler is wrapped with @login_required automatically.
+  Convention: POST to /api/<method-name>
+
+  Standard handler pattern:
+
+    def _handle(self):
+        from flask import request, jsonify
+        body = request.get_json(force=True, silent=True) or {}
+        result = self.compute(body)
+        status = result.pop("_status", 200)
+        return jsonify(result), status
+
+
+----------------------------------------------------------------------------
+4.5 Modal Template (templates/_modal.html)
+----------------------------------------------------------------------------
+
+Analysis plugins provide their complete UI (HTML + CSS + JS) as a modal
+template. This is auto-included in analysis.html via:
+
+  {% for tpl in analysis_modal_templates %}
+  {% include tpl %}
+  {% endfor %}
+
+File: plugins/analysis/my_method/templates/_modal.html
+
+  <style>
+  #mm-overlay { position: fixed; inset: 0; display: none; z-index: 9300; }
+  /* ... modal styles ... */
+  </style>
+
+  <div id="mm-overlay">
+    <div id="mm-dialog">
+      <h2 data-i18n="analysis_my_method_label">My Method</h2>
+      <!-- controls, chart, status ... -->
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+    // Your analysis logic, chart rendering, event listeners...
+
+    window.openMyMethodForKw = function(kwId) { /* open modal */ };
+  })();
+
+  // Register with KI-Analyse system (optional):
+  if (window._registerAnalysisPlugin) {
+    window._registerAnalysisPlugin('my_method', {
+      aiBtnId: 'btn-mm-ai',       // Auto-wires click → onAi
+      onAi: function() {
+        var series = window._collectSeries(null);
+        if (!series.length) return;
+        var context = 'My Method analysis context';
+        var extras = { my_method: { /* summarized results */ } };
+        window._openAiWithContext(series, context, 'My Method · AI', 'my_method', extras);
+      },
+    });
+  }
+  </script>
+
+  Key conventions:
+  - Overlay id: "<prefix>-overlay" (e.g. "mm-overlay")
+  - Use data-i18n attributes for all visible text
+  - Use window.t('key', 'fallback') for JS strings
+  - Register with _registerAnalysisPlugin for KI-Analyse integration
+  - Snapshot buttons: id="btn-<plugin_id>-snap" (auto-detected)
+
+
+============================================================================
+5. SHARED HELPERS
+============================================================================
+
+WatchZone helpers (plugins/watchzone/_helpers.py):
+
+  from plugins.watchzone._helpers import geojson_to_bbox, parse_zone_data, geo_center
+
+  geojson_to_bbox(geo)      → [min_lon, min_lat, max_lon, max_lat] or None
+  parse_zone_data(zone)     → (config_dict, geo_dict, bbox_or_none)
+  geo_center(geo)           → (lat, lon) or (None, None)
+
+Analysis helpers (plugins/analysis/_helpers.py):
+
+  from plugins.analysis._helpers import load_series
+
+  load_series(body)         → (labels, series_list)
+    labels:      ["2024-01-01", ...]
+    series_list: [{"keyword": str, "values": [int|None], "kwId": int}]
+
+
+============================================================================
+6. TESTING YOUR PLUGIN
+============================================================================
+
+1. Place your plugin folder under plugins/<type>/<plugin_id>/
+2. Restart the server (or use FLASK_ENV=development for auto-reload)
+3. Check the startup log for: "Plugin registered: <type>/<plugin_id>"
+4. Verify on /plugins page that your plugin appears
+5. Enable it if needed (enabled by default)
+6. Test the live functionality through the UI
+
+Quick validation without server restart:
+
+  python -c "
+  from app import app
+  from plugins import PluginManager
+  p = PluginManager.get('watchzone', 'my_sensor')
+  print(p, p.meta['label'], list(p.meta.get('i18n', {}).keys()))
+  "
+
+
+============================================================================
+7. CREDENTIAL SYSTEM
+============================================================================
+
+If your plugin requires API keys:
+
+  1. List them in meta["required_credentials"]:
+     "required_credentials": ["my_service_api_key"]
+
+  2. The plugin will show a credential input on the /plugins page
+  3. Users enter their key → stored in AppSetting per user
+  4. is_available(user_id) automatically checks:
+     a) User-specific AppSetting
+     b) Global AppSetting (admin-configured)
+     c) Environment variable (MY_SERVICE_API_KEY)
+  5. If no key found → plugin shows as "unavailable"
+
+  To read the credential in your code:
+    from models import AppSetting
+    key_obj = AppSetting.query.filter_by(key="my_service_api_key", user_id=user_id).first()
+    api_key = key_obj.value if key_obj else ""
+
+
+============================================================================
+8. CHECKLIST
+============================================================================
+
+  [ ] __init__.py with class inheriting from correct base
+  [ ] plugin_id matches folder name
+  [ ] meta dict with all required keys
+  [ ] i18n.json with at least "en" translations
+  [ ] templates/_panel.html with correct div IDs
+  [ ] static/<plugin_id>.js with WZ.registerPlugin() call
+  [ ] PluginManager.register() at end of __init__.py
+  [ ] Tested: plugin appears on /plugins page
+  [ ] Tested: live data works through UI
+  [ ] No hardcoded API keys in source code

@@ -1,0 +1,47 @@
+<div id="panel-wayback_cdx" class="wz-panel" style="display:none;">
+  <div class="wz-main-header">
+    <h2 data-i18n="wz_wbf_title">Wayback Archiving Frequency</h2>
+    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_wbf_source">Source: Wayback Machine CDX API</span>
+    <button onclick="_wbfCreateZone()" class="btn btn-sm" style="margin-left:auto;background:var(--accent1);color:#fff;border:none;" data-i18n="wz_wbf_add_url">+ Website hinzufügen</button>
+    <p class="wz-panel-desc" data-i18n="wz_wbf_desc">Shows how often a URL was cached by the Internet Archive. High archiving frequency indicates media attention, coordinated access or deliberate archiving. No API key required.</p>
+  </div>
+  <div class="wz-main-body">
+    <div id="wz-map-wayback_cdx" class="wz-map-container" style="display:none;"></div>
+    <div class="wz-hint" id="wz-hint-wayback_cdx" data-i18n="wz_wbf_hint">
+      Enter URLs and create a zone. Archiving frequency
+      will be fetched automatically from the Wayback Machine CDX index.
+    </div>
+    <div class="wz-zone-list" id="wz-zones-wayback_cdx"></div>
+  </div>
+</div>
+
+<script>
+function _wbfCreateZone() {
+  var url = prompt("URL eingeben:", "https://");
+  if (!url || !url.trim() || url === "https://") return;
+  var name = prompt("Name:", url.replace(/^https?:\/\//, "").split("/")[0]);
+  if (!name) return;
+
+  fetch("/api/watchzones", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: name,
+      zone_type: "wayback_cdx",
+      geometry: { type: "Point", coordinates: [0, 0] },
+      config: { url: url, days: 365 },
+    }),
+  }).then(r => r.json()).then(data => {
+    if (data.id) {
+      fetch("/api/watchzones").then(r => r.json()).then(zones => {
+        WZ._zones.length = 0;
+        WZ._zones.push(...zones);
+        WZ._renderAllZones();
+        wzSelectPanel("wayback_cdx");
+      });
+    } else {
+      alert(data.error || "Fehler beim Erstellen");
+    }
+  });
+}
+</script>

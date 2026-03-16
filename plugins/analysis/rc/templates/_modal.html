@@ -1,0 +1,422 @@
+<!-- ═══════════════════════════════════════════════════════════
+     ROLLING-CORRELATION OVERLAY
+═══════════════════════════════════════════════════════════ -->
+<style>
+#rc-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82);
+  display: none; align-items: center; justify-content: center;
+  z-index: 9500; padding: 16px; box-sizing: border-box;
+}
+#rc-dialog {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; width: 96vw; max-width: 1400px;
+  height: 85vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#rc-chart-wrap {
+  flex: 1; min-height: 0; padding: 12px 16px 0; overflow: hidden;
+}
+#rc-list-wrap {
+  overflow-y: auto; max-height: 240px; padding: 0 20px 12px;
+}
+.rc-phase { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.rc-phase:last-child { border-bottom: none; }
+.rc-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; color: #fff; }
+</style>
+
+<div id="rc-overlay">
+  <div id="rc-dialog">
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <h2 style="margin:0 0 3px;font-size:16px;font-weight:600;" data-i18n="analysis_rc_label">Rolling Correlation</h2>
+        <div id="rc-subtitle" style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:700px;"></div>
+      </div>
+      {% if 'trend_analysis' in ai_plugins_enabled %}
+      <button id="btn-rc-ai" style="flex-shrink:0;padding:6px 14px;border-radius:6px;border:1px solid rgba(139,92,246,.5);background:none;color:#a78bfa;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">
+        <svg viewBox="0 0 20 16" width="14" height="11" fill="currentColor" style="vertical-align:middle;margin-right:3px;"><text x="1" y="13" font-family="system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="0.5">AI</text></svg> <span data-i18n="an_rc_ai_btn">KI-Analyse</span>
+      </button>
+      {% endif %}
+      <button id="btn-rc-snap" style="flex-shrink:0;width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,12.5 5,7.5 8,9.5 11.5,4.5 14.5,6.5"/></svg>
+      </button>
+      <button id="btn-rc-close" style="flex-shrink:0;width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;">&times;</button>
+    </div>
+
+    <!-- Controls -->
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        <span data-i18n="an_rc_window_label">Fenster:</span>
+        <input id="rc-window" type="range" min="7" max="90" step="1" value="30"
+               style="width:120px;accent-color:var(--accent);">
+        <strong id="rc-window-val" style="min-width:26px;">30</strong>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;">
+        <span data-i18n="an_rc_pair_label">Paar:</span>
+        <select id="rc-pair-sel" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:12px;max-width:360px;"></select>
+      </label>
+    </div>
+
+    <!-- Chart -->
+    <div id="rc-chart-wrap">
+      <div style="position:relative;width:100%;height:100%;">
+        <canvas id="rc-canvas" style="width:100%;height:100%;"></canvas>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div id="rc-status" style="padding:6px 20px;font-size:11px;color:var(--muted);flex-shrink:0;"></div>
+
+    <!-- Phase list -->
+    <div id="rc-list-wrap">
+      <div id="rc-list" style="padding-top:8px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  let _rcChart = null;
+  let _lastRcData = null;
+  let _rcFixedKw = null;  // wenn über Kontextmenü geöffnet
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    return window.fmtDateOnly ? window.fmtDateOnly(iso) : (function() { const s = String(iso).slice(0,10).split('-'); return s.length===3 ? `${s[2]}.${s[1]}.${s[0].slice(2)}` : iso; })();
+  }
+
+  // ── Pearson-Korrelation ─────────────────────────────────────────
+  function pearson(xs, ys) {
+    let n = 0, sx = 0, sy = 0, sxy = 0, sx2 = 0, sy2 = 0;
+    for (let i = 0; i < xs.length; i++) {
+      if (xs[i] == null || ys[i] == null) continue;
+      n++; sx += xs[i]; sy += ys[i];
+      sxy += xs[i] * ys[i]; sx2 += xs[i] * xs[i]; sy2 += ys[i] * ys[i];
+    }
+    if (n < 3) return null;
+    const denom = Math.sqrt((n * sx2 - sx * sx) * (n * sy2 - sy * sy));
+    return denom < 1e-10 ? null : (n * sxy - sx * sy) / denom;
+  }
+
+  // ── Rolling Correlation berechnen ───────────────────────────────
+  function rollingCorrelation(valuesA, valuesB, window) {
+    const n = valuesA.length;
+    const result = new Array(n).fill(null);
+    const half = Math.floor(window / 2);
+    for (let i = half; i < n - half; i++) {
+      const xs = valuesA.slice(i - half, i - half + window);
+      const ys = valuesB.slice(i - half, i - half + window);
+      result[i] = pearson(xs, ys);
+    }
+    return result;
+  }
+
+  // ── Phasen erkennen ─────────────────────────────────────────────
+  function detectPhases(labels, corrs, threshold) {
+    const phases = [];
+    let phase = null;
+    for (let i = 0; i < corrs.length; i++) {
+      if (corrs[i] == null) { if (phase) { phases.push(phase); phase = null; } continue; }
+      const cat = corrs[i] >= threshold ? 'pos' : corrs[i] <= -threshold ? 'neg' : 'neutral';
+      if (!phase || phase.cat !== cat) {
+        if (phase) phases.push(phase);
+        phase = { cat, start: i, end: i, rSum: corrs[i], count: 1 };
+      } else {
+        phase.end = i; phase.rSum += corrs[i]; phase.count++;
+      }
+    }
+    if (phase) phases.push(phase);
+    return phases.map(p => ({
+      ...p,
+      startDate: labels[p.start],
+      endDate: labels[p.end],
+      avgR: p.rSum / p.count,
+      duration: p.end - p.start + 1,
+    }));
+  }
+
+  // ── Datasets aus Main-Chart sammeln ─────────────────────────────
+  function getSeriesFromChart() {
+    const mc = window._mainChart;
+    if (!mc || !mc.data) return null;
+    const labels = mc.data.labels;
+    const series = mc.data.datasets
+      .filter(d => !d._isEvent && !d._isBand && !d._isSunArc && d.data && d.data.length)
+      .map(d => ({ keyword: d.label, values: d.data.slice(), color: d.borderColor, kwId: d._kwId }));
+    return series.length >= 2 ? { labels, series } : null;
+  }
+
+  // ── Paare generieren ────────────────────────────────────────────
+  function buildPairs(series, fixedKw) {
+    const pairs = [];
+    if (fixedKw != null) {
+      const fixed = series.find(s => s.kwId === fixedKw);
+      if (!fixed) return pairs;
+      for (const s of series) {
+        if (s.kwId === fixedKw) continue;
+        pairs.push({ a: fixed, b: s, label: `${fixed.keyword}  ↔  ${s.keyword}` });
+      }
+    } else {
+      for (let i = 0; i < series.length; i++) {
+        for (let j = i + 1; j < series.length; j++) {
+          pairs.push({ a: series[i], b: series[j],
+                       label: `${series[i].keyword}  ↔  ${series[j].keyword}` });
+        }
+      }
+    }
+    return pairs;
+  }
+
+  // ── Chart rendern ───────────────────────────────────────────────
+  function renderRcChart(labels, datasets, pairLabel) {
+    if (_rcChart) { _rcChart.destroy(); _rcChart = null; }
+    const canvas = document.getElementById('rc-canvas');
+    canvas.style.display = 'block';
+
+    _rcChart = new Chart(canvas, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: datasets.length > 1, labels: { color: '#e2e4ef', font: { size: 12 } } },
+          annotation: {
+            annotations: {
+              zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(255,255,255,.25)', borderWidth: 1 },
+              posZone:  { type: 'box', yMin: 0.5, yMax: 1, backgroundColor: 'rgba(34,197,94,.06)', borderWidth: 0 },
+              negZone:  { type: 'box', yMin: -1, yMax: -0.5, backgroundColor: 'rgba(239,68,68,.06)', borderWidth: 0 },
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(20,20,30,.92)',
+            titleColor: '#e2e4ef', bodyColor: '#e2e4ef',
+            borderColor: 'rgba(255,255,255,.1)', borderWidth: 1,
+            callbacks: {
+              title: items => items.length ? fmtDate(labels[items[0].dataIndex]) : '',
+              label: item => `${item.dataset.label}: r = ${item.raw != null ? item.raw.toFixed(3) : '–'}`,
+            }
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: '#888', maxRotation: 45, autoSkip: true, maxTicksLimit: 28,
+                     callback: (_, i) => fmtDate(labels[i]) },
+            grid: { color: 'rgba(255,255,255,.06)' },
+          },
+          y: {
+            min: -1, max: 1,
+            ticks: { color: '#888', stepSize: 0.25 },
+            grid: { color: 'rgba(255,255,255,.06)' },
+          },
+        },
+      },
+    });
+  }
+
+  // ── Hauptberechnung ─────────────────────────────────────────────
+  function runRc() {
+    const statusEl = document.getElementById('rc-status');
+    const listEl = document.getElementById('rc-list');
+    const pairSel = document.getElementById('rc-pair-sel');
+
+    const data = getSeriesFromChart();
+    if (!data) {
+      statusEl.textContent = window.t('an_rc_min_kw2','Mindestens 2 Keywords erforderlich.');
+      listEl.innerHTML = ''; return;
+    }
+
+    const winSize = parseInt(document.getElementById('rc-window').value, 10);
+    const pairs = buildPairs(data.series, _rcFixedKw);
+    if (!pairs.length) {
+      statusEl.textContent = window.t('an_rc_no_pair','Kein gültiges Keyword-Paar verfügbar.');
+      listEl.innerHTML = ''; return;
+    }
+
+    // Pair-Selector befüllen
+    const selectedPairIdx = pairSel.value ? parseInt(pairSel.value, 10) : 0;
+    const pairIdx = Math.min(selectedPairIdx, pairs.length - 1);
+
+    // Alle Paare oder ausgewähltes Paar?
+    const showAll = pairSel.value === 'all';
+    const PAIR_COLORS = ['#38bdf8', '#a78bfa', '#fb923c', '#f87171', '#22c55e', '#fbbf24', '#e879f9', '#67e8f9'];
+
+    let chartDatasets;
+    let allPhases = [];
+
+    if (showAll || pairs.length === 1) {
+      // Alle Paare überlagert
+      chartDatasets = pairs.map((p, pi) => {
+        const corrs = rollingCorrelation(p.a.values, p.b.values, winSize);
+        const phases = detectPhases(data.labels, corrs, 0.5);
+        allPhases.push(...phases.map(ph => ({ ...ph, pair: p.label })));
+        return {
+          label: p.label,
+          data: corrs,
+          borderColor: PAIR_COLORS[pi % PAIR_COLORS.length],
+          backgroundColor: PAIR_COLORS[pi % PAIR_COLORS.length] + '22',
+          borderWidth: 1.8, tension: 0.3, pointRadius: 0, pointHoverRadius: 3, fill: false,
+        };
+      });
+    } else {
+      // Einzelnes Paar
+      const p = pairs[pairIdx];
+      const corrs = rollingCorrelation(p.a.values, p.b.values, winSize);
+      allPhases = detectPhases(data.labels, corrs, 0.5).map(ph => ({ ...ph, pair: p.label }));
+
+      // Gradient-Farbe basierend auf Korrelation
+      chartDatasets = [{
+        label: p.label,
+        data: corrs,
+        borderColor: '#38bdf8',
+        backgroundColor: '#38bdf822',
+        borderWidth: 2, tension: 0.3, pointRadius: 0, pointHoverRadius: 3,
+        fill: { target: 'origin', above: 'rgba(34,197,94,.12)', below: 'rgba(239,68,68,.12)' },
+        segment: {
+          borderColor: ctx => {
+            const v = ctx.p1.parsed.y;
+            if (v == null) return '#666';
+            return v > 0.5 ? '#22c55e' : v < -0.5 ? '#ef4444' : '#38bdf8';
+          },
+        },
+      }];
+    }
+
+    const subtitle = showAll
+      ? window.t('an_rc_all_pairs_window','Alle Paare · Fenster: ${w}').replace('${w}',winSize)
+      : window.t('an_rc_pair_window','${pair} · Fenster: ${w}').replace('${pair}',pairs[pairIdx]?.label||'').replace('${w}',winSize);
+    document.getElementById('rc-subtitle').textContent = subtitle;
+
+    renderRcChart(data.labels, chartDatasets, subtitle);
+
+    // Statistik
+    const validCorrs = chartDatasets.flatMap(d => d.data.filter(v => v != null));
+    const avgR = validCorrs.length ? (validCorrs.reduce((a, b) => a + b, 0) / validCorrs.length) : 0;
+
+    _lastRcData = { pairs, winSize, phases: allPhases, avgR, labels: data.labels, series: data.series };
+
+    statusEl.textContent =
+      window.t('an_rc_status','${n} Paar${pl} · Fenster: ${w} Datenpunkte · Ø r = ${r} · ${p} erkannte Phasen')
+        .replace('${n}',pairs.length).replace('${pl}',pairs.length!==1?'e':'').replace('${w}',winSize).replace('${r}',avgR.toFixed(3)).replace('${p}',allPhases.length);
+
+    // Phasen-Tabelle
+    if (!allPhases.length) {
+      listEl.innerHTML = `<p style="color:var(--muted);font-size:12px;padding:8px 0 4px;">${window.t('an_rc_no_phases','Keine ausgeprägten Korrelationsphasen erkannt.')}</p>`;
+      return;
+    }
+
+    // Sortieren: längste / stärkste zuerst
+    allPhases.sort((a, b) => Math.abs(b.avgR) - Math.abs(a.avgR));
+
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+      '<thead><tr style="text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;">' +
+      `<th style="padding:6px 8px;">${window.t('an_rc_th_phase','Phase')}</th><th style="padding:6px 8px;">${window.t('an_rc_th_pair','Paar')}</th>` +
+      `<th style="padding:6px 8px;">${window.t('an_rc_th_from','Von')}</th><th style="padding:6px 8px;">${window.t('an_rc_th_to','Bis')}</th>` +
+      `<th style="padding:6px 8px;">${window.t('an_rc_th_duration','Dauer')}</th><th style="padding:6px 8px;">${window.t('an_rc_th_avg_r','Ø r')}</th></tr></thead><tbody>`;
+
+    for (const ph of allPhases.slice(0, 30)) {
+      const catLabel = ph.cat === 'pos' ? window.t('an_rc_phase_pos','Positiv') : ph.cat === 'neg' ? window.t('an_rc_phase_neg','Negativ') : window.t('an_rc_phase_neutral','Neutral');
+      const catColor = ph.cat === 'pos' ? '#22c55e' : ph.cat === 'neg' ? '#ef4444' : '#888';
+      html += `<tr class="rc-phase">
+        <td style="padding:6px 8px;"><span class="rc-badge" style="background:${catColor};">${catLabel}</span></td>
+        <td style="padding:6px 8px;font-size:12px;">${ph.pair}</td>
+        <td style="padding:6px 8px;font-variant-numeric:tabular-nums;">${fmtDate(ph.startDate)}</td>
+        <td style="padding:6px 8px;font-variant-numeric:tabular-nums;">${fmtDate(ph.endDate)}</td>
+        <td style="padding:6px 8px;">${ph.duration} ${window.t('an_rc_pts','Pkt.')}</td>
+        <td style="padding:6px 8px;font-weight:600;color:${catColor};font-variant-numeric:tabular-nums;">${ph.avgR.toFixed(3)}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    listEl.innerHTML = html;
+  }
+
+  // ── Öffnen / Schließen ──────────────────────────────────────────
+  function openRc(kwId) {
+    _rcFixedKw = kwId ?? null;
+    const overlay = document.getElementById('rc-overlay');
+    const pairSel = document.getElementById('rc-pair-sel');
+
+    const data = getSeriesFromChart();
+    if (!data || data.series.length < 2) {
+      alert('Mindestens 2 aktive Keywords erforderlich.'); return;
+    }
+
+    const pairs = buildPairs(data.series, _rcFixedKw);
+    pairSel.innerHTML = (pairs.length > 1
+        ? `<option value="all">${window.t('an_rc_all_pairs','Alle Paare')}</option>` : '') +
+      pairs.map((p, i) => `<option value="${i}">${p.label}</option>`).join('');
+    if (pairs.length > 1) pairSel.value = '0';
+
+    overlay.style.display = 'flex';
+    runRc();
+  }
+
+  function closeRc() {
+    document.getElementById('rc-overlay').style.display = 'none';
+    if (_rcChart) { _rcChart.destroy(); _rcChart = null; }
+  }
+
+  window.openRcForKw = function(kwId) { openRc(kwId); };
+
+  // ── Event Listeners ─────────────────────────────────────────────
+  if (document.getElementById('btn-rolling-corr')) document.getElementById('btn-rolling-corr').addEventListener('click', () => openRc(null));
+  document.getElementById('btn-rc-close').addEventListener('click', closeRc);
+  document.getElementById('rc-overlay').addEventListener('click', e => {
+    if (e.target.id === 'rc-overlay') closeRc();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('rc-overlay').style.display === 'flex') closeRc();
+  });
+
+  document.getElementById('rc-window').addEventListener('input', e => {
+    document.getElementById('rc-window-val').textContent = e.target.value;
+    runRc();
+  });
+  document.getElementById('rc-pair-sel').addEventListener('change', () => runRc());
+
+  // Snapshot
+  document.getElementById('btn-rc-snap').addEventListener('click', () => {
+    if (!_rcChart) return;
+    const canvas = document.getElementById('rc-canvas');
+    const subtitle = document.getElementById('rc-subtitle').textContent;
+    if (typeof window.openAnalysisSnap === 'function') {
+      window.openAnalysisSnap('rolling_corr', canvas, subtitle,
+        { window: parseInt(document.getElementById('rc-window').value, 10) });
+    }
+  });
+
+  // KI-Analyse
+  if (document.getElementById('btn-rc-ai')) document.getElementById('btn-rc-ai').addEventListener('click', () => {
+    if (!_lastRcData || !_lastRcData.phases.length) {
+      alert(window.t('an_rc_no_phases_alert','Keine Korrelationsphasen vorhanden.')); return;
+    }
+    const series = window._collectSeries ? window._collectSeries(null) : [];
+    if (!series.length) { alert(window.t('an_rc_no_data','Keine aktiven Datenpunkte.')); return; }
+    const context = `${window.t('analysis_rc_label','Rolling Correlation')}: ${window.t('an_rc_window_label','Fenster:')} ${_lastRcData.winSize}, ${_lastRcData.pairs.length} Keyword-${window.t('an_rc_th_pair','Paar')}e, Ø r = ${_lastRcData.avgR.toFixed(3)}`;
+    const extras = {
+      rolling_correlation: {
+        window: _lastRcData.winSize,
+        avgR: _lastRcData.avgR.toFixed(3),
+        pairs: _lastRcData.pairs.map(p => p.label),
+        phases: _lastRcData.phases.slice(0, 25).map(ph => ({
+          pair: ph.pair,
+          cat: ph.cat === 'pos' ? window.t('an_rc_phase_pos','Positiv').toLowerCase() : ph.cat === 'neg' ? window.t('an_rc_phase_neg','Negativ').toLowerCase() : window.t('an_rc_phase_neutral','Neutral').toLowerCase(),
+          startDate: ph.startDate,
+          endDate: ph.endDate,
+          duration: ph.duration,
+          avgR: ph.avgR.toFixed(3),
+        }))
+      }
+    };
+    if (window._openAiWithContext) {
+      window._openAiWithContext(series, context, window.t('an_rc_ai_context','Rolling Correlation · KI-Analyse'), 'rc', extras);
+    }
+  });
+})();
+</script>
+

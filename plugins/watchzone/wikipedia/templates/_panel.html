@@ -1,0 +1,17 @@
+<div id="panel-wikipedia" class="wz-panel" style="display:none;">
+  <div class="wz-main-header">
+    <h2 data-i18n="wz_wiki_title">Wikipedia Monitoring</h2>
+    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_wiki_source">Source: Wikipedia / Wikimedia API</span>
+    <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="wzAddWikipedia()" data-i18n="wz_wiki_add_btn">
+      + Add Article
+    </button>
+    <p class="wz-panel-desc" data-i18n="wz_wiki_desc">Tracks edits and page views of Wikipedia articles. "Live" shows the number and scope of recent changes over the last 30 days.</p>
+  </div>
+  <div class="wz-main-body">
+    <div class="wz-hint" id="wz-hint-wikipedia" data-i18n="wz_wiki_hint">
+      Add Wikipedia articles whose changes should be monitored.
+      The article search uses the Wikipedia Search API for exact matches.
+    </div>
+    <div class="wz-zone-list" id="wz-zones-wikipedia"></div>
+  </div>
+</div>

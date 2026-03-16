@@ -1,0 +1,648 @@
+{% extends "base.html" %}
+
+{% block title %}Ereignisse – spectralQ{% endblock %}
+
+{% block head %}
+<style>
+  .color-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.15);
+    display: inline-block;
+    vertical-align: middle;
+  }
+  .events-subnav {
+    display: flex; gap: 0;
+    border-bottom: 2px solid var(--border); margin-bottom: 28px;
+  }
+  .events-subnav a {
+    padding: 10px 32px; font-size: 14px; font-weight: 600;
+    color: var(--muted); text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px; white-space: nowrap;
+    transition: color .12s, border-color .12s;
+  }
+  .events-subnav a:hover { color: var(--text); }
+  .events-subnav a.active { color: var(--text); border-bottom-color: var(--accent1); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+  <h1 style="margin:0;" data-i18n="nav_events">Ereignisse</h1>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+    <span style="font-size:11px;color:var(--muted);white-space:nowrap;" data-i18n="ev_lbl_project">Projekt:</span>
+    <select id="hdr-evt-project"
+            style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);
+                   background:var(--bg);color:var(--text);font-size:12px;max-width:220px;">
+      {% if current_user.is_superadmin %}<option value="" data-i18n="ev_all_projects">– Alle –</option>{% endif %}
+    </select>
+  </div>
+</div>
+
+<div class="events-subnav">
+  <a href="/events" class="active" data-i18n="ev_tab_manage">Verwalten</a>
+  <a href="/events/find" data-i18n="ev_tab_find">Meldungen finden</a>
+  <a href="/events/watchzones" data-i18n="ev_tab_watchzones">Watch Zones</a>
+</div>
+
+{% if not current_user.is_superadmin and user_project_count == 0 %}
+<div style="max-width:640px;margin:40px auto;text-align:center;">
+  <div style="padding:24px;background:rgba(124,92,191,.08);border:1px solid rgba(124,92,191,.25);border-radius:10px;">
+    <strong style="font-size:16px;color:var(--accent1);display:block;margin-bottom:8px;" data-i18n="kw_no_project_msg">Bitte zuerst ein Projekt anlegen.</strong>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;" data-i18n="kw_no_project_desc">Um mit der Analyse zu starten, wird ein Projekt benötigt. Dort werden alle Keywords und Ergebnisse organisiert.</p>
+    <a href="/projects" style="display:inline-block;padding:10px 24px;background:var(--accent1);color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;" data-i18n="kw_no_project_btn">Projekt anlegen</a>
+  </div>
+</div>
+{% else %}
+
+<p class="text-muted text-sm" style="margin-bottom:20px;" data-i18n="ev_desc">
+  Ereignisse werden im Analyse-Verlaufsdiagramm als vertikale Linien (Punkt-Ereignis)
+  oder eingefärbte Bereiche (Zeitraum) angezeigt.
+</p>
+
+<div style="margin-bottom:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+  <button class="btn btn-primary" id="btn-add" data-i18n="ev_btn_add">+ Neues Ereignis</button>
+  <div id="evt-bulk-bar" style="display:none;align-items:center;gap:8px;margin-left:4px;">
+    <span id="evt-bulk-count" style="font-size:12px;color:var(--muted);"></span>
+    <button class="btn btn-ghost btn-sm" id="btn-bulk-delete"
+            style="border-color:rgba(239,68,68,.5);color:#ef4444;font-size:12px;"
+            data-i18n="ev_btn_delete_sel">Ausgewählte löschen</button>
+  </div>
+  <input id="evt-search" type="search" data-i18n-placeholder="ev_search_ph" placeholder="Suchen …"
+         style="margin-left:auto;width:220px;font-size:13px;" />
+</div>
+
+<!-- Tabelle -->
+<div class="card" style="padding:0;overflow:hidden;">
+  <table id="evt-table">
+    <thead>
+      <tr>
+        <th style="width:36px;padding:8px 4px 8px 12px;">
+          <div style="position:relative;display:inline-block;">
+            <input type="checkbox" id="evt-select-all" style="cursor:pointer;"
+                   data-i18n-title="ev_select_all_title" title="Alle / Keine auswählen" />
+          </div>
+        </th>
+        <th data-i18n="ev_th_color">Farbe</th>
+        <th data-i18n="ev_th_title">Titel</th>
+        <th data-i18n="ev_th_start">Beginn</th>
+        <th data-i18n="ev_th_end">Ende</th>
+        <th data-i18n="ev_th_desc">Beschreibung</th>
+        <th style="width:140px;"></th>
+      </tr>
+    </thead>
+    <tbody id="evt-body">
+      <tr><td colspan="7" class="text-muted" style="text-align:center;padding:24px;" data-i18n="kw_loading">Lade…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div id="evt-modal" style="display:none;position:fixed;inset:0;background:#000a;z-index:500;align-items:center;justify-content:center;">
+  <div class="card" style="width:500px;max-height:90vh;overflow-y:auto;position:relative;">
+    <h2 id="modal-title" data-i18n="ev_modal_new_title">Neues Ereignis</h2>
+    <form id="evt-form" style="display:flex;flex-direction:column;gap:14px;margin-top:14px;">
+      <input type="hidden" id="evt-id" />
+
+      <div>
+        <label data-i18n="ev_lbl_title_req">Titel *</label>
+        <input id="evt-title" type="text" class="w-full" required
+               data-i18n-placeholder="ev_ph_title" placeholder="z.B. Produktlaunch, Pressemitteilung …" />
+      </div>
+
+      <div>
+        <label data-i18n="ev_lbl_desc_opt">Beschreibung (optional)</label>
+        <textarea id="evt-desc" class="w-full" rows="2"
+                  style="resize:vertical;font-family:inherit;"></textarea>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:flex-end;">
+        <div style="flex:1;">
+          <label data-i18n="ev_lbl_type">Typ</label>
+          <select id="evt-type" class="w-full">
+            <option value="point" data-i18n="ev_type_point">Punkt-Ereignis (vertikale Linie)</option>
+            <option value="range" data-i18n="ev_type_range">Zeitraum (eingefärbter Bereich)</option>
+          </select>
+        </div>
+        <div>
+          <label data-i18n="ev_lbl_color">Farbe</label>
+          <input id="evt-color" type="color" value="#f75f4f"
+                 style="height:36px;width:56px;padding:2px 3px;cursor:pointer;" />
+        </div>
+      </div>
+
+      <div>
+        <label id="lbl-start" data-i18n="ev_lbl_time_req">Zeitpunkt *</label>
+        <div style="display:flex;gap:8px;">
+          <input id="evt-start-d" type="date" style="flex:1;" required />
+          <input id="evt-start-t" type="time" style="width:110px;" />
+        </div>
+      </div>
+
+      <div id="end-row" style="display:none;">
+        <label data-i18n="ev_lbl_end_req">Ende *</label>
+        <div style="display:flex;gap:8px;">
+          <input id="evt-end-d" type="date" style="flex:1;" />
+          <input id="evt-end-t" type="time" style="width:110px;" />
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+        <button type="button" class="btn btn-ghost" id="evt-cancel" data-i18n="kw_btn_cancel">Abbrechen</button>
+        <button type="submit" class="btn btn-primary" data-i18n="kw_btn_save">Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+window._mergeI18n({
+  de: {
+    ev_lbl_project: 'Projekt:',
+    ev_all_projects: '\u2013 Alle \u2013',
+    ev_tab_manage: 'Verwalten',
+    ev_tab_find: 'Meldungen finden',
+    ev_tab_watchzones: 'Watch Zones',
+    ev_desc: 'Ereignisse werden im Analyse-Verlaufsdiagramm als vertikale Linien (Punkt-Ereignis) oder eingef\u00e4rbte Bereiche (Zeitraum) angezeigt.',
+    ev_btn_add: '+ Neues Ereignis',
+    ev_btn_delete_sel: 'Ausgew\u00e4hlte l\u00f6schen',
+    ev_search_ph: 'Suchen \u2026',
+    ev_select_all_title: 'Alle / Keine ausw\u00e4hlen',
+    ev_th_color: 'Farbe',
+    ev_th_title: 'Titel',
+    ev_th_start: 'Beginn',
+    ev_th_end: 'Ende',
+    ev_th_desc: 'Beschreibung',
+    ev_modal_new_title: 'Neues Ereignis',
+    ev_modal_edit_title: 'Ereignis bearbeiten',
+    ev_lbl_title_req: 'Titel *',
+    ev_ph_title: 'z.B. Produktlaunch, Pressemitteilung \u2026',
+    ev_lbl_desc_opt: 'Beschreibung (optional)',
+    ev_lbl_type: 'Typ',
+    ev_type_point: 'Punkt-Ereignis (vertikale Linie)',
+    ev_type_range: 'Zeitraum (eingef\u00e4rbter Bereich)',
+    ev_lbl_color: 'Farbe',
+    ev_lbl_time_req: 'Zeitpunkt *',
+    ev_lbl_start_req: 'Beginn *',
+    ev_lbl_end_req: 'Ende *',
+    ev_no_events_proj: 'Keine Ereignisse f\u00fcr dieses Projekt.',
+    ev_no_events: 'Noch keine Ereignisse vorhanden.',
+    ev_sel_count: '{n} ausgew\u00e4hlt',
+    ev_confirm_delete_sel: '{n} Ereignis{s} wirklich l\u00f6schen?',
+    ev_deleting: 'L\u00f6sche \u2026',
+    ev_deleted_ok: '{ok} Ereignis{s} gel\u00f6scht',
+    ev_deleted_fail: '{ok} gel\u00f6scht, {fail} fehlgeschlagen',
+    ev_confirm_delete: '"{title}" wirklich l\u00f6schen?',
+    ev_toast_deleted: '"{title}" gel\u00f6scht',
+    ev_toast_saved: 'Gespeichert',
+    ev_toast_created: 'Ereignis erstellt',
+    ev_no_project: 'Bitte oben rechts ein Projekt ausw\u00e4hlen.',
+    ev_edit_tip: 'Bearbeiten',
+    ev_delete_tip: 'L\u00f6schen',
+    ev_load_err: 'Ladefehler: ',
+  },
+  en: {
+    ev_lbl_project: 'Project:',
+    ev_all_projects: '\u2013 All \u2013',
+    ev_tab_manage: 'Manage',
+    ev_tab_find: 'Find news',
+    ev_tab_watchzones: 'Watch Zones',
+    ev_desc: 'Events are shown in the analysis timeline as vertical lines (point event) or coloured areas (time range).',
+    ev_btn_add: '+ New event',
+    ev_btn_delete_sel: 'Delete selected',
+    ev_search_ph: 'Search \u2026',
+    ev_select_all_title: 'Select all / none',
+    ev_th_color: 'Colour',
+    ev_th_title: 'Title',
+    ev_th_start: 'Start',
+    ev_th_end: 'End',
+    ev_th_desc: 'Description',
+    ev_modal_new_title: 'New event',
+    ev_modal_edit_title: 'Edit event',
+    ev_lbl_title_req: 'Title *',
+    ev_ph_title: 'e.g. Product launch, Press release \u2026',
+    ev_lbl_desc_opt: 'Description (optional)',
+    ev_lbl_type: 'Type',
+    ev_type_point: 'Point event (vertical line)',
+    ev_type_range: 'Time range (coloured area)',
+    ev_lbl_color: 'Colour',
+    ev_lbl_time_req: 'Time *',
+    ev_lbl_start_req: 'Start *',
+    ev_lbl_end_req: 'End *',
+    ev_no_events_proj: 'No events for this project.',
+    ev_no_events: 'No events yet.',
+    ev_sel_count: '{n} selected',
+    ev_confirm_delete_sel: 'Really delete {n} event{s}?',
+    ev_deleting: 'Deleting \u2026',
+    ev_deleted_ok: '{ok} event{s} deleted',
+    ev_deleted_fail: '{ok} deleted, {fail} failed',
+    ev_confirm_delete: 'Really delete "{title}"?',
+    ev_toast_deleted: '"{title}" deleted',
+    ev_toast_saved: 'Saved',
+    ev_toast_created: 'Event created',
+    ev_no_project: 'Please select a project in the top right.',
+    ev_edit_tip: 'Edit',
+    ev_delete_tip: 'Delete',
+    ev_load_err: 'Load error: ',
+  },
+  fr: {
+    ev_lbl_project: 'Projet\u00a0:',
+    ev_all_projects: '\u2013 Tous \u2013',
+    ev_tab_manage: 'G\u00e9rer',
+    ev_tab_find: 'Trouver des actualit\u00e9s',
+    ev_tab_watchzones: 'Zones de surveillance',
+    ev_desc: 'Les \u00e9v\u00e9nements apparaissent dans le diagramme d\u2019analyse comme des lignes verticales (\u00e9v\u00e9nement ponctuel) ou des zones color\u00e9es (p\u00e9riode).',
+    ev_btn_add: '+ Nouvel \u00e9v\u00e9nement',
+    ev_btn_delete_sel: 'Supprimer la s\u00e9lection',
+    ev_search_ph: 'Rechercher \u2026',
+    ev_select_all_title: 'Tout s\u00e9lectionner / d\u00e9s\u00e9lectionner',
+    ev_th_color: 'Couleur',
+    ev_th_title: 'Titre',
+    ev_th_start: 'D\u00e9but',
+    ev_th_end: 'Fin',
+    ev_th_desc: 'Description',
+    ev_modal_new_title: 'Nouvel \u00e9v\u00e9nement',
+    ev_modal_edit_title: 'Modifier l\u2019\u00e9v\u00e9nement',
+    ev_lbl_title_req: 'Titre *',
+    ev_ph_title: 'ex. Lancement produit, Communiqu\u00e9 de presse \u2026',
+    ev_lbl_desc_opt: 'Description (optionnel)',
+    ev_lbl_type: 'Type',
+    ev_type_point: '\u00c9v\u00e9nement ponctuel (ligne verticale)',
+    ev_type_range: 'P\u00e9riode (zone color\u00e9e)',
+    ev_lbl_color: 'Couleur',
+    ev_lbl_time_req: 'Moment *',
+    ev_lbl_start_req: 'D\u00e9but *',
+    ev_lbl_end_req: 'Fin *',
+    ev_no_events_proj: 'Aucun \u00e9v\u00e9nement pour ce projet.',
+    ev_no_events: 'Aucun \u00e9v\u00e9nement pour l\u2019instant.',
+    ev_sel_count: '{n} s\u00e9lectionn\u00e9{s}',
+    ev_confirm_delete_sel: 'Supprimer vraiment {n} \u00e9v\u00e9nement{s}\u00a0?',
+    ev_deleting: 'Suppression \u2026',
+    ev_deleted_ok: '{ok} \u00e9v\u00e9nement{s} supprim\u00e9{s}',
+    ev_deleted_fail: '{ok} supprim\u00e9{s}, {fail} \u00e9chou\u00e9{s}',
+    ev_confirm_delete: 'Supprimer vraiment \u00ab\u00a0{title}\u00a0\u00bb\u00a0?',
+    ev_toast_deleted: '\u00ab\u00a0{title}\u00a0\u00bb supprim\u00e9',
+    ev_toast_saved: 'Enregistr\u00e9',
+    ev_toast_created: '\u00c9v\u00e9nement cr\u00e9\u00e9',
+    ev_no_project: 'Veuillez s\u00e9lectionner un projet en haut \u00e0 droite.',
+    ev_edit_tip: 'Modifier',
+    ev_delete_tip: 'Supprimer',
+    ev_load_err: 'Erreur de chargement\u00a0: ',
+  },
+  es: {
+    ev_lbl_project: 'Proyecto:',
+    ev_all_projects: '\u2013 Todos \u2013',
+    ev_tab_manage: 'Gestionar',
+    ev_tab_find: 'Buscar noticias',
+    ev_tab_watchzones: 'Zonas de vigilancia',
+    ev_desc: 'Los eventos aparecen en el diagrama de an\u00e1lisis como l\u00edneas verticales (evento puntual) o \u00e1reas coloreadas (per\u00edodo).',
+    ev_btn_add: '+ Nuevo evento',
+    ev_btn_delete_sel: 'Eliminar selecci\u00f3n',
+    ev_search_ph: 'Buscar \u2026',
+    ev_select_all_title: 'Seleccionar todo / ninguno',
+    ev_th_color: 'Color',
+    ev_th_title: 'T\u00edtulo',
+    ev_th_start: 'Inicio',
+    ev_th_end: 'Fin',
+    ev_th_desc: 'Descripci\u00f3n',
+    ev_modal_new_title: 'Nuevo evento',
+    ev_modal_edit_title: 'Editar evento',
+    ev_lbl_title_req: 'T\u00edtulo *',
+    ev_ph_title: 'ej. Lanzamiento de producto, Nota de prensa \u2026',
+    ev_lbl_desc_opt: 'Descripci\u00f3n (opcional)',
+    ev_lbl_type: 'Tipo',
+    ev_type_point: 'Evento puntual (l\u00ednea vertical)',
+    ev_type_range: 'Per\u00edodo (zona coloreada)',
+    ev_lbl_color: 'Color',
+    ev_lbl_time_req: 'Momento *',
+    ev_lbl_start_req: 'Inicio *',
+    ev_lbl_end_req: 'Fin *',
+    ev_no_events_proj: 'No hay eventos para este proyecto.',
+    ev_no_events: 'A\u00fan no hay eventos.',
+    ev_sel_count: '{n} seleccionado{s}',
+    ev_confirm_delete_sel: '\u00bfEliminar realmente {n} evento{s}?',
+    ev_deleting: 'Eliminando \u2026',
+    ev_deleted_ok: '{ok} evento{s} eliminado{s}',
+    ev_deleted_fail: '{ok} eliminado{s}, {fail} fallido{s}',
+    ev_confirm_delete: '\u00bfEliminar realmente \u00ab{title}\u00bb?',
+    ev_toast_deleted: '\u00ab{title}\u00bb eliminado',
+    ev_toast_saved: 'Guardado',
+    ev_toast_created: 'Evento creado',
+    ev_no_project: 'Por favor selecciona un proyecto arriba a la derecha.',
+    ev_edit_tip: 'Editar',
+    ev_delete_tip: 'Eliminar',
+    ev_load_err: 'Error al cargar: ',
+  },
+});
+window._applyI18n();
+
+  let allEvents = [];
+  let allProjects = [];
+
+  const _isSuperadmin = {{ 'true' if current_user.is_superadmin else 'false' }};
+
+  function getSelectedProjectId() {
+    return document.getElementById("hdr-evt-project").value || "";
+  }
+
+  async function loadProjects() {
+    try {
+      allProjects = await api("/api/projects");
+      const hdr = document.getElementById("hdr-evt-project");
+      const saved = localStorage.getItem("evt_project_id") || "";
+      const noProj = _isSuperadmin ? `<option value="">${window.t('ev_all_projects','\u2013 Alle \u2013')}</option>` : '';
+      hdr.innerHTML = noProj +
+        allProjects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+      if (saved) hdr.value = saved;
+      if (!hdr.value && allProjects.length) hdr.value = String(allProjects[0].id);
+    } catch(_) {}
+  }
+
+  document.getElementById("hdr-evt-project").addEventListener("change", () => {
+    localStorage.setItem("evt_project_id", getSelectedProjectId());
+    renderTable();
+  });
+
+  async function loadEvents() {
+    try {
+      allEvents = await api("/api/events");
+      renderTable();
+    } catch(e) {
+      toast(window.t('ev_load_err','Ladefehler: ') + e.message, "error");
+    }
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById("evt-body");
+    const pid   = getSelectedProjectId();
+    const filtered = pid
+      ? allEvents.filter(e => String(e.project_id) === String(pid))
+      : allEvents;
+
+    document.getElementById("evt-select-all").checked = false;
+    updateBulkBar();
+
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-muted" style="text-align:center;padding:32px;">
+        ${allEvents.length
+          ? window.t('ev_no_events_proj','Keine Ereignisse für dieses Projekt.')
+          : window.t('ev_no_events','Noch keine Ereignisse vorhanden.')}
+      </td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filtered.map(evt => {
+      return `
+        <tr data-evt-id="${evt.id}">
+          <td style="padding:8px 4px 8px 12px;">
+            <input type="checkbox" class="evt-cb" value="${evt.id}" style="cursor:pointer;" />
+          </td>
+          <td>
+            <span class="color-dot" style="background:${esc(evt.color)};"></span>
+          </td>
+          <td><strong>${esc(evt.title)}</strong></td>
+          <td class="text-sm">${fmtDt(evt.start_dt)}</td>
+          <td class="text-sm text-muted">${evt.end_dt ? fmtDt(evt.end_dt) : '\u2013'}</td>
+          <td class="text-sm text-muted" style="max-width:280px;overflow:hidden;
+              text-overflow:ellipsis;white-space:nowrap;"
+              title="${esc(evt.description)}">${linkify(evt.description)}</td>
+          <td>
+            <div style="display:flex;gap:4px;">
+              <button data-tip="${window.t('ev_edit_tip','Bearbeiten')}" style="cursor:pointer;background:none;border:none;color:var(--muted);padding:5px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;transition:background .1s,color .1s;" onclick="openEdit(${evt.id})" onmouseover="this.style.background='var(--surface2)';this.style.color='var(--text)'" onmouseout="this.style.background='none';this.style.color='var(--muted)'"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5l2.5 2.5-7.5 7.5H3.5V10L11 2.5z"/></svg></button>
+              <button data-tip="${window.t('ev_delete_tip','Löschen')}" style="cursor:pointer;background:none;border:none;color:rgba(239,68,68,.6);padding:5px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;transition:background .1s,color .1s;" onclick="deleteEvt(${evt.id})" onmouseover="this.style.background='rgba(239,68,68,.1)';this.style.color='#ef4444'" onmouseout="this.style.background='none';this.style.color='rgba(239,68,68,.6)'"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,4.5 13,4.5"/><path d="M6.5 4.5V3h3v1.5"/><rect x="4.5" y="4.5" width="7" height="9" rx="1"/><line x1="6.5" y1="7" x2="6.5" y2="11"/><line x1="9.5" y1="7" x2="9.5" y2="11"/></svg></button>
+            </div>
+          </td>
+        </tr>`;
+    }).join("");
+
+    tbody.querySelectorAll(".evt-cb").forEach(cb => cb.addEventListener("change", updateBulkBar));
+  }
+
+  function getCheckedIds() {
+    return [...document.querySelectorAll("#evt-body .evt-cb:checked")].map(cb => parseInt(cb.value));
+  }
+
+  function updateBulkBar() {
+    const checked = getCheckedIds();
+    const bar     = document.getElementById("evt-bulk-bar");
+    const allCb   = document.getElementById("evt-select-all");
+    const total   = document.querySelectorAll("#evt-body .evt-cb").length;
+
+    bar.style.display = checked.length > 0 ? "flex" : "none";
+    document.getElementById("evt-bulk-count").textContent =
+      window.t('ev_sel_count','{n} ausgewählt').replace('{n}', checked.length);
+    allCb.checked       = total > 0 && checked.length === total;
+    allCb.indeterminate = checked.length > 0 && checked.length < total;
+  }
+
+  document.getElementById("evt-select-all").addEventListener("change", function() {
+    const checked = this.checked;
+    document.querySelectorAll("#evt-body .evt-cb").forEach(cb => { cb.checked = checked; });
+    updateBulkBar();
+  });
+
+  document.getElementById("btn-bulk-delete").addEventListener("click", async () => {
+    const ids = getCheckedIds();
+    if (!ids.length) return;
+    const n = ids.length, s = n !== 1 ? 's' : '';
+    if (!confirm(window.t('ev_confirm_delete_sel','{n} Ereignisse wirklich löschen?')
+          .replace('{n}', n).replace('{s}', s))) return;
+
+    const btn = document.getElementById("btn-bulk-delete");
+    btn.disabled = true;
+    btn.textContent = window.t('ev_deleting','Lösche …');
+    let ok = 0, fail = 0;
+    for (const id of ids) {
+      try { await api(`/api/events/${id}`, { method: "DELETE" }); ok++; }
+      catch (_) { fail++; }
+    }
+    btn.disabled = false;
+    btn.textContent = window.t('ev_btn_delete_sel','Ausgewählte löschen');
+    const oks = ok !== 1 ? 's' : '';
+    toast(fail
+      ? window.t('ev_deleted_fail','{ok} gelöscht, {fail} fehlgeschlagen').replace('{ok}',ok).replace('{fail}',fail)
+      : window.t('ev_deleted_ok','{ok} Ereignisse gelöscht').replace('{ok}',ok).replace('{s}',oks),
+      fail ? "error" : "ok");
+    await loadEvents();
+  });
+
+  function linkify(text) {
+    if (!text) return "\u2013";
+    const urlRe = /(https?:\/\/[^\s]+)/g;
+    return text.split(urlRe).map((part, i) => {
+      if (i % 2 === 1) {
+        const safeHref = part.replace(/"/g, "%22");
+        return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer"
+                   style="color:var(--accent,#4f8ef7);text-decoration:underline;"
+                   onclick="event.stopPropagation()">${esc(part)}</a>`;
+      }
+      return esc(part);
+    }).join("");
+  }
+
+  function fmtDt(s) {
+    if (!s) return "\u2013";
+    if (s.includes("T")) return window.fmtDate ? window.fmtDate(s) : new Date(s).toLocaleString("de-DE", {dateStyle:"medium", timeStyle:"short"});
+    return window.fmtDateOnly ? window.fmtDateOnly(s + "T00:00") : new Date(s + "T00:00").toLocaleDateString("de-DE", {dateStyle:"medium"});
+  }
+
+  document.getElementById("evt-type").addEventListener("change", syncType);
+  function syncType() {
+    const isRange = document.getElementById("evt-type").value === "range";
+    document.getElementById("end-row").style.display = isRange ? "block" : "none";
+    document.getElementById("lbl-start").textContent = isRange
+      ? window.t('ev_lbl_start_req','Beginn *')
+      : window.t('ev_lbl_time_req','Zeitpunkt *');
+  }
+
+  document.getElementById("btn-add").addEventListener("click", () => {
+    document.getElementById("evt-id").value = "";
+    document.getElementById("modal-title").textContent = window.t('ev_modal_new_title','Neues Ereignis');
+    document.getElementById("evt-title").value   = "";
+    document.getElementById("evt-desc").value    = "";
+    document.getElementById("evt-type").value    = "point";
+    document.getElementById("evt-color").value   = "#f75f4f";
+    setDt("evt-start", "");
+    setDt("evt-end", "");
+    syncType();
+    showModal("evt-modal");
+  });
+
+  function openEdit(id) {
+    const evt = allEvents.find(e => e.id === id);
+    if (!evt) return;
+    document.getElementById("evt-id").value = evt.id;
+    document.getElementById("modal-title").textContent = window.t('ev_modal_edit_title','Ereignis bearbeiten');
+    document.getElementById("evt-title").value   = evt.title;
+    document.getElementById("evt-desc").value    = evt.description || "";
+    document.getElementById("evt-type").value    = evt.event_type;
+    document.getElementById("evt-color").value   = evt.color || "#f75f4f";
+    setDt("evt-start", evt.start_dt || "");
+    setDt("evt-end", evt.end_dt || "");
+    syncType();
+    showModal("evt-modal");
+  }
+
+  function getDt(idBase) {
+    const d = document.getElementById(idBase + "-d").value;
+    const t = document.getElementById(idBase + "-t").value;
+    if (!d) return "";
+    return t ? `${d}T${t}` : d;
+  }
+  function setDt(idBase, iso) {
+    if (!iso) {
+      document.getElementById(idBase + "-d").value = "";
+      document.getElementById(idBase + "-t").value = "";
+      return;
+    }
+    const hasTime = iso.includes("T");
+    document.getElementById(idBase + "-d").value = iso.slice(0, 10);
+    document.getElementById(idBase + "-t").value = hasTime ? iso.slice(11, 16) : "";
+  }
+
+  document.getElementById("evt-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const id        = document.getElementById("evt-id").value;
+    const eventType = document.getElementById("evt-type").value;
+    const endVal    = getDt("evt-end");
+
+    const projVal = getSelectedProjectId();
+    if (!projVal && !_isSuperadmin) {
+      toast(window.t('ev_no_project','Bitte oben rechts ein Projekt auswählen.'), "error");
+      return;
+    }
+    const body = {
+      title:       document.getElementById("evt-title").value.trim(),
+      description: document.getElementById("evt-desc").value.trim(),
+      event_type:  eventType,
+      color:       document.getElementById("evt-color").value,
+      start_dt:    getDt("evt-start"),
+      end_dt:      eventType === "range" ? (endVal || null) : null,
+      project_id:  projVal ? parseInt(projVal) : null,
+    };
+
+    try {
+      if (id) {
+        await api(`/api/events/${id}`, { method: "PUT", body: JSON.stringify(body) });
+        toast(window.t('ev_toast_saved','Gespeichert'), "ok");
+      } else {
+        await api("/api/events", { method: "POST", body: JSON.stringify(body) });
+        toast(window.t('ev_toast_created','Ereignis erstellt'), "ok");
+      }
+      hideModal("evt-modal");
+      await loadEvents();
+    } catch(e) {
+      toast("Fehler: " + e.message, "error");
+    }
+  });
+
+  async function deleteEvt(id) {
+    const evt = allEvents.find(e => e.id === id);
+    if (!evt) return;
+    if (!confirm(window.t('ev_confirm_delete','"{title}" wirklich löschen?').replace('{title}', evt.title))) return;
+    try {
+      await api(`/api/events/${id}`, { method: "DELETE" });
+      toast(window.t('ev_toast_deleted','"{title}" gelöscht').replace('{title}', evt.title), "ok");
+      await loadEvents();
+    } catch(e) {
+      toast("Fehler: " + e.message, "error");
+    }
+  }
+
+  document.getElementById("evt-cancel").addEventListener("click", () => hideModal("evt-modal"));
+  document.getElementById("evt-modal").addEventListener("click", e => {
+    if (e.target.id === "evt-modal") hideModal("evt-modal");
+  });
+
+  function showModal(id) { document.getElementById(id).style.display = "flex"; }
+  function hideModal(id) { document.getElementById(id).style.display = "none"; }
+
+  function esc(s) {
+    return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;")
+                          .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  // Settings abwarten, damit Datumsformat korrekt ist
+  (window._vtSettingsReady || Promise.resolve()).then(() => {
+    loadProjects().then(() => loadEvents());
+  });
+
+  function initFromUrl() {
+    const params  = new URLSearchParams(location.search);
+    const startDt = params.get("start_dt");
+    if (!startDt) return;
+
+    const type  = params.get("type") || "point";
+    const endDt = params.get("end_dt") || "";
+    const title = params.get("title") || "";
+    const desc  = params.get("desc") || "";
+
+    document.getElementById("evt-id").value            = "";
+    document.getElementById("modal-title").textContent = window.t('ev_modal_new_title','Neues Ereignis');
+    document.getElementById("evt-title").value         = title;
+    document.getElementById("evt-desc").value          = desc;
+    document.getElementById("evt-type").value          = type;
+    document.getElementById("evt-color").value         = "#f75f4f";
+    setDt("evt-start", startDt);
+    setDt("evt-end", endDt || "");
+    syncType();
+    showModal("evt-modal");
+    document.getElementById("evt-title").focus();
+    history.replaceState({}, "", "/events");
+  }
+
+  initFromUrl();
+
+  document.getElementById("evt-search").addEventListener("input", function() {
+    const q = this.value.trim().toLowerCase();
+    document.querySelectorAll("#evt-body tr[data-evt-id]").forEach(row => {
+      row.style.display = q === "" || row.textContent.toLowerCase().includes(q) ? "" : "none";
+    });
+  });
+
+</script>
+{% endblock %}

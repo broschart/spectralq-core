@@ -1,0 +1,400 @@
+<!-- ═══════════════════════════════════════════════════════════
+     FORECASTING OVERLAY
+═══════════════════════════════════════════════════════════ -->
+<style>
+#fc-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82);
+  display: none; align-items: center; justify-content: center;
+  z-index: 9500; padding: 16px; box-sizing: border-box;
+}
+#fc-dialog {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; width: 96vw; max-width: 1400px;
+  height: 85vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#fc-chart-wrap {
+  flex: 1; min-height: 0; padding: 12px 16px 0; overflow: hidden;
+}
+#fc-info-wrap {
+  overflow-y: auto; max-height: 200px; padding: 0 20px 12px;
+}
+</style>
+
+<div id="fc-overlay">
+  <div id="fc-dialog">
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <h2 style="margin:0 0 3px;font-size:16px;font-weight:600;" data-i18n="analysis_forecast_label">Forecasting</h2>
+        <div id="fc-subtitle" style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:700px;"></div>
+      </div>
+      {% if 'trend_analysis' in ai_plugins_enabled %}
+      <button id="btn-fc-ai" style="flex-shrink:0;padding:6px 14px;border-radius:6px;border:1px solid rgba(139,92,246,.5);background:none;color:#a78bfa;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">
+        <svg viewBox="0 0 20 16" width="14" height="11" fill="currentColor" style="vertical-align:middle;margin-right:3px;"><text x="1" y="13" font-family="system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="0.5">AI</text></svg> <span data-i18n="an_fc_ai_btn">KI-Analyse</span>
+      </button>
+      {% endif %}
+      <button id="btn-fc-snap" style="flex-shrink:0;width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,12.5 5,7.5 8,9.5 11.5,4.5 14.5,6.5"/></svg>
+      </button>
+      <button id="btn-fc-close" style="flex-shrink:0;width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;">&times;</button>
+    </div>
+
+    <!-- Controls -->
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;">
+        <span data-i18n="an_fc_model_label">Modell:</span>
+        <select id="fc-model" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:12px;">
+          <option value="prophet">Prophet</option>
+          <option value="arima">ARIMA</option>
+        </select>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        <span data-i18n="an_fc_horizon_label">Horizont:</span>
+        <input id="fc-horizon" type="range" min="7" max="180" step="1" value="30"
+               style="width:120px;accent-color:var(--accent);">
+        <strong id="fc-horizon-val" style="min-width:32px;">30</strong>
+      </label>
+      <label id="fc-kw-wrap" style="display:flex;align-items:center;gap:6px;font-size:12px;">
+        <span data-i18n="an_fc_keyword_label">Keyword:</span>
+        <select id="fc-kw-sel" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:12px;max-width:260px;"></select>
+      </label>
+      <button id="btn-fc-run" class="btn btn-ghost btn-sm"
+              style="border-color:rgba(34,197,94,.5);color:#22c55e;font-weight:600;padding:5px 16px;"
+              data-i18n="an_fc_run">
+        Berechnen
+      </button>
+    </div>
+
+    <!-- Chart -->
+    <div id="fc-chart-wrap">
+      <div style="position:relative;width:100%;height:100%;">
+        <canvas id="fc-canvas" style="width:100%;height:100%;"></canvas>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div id="fc-status" style="padding:6px 20px;font-size:11px;color:var(--muted);flex-shrink:0;"></div>
+
+    <!-- Info -->
+    <div id="fc-info-wrap">
+      <div id="fc-info" style="padding-top:8px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  let _fcChart = null;
+  let _lastFcData = null;
+  let _fcFixedKw = null;
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    return window.fmtDateOnly ? window.fmtDateOnly(iso) : (function() { const s = String(iso).slice(0,10).split('-'); return s.length===3 ? `${s[2]}.${s[1]}.${s[0].slice(2)}` : iso; })();
+  }
+
+  // ── Keyword-Daten aus rawData holen ─────────────────────────────
+  function getKwData(kwId) {
+    const mc = window._mainChart;
+    if (!mc || !mc.data) return null;
+
+    // Finde das Dataset im Chart
+    const ds = mc.data.datasets.find(d => d._kwId === kwId && !d._isEvent && !d._isBand && !d._isSunArc);
+    if (!ds) return null;
+
+    const labels = mc.data.labels;
+    const data = [];
+    for (let i = 0; i < labels.length; i++) {
+      if (ds.data[i] != null) {
+        data.push({ date: labels[i], value: ds.data[i] });
+      }
+    }
+    return { keyword: ds.label, color: ds.borderColor, data, kwId };
+  }
+
+  function getAvailableKws() {
+    const mc = window._mainChart;
+    if (!mc || !mc.data) return [];
+    return mc.data.datasets
+      .filter(d => !d._isEvent && !d._isBand && !d._isSunArc && d.data && d.data.length)
+      .map(d => ({ kwId: d._kwId, keyword: d.label, color: d.borderColor }));
+  }
+
+  // ── Chart rendern ───────────────────────────────────────────────
+  function renderFcChart(histLabels, histValues, histColor, fcLabels, fcValues, fcLower, fcUpper, modelName) {
+    if (_fcChart) { _fcChart.destroy(); _fcChart = null; }
+    const canvas = document.getElementById('fc-canvas');
+    canvas.style.display = 'block';
+
+    // Kombinierte Labels
+    const allLabels = [...histLabels, ...fcLabels];
+    const histData = [...histValues, ...new Array(fcLabels.length).fill(null)];
+    const fcData = [...new Array(histLabels.length - 1).fill(null), histValues[histValues.length - 1], ...fcValues];
+    const lowerData = [...new Array(histLabels.length - 1).fill(null), histValues[histValues.length - 1], ...fcLower];
+    const upperData = [...new Array(histLabels.length - 1).fill(null), histValues[histValues.length - 1], ...fcUpper];
+
+    _fcChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: allLabels,
+        datasets: [
+          {
+            label: window.t('an_fc_hist','Historisch'),
+            data: histData,
+            borderColor: histColor,
+            backgroundColor: histColor + '22',
+            borderWidth: 1.8, tension: 0.3, pointRadius: 0, pointHoverRadius: 3, fill: false,
+          },
+          {
+            label: window.t('an_fc_forecast','Prognose (${m})').replace('${m}',modelName),
+            data: fcData,
+            borderColor: '#22c55e',
+            backgroundColor: '#22c55e22',
+            borderWidth: 2, borderDash: [6, 3], tension: 0.3, pointRadius: 0, pointHoverRadius: 3, fill: false,
+          },
+          {
+            label: window.t('an_fc_conf_upper','Konfidenz oben'),
+            data: upperData,
+            borderColor: 'transparent',
+            backgroundColor: 'rgba(34,197,94,.1)',
+            borderWidth: 0, tension: 0.3, pointRadius: 0, fill: '+1',
+          },
+          {
+            label: window.t('an_fc_conf_lower','Konfidenz unten'),
+            data: lowerData,
+            borderColor: 'transparent',
+            backgroundColor: 'rgba(34,197,94,.1)',
+            borderWidth: 0, tension: 0.3, pointRadius: 0, fill: '-1',
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { labels: { color: '#e2e4ef', font: { size: 12 }, filter: item => !item.text.startsWith(window.t('an_fc_conf_upper','Konfidenz').split(' ')[0]) } },
+          annotation: {
+            annotations: {
+              fcStart: {
+                type: 'line',
+                xMin: histLabels.length - 1, xMax: histLabels.length - 1,
+                borderColor: 'rgba(34,197,94,.5)', borderWidth: 1.5, borderDash: [4, 3],
+                label: {
+                  display: true, content: window.t('an_fc_start_line','Prognose-Start'), position: 'start',
+                  backgroundColor: 'rgba(34,197,94,.8)', color: '#fff',
+                  font: { size: 10, weight: '600' }, padding: { x: 5, y: 2 }, borderRadius: 4,
+                }
+              }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(20,20,30,.92)',
+            titleColor: '#e2e4ef', bodyColor: '#e2e4ef',
+            borderColor: 'rgba(255,255,255,.1)', borderWidth: 1,
+            callbacks: {
+              title: items => items.length ? fmtDate(allLabels[items[0].dataIndex]) : '',
+            },
+            filter: item => !item.dataset.label.startsWith(window.t('an_fc_conf_upper','Konfidenz').split(' ')[0]),
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: '#888', maxRotation: 45, autoSkip: true, maxTicksLimit: 28,
+                     callback: (_, i) => fmtDate(allLabels[i]) },
+            grid: { color: 'rgba(255,255,255,.06)' },
+          },
+          y: {
+            ticks: { color: '#888' },
+            grid: { color: 'rgba(255,255,255,.06)' },
+          },
+        },
+      },
+    });
+  }
+
+  // ── Forecast ausführen ──────────────────────────────────────────
+  async function runForecast() {
+    const statusEl = document.getElementById('fc-status');
+    const infoEl = document.getElementById('fc-info');
+    const runBtn = document.getElementById('btn-fc-run');
+
+    const kwId = parseInt(document.getElementById('fc-kw-sel').value, 10);
+    const model = document.getElementById('fc-model').value;
+    const horizon = parseInt(document.getElementById('fc-horizon').value, 10);
+
+    const kwData = getKwData(kwId);
+    if (!kwData || kwData.data.length < 10) {
+      statusEl.textContent = window.t('an_fc_min_pts','Mindestens 10 Datenpunkte erforderlich.');
+      infoEl.innerHTML = ''; return;
+    }
+
+    runBtn.disabled = true;
+    statusEl.textContent = window.t('an_fc_computing','Berechne ${m}-Prognose (${h} Schritte)…').replace('${m}',model==='prophet'?'Prophet':'ARIMA').replace('${h}',horizon);
+    infoEl.innerHTML = '';
+
+    try {
+      const res = await fetch('/api/forecast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, horizon, data: kwData.data }),
+      });
+      const json = await res.json();
+
+      if (!res.ok || json.error) {
+        statusEl.textContent = json.error || window.t('an_fc_error','Fehler bei der Prognose.');
+        runBtn.disabled = false; return;
+      }
+
+      const fc = json.forecast;
+      const histLabels = kwData.data.map(p => p.date);
+      const histValues = kwData.data.map(p => p.value);
+      const fcLabels = fc.map(p => p.date);
+      const fcValues = fc.map(p => p.yhat);
+      const fcLower = fc.map(p => p.yhat_lower);
+      const fcUpper = fc.map(p => p.yhat_upper);
+
+      renderFcChart(histLabels, histValues, kwData.color, fcLabels, fcValues, fcLower, fcUpper, json.model);
+
+      const subtitle = `${kwData.keyword} · ${json.model} · ${horizon} ${window.t('an_fc_steps','Schritte')}`;
+      document.getElementById('fc-subtitle').textContent = subtitle;
+
+      // Trend-Richtung ermitteln
+      const lastHist = histValues[histValues.length - 1];
+      const lastFc = fcValues[fcValues.length - 1];
+      const dir = lastFc > lastHist * 1.05 ? window.t('an_fc_dir_up','steigend') : lastFc < lastHist * 0.95 ? window.t('an_fc_dir_down','fallend') : window.t('an_fc_dir_stable','stabil');
+      const delta = ((lastFc - lastHist) / Math.max(1, lastHist) * 100).toFixed(1);
+
+      // Info speichern
+      _lastFcData = {
+        keyword: kwData.keyword, model: json.model, horizon,
+        freq: json.freq, dir, delta, lastHist, lastFc,
+        changepoints: json.changepoints || [],
+        aic: json.aic, bic: json.bic,
+        forecast: fc,
+      };
+
+      statusEl.textContent =
+        `${json.model} · ${horizon} ${window.t('an_fc_steps','Schritte')} · ${window.t('an_fc_freq','Frequenz:')} ${json.freq} · ` +
+        `${window.t('an_fc_trend','Trend:')} ${dir} (${delta > 0 ? '+' : ''}${delta} %) · ` +
+        `${window.t('an_fc_last_val','Letzter Wert:')} ${lastHist.toFixed(1)} → ${window.t('an_fc_forecast_short','Prognose:')} ${lastFc.toFixed(1)}`;
+
+      // Info-Box
+      let html = '<div style="font-size:13px;color:var(--text);">';
+      html += `<p><strong>${window.t('an_fc_model_info','Modell:')}</strong> ${json.model} · <strong>${window.t('an_fc_freq','Frequenz:')}</strong> ${json.freq} · `;
+      html += `<strong>${window.t('an_fc_horizon_info','Horizont:')}</strong> ${horizon} ${window.t('an_fc_datapoints','Datenpunkte')}</p>`;
+      if (json.aic) html += `<p><strong>AIC:</strong> ${json.aic} · <strong>BIC:</strong> ${json.bic}</p>`;
+      if (json.changepoints && json.changepoints.length) {
+        html += `<p><strong>${window.t('an_fc_changepoints_prophet','Erkannte Changepoints (Prophet):')}</strong> ${json.changepoints.map(fmtDate).join(', ')}</p>`;
+      }
+
+      // Forecast-Tabelle (kompakt)
+      html += `<details style="margin-top:8px;"><summary style="cursor:pointer;color:var(--accent);font-size:12px;">${window.t('an_fc_show_values','Prognose-Werte anzeigen')}</summary>`;
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;">';
+      html += `<thead><tr style="color:var(--muted);font-size:11px;"><th style="padding:4px 6px;text-align:left;">${window.t('an_fc_th_date','Datum')}</th><th style="padding:4px 6px;text-align:right;">${window.t('an_fc_th_forecast','Prognose')}</th><th style="padding:4px 6px;text-align:right;">${window.t('an_fc_th_lower','Unten')}</th><th style="padding:4px 6px;text-align:right;">${window.t('an_fc_th_upper','Oben')}</th></tr></thead><tbody>`;
+      for (const p of fc) {
+        html += `<tr><td style="padding:3px 6px;font-variant-numeric:tabular-nums;">${fmtDate(p.date)}</td>`;
+        html += `<td style="padding:3px 6px;text-align:right;font-weight:600;color:#22c55e;">${p.yhat}</td>`;
+        html += `<td style="padding:3px 6px;text-align:right;color:var(--muted);">${p.yhat_lower}</td>`;
+        html += `<td style="padding:3px 6px;text-align:right;color:var(--muted);">${p.yhat_upper}</td></tr>`;
+      }
+      html += '</tbody></table></details>';
+      html += '</div>';
+      infoEl.innerHTML = html;
+
+    } catch (e) {
+      statusEl.textContent = `${window.t('an_fc_error_prefix','Fehler:')} ${e.message}`;
+    } finally {
+      runBtn.disabled = false;
+    }
+  }
+
+  // ── Öffnen / Schließen ──────────────────────────────────────────
+  function openFc(kwId) {
+    _fcFixedKw = kwId ?? null;
+    const overlay = document.getElementById('fc-overlay');
+    const kwSel = document.getElementById('fc-kw-sel');
+
+    const kws = getAvailableKws();
+    if (!kws.length) { alert(window.t('an_fc_no_kws','Keine aktiven Keywords vorhanden.')); return; }
+
+    kwSel.innerHTML = kws.map(k =>
+      `<option value="${k.kwId}" ${k.kwId === _fcFixedKw ? 'selected' : ''}>${k.keyword}</option>`
+    ).join('');
+    if (!_fcFixedKw) kwSel.value = kws[0].kwId;
+
+    document.getElementById('fc-status').textContent = window.t('an_fc_hint','Modell wählen und "Berechnen" klicken.');
+    document.getElementById('fc-info').innerHTML = '';
+    overlay.style.display = 'flex';
+  }
+
+  function closeFc() {
+    document.getElementById('fc-overlay').style.display = 'none';
+    if (_fcChart) { _fcChart.destroy(); _fcChart = null; }
+  }
+
+  window.openFcForKw = function(kwId) { openFc(kwId); };
+
+  // ── Event Listeners ─────────────────────────────────────────────
+  document.getElementById('btn-fc-close').addEventListener('click', closeFc);
+  document.getElementById('fc-overlay').addEventListener('click', e => {
+    if (e.target.id === 'fc-overlay') closeFc();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('fc-overlay').style.display === 'flex') closeFc();
+  });
+
+  document.getElementById('fc-horizon').addEventListener('input', e => {
+    document.getElementById('fc-horizon-val').textContent = e.target.value;
+  });
+
+  document.getElementById('btn-fc-run').addEventListener('click', runForecast);
+
+  // Snapshot
+  document.getElementById('btn-fc-snap').addEventListener('click', () => {
+    if (!_fcChart) return;
+    const canvas = document.getElementById('fc-canvas');
+    const subtitle = document.getElementById('fc-subtitle').textContent;
+    if (typeof window.openAnalysisSnap === 'function') {
+      window.openAnalysisSnap('forecast', canvas, subtitle,
+        { model: document.getElementById('fc-model').value,
+          horizon: parseInt(document.getElementById('fc-horizon').value, 10) });
+    }
+  });
+
+  // KI-Analyse
+  if (document.getElementById('btn-fc-ai')) document.getElementById('btn-fc-ai').addEventListener('click', () => {
+    if (!_lastFcData) { alert(window.t('an_fc_no_forecast','Noch keine Prognose berechnet.')); return; }
+    const series = window._collectSeries ? window._collectSeries(null) : [];
+    if (!series.length) { alert(window.t('an_fc_no_data','Keine aktiven Datenpunkte.')); return; }
+    const d = _lastFcData;
+    const context = `${window.t('analysis_forecast_label','Forecasting')}: ${d.model}, ${d.horizon} ${window.t('an_fc_steps','Schritte')}, ${window.t('an_fc_trend','Trend:')} ${d.dir} (${d.delta}%)`;
+    const extras = {
+      forecast: {
+        model: d.model,
+        keyword: d.keyword,
+        horizon: d.horizon,
+        freq: d.freq,
+        direction: d.dir,
+        delta_pct: d.delta,
+        last_historical: d.lastHist,
+        last_forecast: d.lastFc,
+        changepoints: d.changepoints,
+        aic: d.aic, bic: d.bic,
+        values: d.forecast.slice(0, 30).map(p => ({
+          date: p.date, yhat: p.yhat, lower: p.yhat_lower, upper: p.yhat_upper
+        })),
+      }
+    };
+    if (window._openAiWithContext) {
+      window._openAiWithContext(series, context, window.t('an_fc_ai_context','Forecasting · KI-Analyse'), 'fc', extras);
+    }
+  });
+})();
+</script>
+

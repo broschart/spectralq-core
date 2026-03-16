@@ -1,0 +1,578 @@
+{% extends "base.html" %}
+
+{% block title %}Watch Zones – spectralQ{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<style>
+  .wz-label-icon { overflow: visible !important; }
+  @keyframes wz-pulse {
+    0%   { stroke-opacity: 1; r: 18; }
+    100% { stroke-opacity: 0; r: 35; }
+  }
+  @keyframes wz-nearest-blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
+  .wz-nearest-blink { animation: wz-nearest-blink 0.75s step-end infinite; }
+  .wz-pulse-ring {
+    animation: wz-pulse 1s ease-out infinite;
+  }
+  .events-subnav {
+    display: flex; gap: 0;
+    border-bottom: 2px solid var(--border); margin-bottom: 28px;
+  }
+  .events-subnav a {
+    padding: 10px 32px; font-size: 14px; font-weight: 600;
+    color: var(--muted); text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px; white-space: nowrap;
+    transition: color .12s, border-color .12s;
+  }
+  .events-subnav a:hover { color: var(--text); }
+  .events-subnav a.active { color: var(--text); border-bottom-color: var(--accent1); }
+
+  /* Layout: linke Sidebar + rechts Inhalt */
+  .wz-layout {
+    display: flex;
+    gap: 0;
+    min-height: calc(100vh - 220px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .wz-sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+  .wz-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background .12s, color .12s;
+    user-select: none;
+  }
+  .wz-sidebar-item:hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .wz-sidebar-item.active {
+    background: rgba(124,92,191,.12);
+    color: var(--accent1);
+    border-left: 3px solid var(--accent1);
+    padding-left: 15px;
+  }
+  .wz-sidebar-item svg {
+    flex-shrink: 0;
+    opacity: .7;
+  }
+  .wz-sidebar-item.active svg {
+    opacity: 1;
+  }
+  .wz-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+  }
+  .wz-main-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .wz-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .wz-panel-desc {
+    width: 100%;
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    order: 10;
+  }
+  .wz-main-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .wz-main-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Karte */
+  .wz-map-container {
+    flex: 1;
+    min-height: 400px;
+  }
+
+  /* Draw-Buttons auf der Karte */
+  .wz-draw-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .wz-draw-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent1);
+    color: #fff;
+    border: 1px solid var(--accent1);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(0,0,0,.15);
+    transition: opacity .15s;
+  }
+  .wz-draw-btn svg { stroke: #fff; }
+  .wz-draw-btn:hover {
+    opacity: .85;
+  }
+
+  /* Fadenkreuz-Linien im Zeichenmodus */
+  .wz-crosshair-h, .wz-crosshair-v {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1000;
+  }
+  .wz-crosshair-h {
+    left: 0; right: 0; height: 0;
+    border-top: 1px dashed var(--accent1);
+  }
+  .wz-crosshair-v {
+    top: 0; bottom: 0; width: 0;
+    border-left: 1px dashed var(--accent1);
+  }
+
+  /* Zonen-Liste unter Karte */
+  .wz-zone-list {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+  .wz-zone-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    font-size: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .wz-zone-row:hover {
+    background: color-mix(in srgb, var(--accent1) 8%, var(--surface));
+  }
+  .wz-zone-row .wz-zone-name {
+    flex: 1;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .wz-zone-row .wz-zone-meta {
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .wz-zone-row .wz-zone-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .wz-zone-row .wz-zone-actions button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 12px;
+    border-radius: 4px;
+    transition: color .12s, background .12s;
+  }
+  .wz-zone-row .wz-zone-actions button:hover {
+    color: var(--text);
+    background: var(--surface2);
+  }
+  .wz-zone-row .wz-zone-actions button.delete:hover {
+    color: var(--danger);
+  }
+
+
+  .wz-hint {
+    color: var(--muted);
+    font-size: 12px;
+    padding: 20px;
+    line-height: 1.6;
+  }
+
+  /* Inline edit */
+  .wz-inline-edit {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 12px;
+    padding: 2px 6px;
+    width: 160px;
+  }
+
+  /* Resize handles */
+  .wz-resize-handle {
+    height: 8px;
+    flex-shrink: 0;
+    cursor: ns-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+    transition: background .1s;
+  }
+  .wz-resize-handle:hover,
+  .wz-resize-handle.active {
+    background: rgba(124,58,237,.12);
+  }
+  .wz-resize-dots {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  /* ── Fullscreen-Modus (CSS-basiert, kein native Fullscreen API) ── */
+  .wz-fake-fs {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 10001 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: var(--bg) !important;
+  }
+  .wz-fake-fs #wz-live-map {
+    height: 55vh !important;
+  }
+  .wz-fake-fs.wz-map-fill #wz-live-map {
+    height: 100% !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+  <h1 style="margin:0;" data-i18n="nav_events">Ereignisse</h1>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+    <span style="font-size:11px;color:var(--muted);white-space:nowrap;" data-i18n="wz_lbl_project">Projekt:</span>
+    <select id="hdr-wz-project"
+            style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);
+                   background:var(--bg);color:var(--text);font-size:12px;max-width:220px;">
+      {% if current_user.is_superadmin %}<option value="" data-i18n="wz_all_projects">– Alle –</option>{% endif %}
+    </select>
+  </div>
+</div>
+
+<div class="events-subnav">
+  <a href="/events" data-i18n="ef_nav_manage">Verwalten</a>
+  <a href="/events/find" data-i18n="ef_nav_find">Meldungen finden</a>
+  <a href="/events/watchzones" class="active" data-i18n="ef_nav_watchzones">Watch Zones</a>
+</div>
+
+<div class="wz-layout">
+  <!-- Linke Navigation -->
+  <div class="wz-sidebar">
+    <div class="wz-sidebar-item active" data-panel="global" onclick="wzSelectPanel('global')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </svg>
+      <span data-i18n="wz_sidebar_global">Global Zones</span>
+    </div>
+    <div style="border-bottom:2px solid var(--border);"></div>
+    <div style="padding:8px 12px;">
+      <input id="wz-sidebar-search" type="text" placeholder="Suchen…"
+             oninput="wzFilterSidebar(this.value)"
+             style="width:100%;font-size:12px;padding:5px 10px;border:1px solid var(--border);
+                    border-radius:6px;background:var(--bg);color:var(--text);outline:none;" />
+    </div>
+    {% for p in wz_plugins %}
+    <div class="wz-sidebar-item" data-panel="{{ p.plugin_id }}" data-search-label="{{ p.meta.label|lower }} {{ p.plugin_id }}" onclick="wzSelectPanel('{{ p.plugin_id }}')">
+      {{ p.meta.icon_svg | safe }}
+      <span data-i18n="wz_sidebar_{{ p.plugin_id }}">{{ p.meta.label }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Hauptbereich -->
+  <div class="wz-main">
+    <!-- ── Globale Zonen ───────────────────────────────────── -->
+    <div id="panel-global" class="wz-panel">
+      <div class="wz-main-header">
+        <h2 data-i18n="wz_global_title">Global Zones</h2>
+        <span style="font-size:11px;color:var(--muted);" data-i18n="wz_global_subtitle">Cross-category zones for all observation types</span>
+        <p class="wz-panel-desc" data-i18n="wz_global_desc">Global zones apply simultaneously to all observation categories. Once drawn, the zone automatically appears in every active category – ideal for a permanent observation area you don't want to define multiple times.</p>
+      </div>
+      <div class="wz-main-body">
+        <div id="wz-map-global" class="wz-map-container" style="height:500px;"></div>
+        <div class="wz-hint" id="wz-hint-global" data-i18n="wz_global_hint">
+          Define cross-category observation zones here that you can reuse across all active categories
+          – without having to redraw the zone each time.
+        </div>
+        <div class="wz-zone-list" id="wz-zones-global"></div>
+      </div>
+    </div>
+
+    {# ── Plugin-Panels (aus Plugin-Templates) ──────────────── #}
+    {% for p in wz_plugins %}
+    {% include p.meta.panel_template %}
+    {% endfor %}
+
+  </div>
+</div>
+
+{# ── Plugin-Overlays (standalone Modals) ──────────────── #}
+{% for p in wz_plugins %}{% if p.meta.overlay_template %}{% include p.meta.overlay_template %}{% endif %}
+{% endfor %}
+
+{# ── Hidden Plugin Store: Elemente werden per JS in den Popup verschoben ── #}
+<div id="wz-plugin-store" style="display:none;">
+  {% for p in wz_plugins %}
+    {% if p.meta.live_header_template %}{% include p.meta.live_header_template %}{% endif %}
+    {% if p.meta.live_refresh_template %}{% include p.meta.live_refresh_template %}{% endif %}
+    {% if p.meta.live_map_inset_template %}{% include p.meta.live_map_inset_template %}{% endif %}
+    {% if p.meta.live_side_panels_template %}{% include p.meta.live_side_panels_template %}{% endif %}
+    {% if p.meta.live_undermap_template %}{% include p.meta.live_undermap_template %}{% endif %}
+    {% if p.meta.live_parcoords_template %}{% include p.meta.live_parcoords_template %}{% endif %}
+  {% endfor %}
+</div>
+
+<!-- Live-Daten Popup -->
+<div id="wz-live-overlay" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.6);
+     align-items:flex-start;justify-content:center;overflow-y:auto;padding:2vh 0;" onclick="if(event.target===this)wzCloseLive()">
+  <div id="wz-live-spinner" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;position:fixed;inset:0;z-index:1;">
+    <div style="width:44px;height:44px;border:4px solid rgba(255,255,255,.15);border-top-color:#06b6d4;border-radius:50%;animation:wz-spin 0.75s linear infinite;"></div>
+    <div id="wz-live-spinner-text" style="font-size:13px;color:rgba(255,255,255,.7);font-family:sans-serif;" data-i18n="wz_spinner_loading">Lade Daten …</div>
+  </div>
+  <div id="wz-live-box" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;
+              width:96%;max-width:1400px;height:95vh;max-height:95vh;display:flex;flex-direction:column;
+              overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.4);transition:max-width .2s;">
+    {# ── Live-Popup Header ── #}
+    <div id="wz-live-header" style="padding:10px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;">
+      <h3 id="wz-live-title" style="margin:0;font-size:15px;font-weight:600;" data-i18n="wz_live_title_default">Live Data</h3>
+      <span id="wz-live-count" style="font-size:11px;color:var(--muted);"></span>
+      <span id="wz-live-hdr-spacer" style="flex:1;"></span>
+      {# Plugin-Header-Buttons werden per JS hierhin injiziert (vor wz-live-hdr-spacer.nextSibling) #}
+      <button id="wz-live-fs-btn" title="Vollbild"
+              style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px;"
+              onclick="wzToggleFullscreen('wz-live-box')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3"/>
+          <path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
+          <path d="M3 16v3a2 2 0 0 0 2 2h3"/>
+          <path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+        </svg>
+      </button>
+      <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px;"
+              onclick="wzCloseLive()">&#10005;</button>
+    </div>
+    {# ── Slot: Refresh-Leiste (per Plugin-JS injiziert) ── #}
+    {# ── Karte ── #}
+    <div id="wz-map-row" style="display:flex;flex-shrink:0;">
+      <div id="wz-live-map" style="height:clamp(200px,42vh,560px);min-height:120px;flex:1;overflow:hidden;position:relative;">
+      </div>
+      {# Seitenpanels werden per Plugin-JS injiziert #}
+    </div>
+    {# ── Slot: Unter-Karte-Buttons (per Plugin-JS injiziert) ── #}
+    <div id="wz-under-map-bar" style="display:none;padding:6px 14px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;justify-content:flex-end;align-items:center;gap:8px;">
+    </div>
+    <div id="wz-resize-map" style="display:none;"></div>
+    {# ── Slot: Plugin-Content zwischen Karte und Liste (per JS) ── #}
+    {# ── Sticky-Header + Liste ── #}
+    <div id="wz-live-sticky" style="display:none;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);"></div>
+    <div id="wz-live-body" style="flex:1;overflow-y:auto;padding:0;min-height:0;">
+      <div id="wz-live-loading" style="text-align:center;padding:30px;color:var(--muted);" data-i18n="wz_loading_live">Loading live data …</div>
+      <div id="wz-live-error" style="display:none;text-align:center;padding:20px;color:var(--danger);"></div>
+      <div id="wz-live-content" style="display:none;padding:0 16px 12px;"></div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  "use strict";
+
+  // i18n kommt über plugin_i18n_json aus base.html
+  window._applyI18n();
+
+  // Sidebar-Suchfilter
+  window.wzFilterSidebar = function(q) {
+    q = (q || "").toLowerCase().trim();
+    document.querySelectorAll(".wz-sidebar-item[data-search-label]").forEach(function(el) {
+      var label = el.getAttribute("data-search-label") || "";
+      el.style.display = (!q || label.indexOf(q) !== -1) ? "" : "none";
+    });
+  };
+})();
+</script>
+
+<!-- WZ Namespace -->
+<script>
+window.WZ = {
+  PLUGIN_IDS: ["global"{% for p in wz_plugins %}, "{{ p.plugin_id }}"{% endfor %}],
+  ZONE_COLORS: { global: "#8b5cf6", {% for p in wz_plugins %}"{{ p.plugin_id }}": "{{ p.meta.color }}", {% endfor %} },
+  _renderers: {},
+  _plugins: {},
+  _onLiveClose: [],
+  _onLiveReset: [],
+  _onResizeParcoords: [],
+  _onFullscreenChange: [],
+  registerRenderer: function(t, fn) { this._renderers[t] = fn; },
+  registerPlugin: function(id, cfg) {
+    this._plugins[id] = cfg;
+    if (cfg.renderer) this._renderers[id] = cfg.renderer;
+  },
+};
+</script>
+
+<!-- WZ Fullscreen (native Fullscreen API) -->
+<script>
+(function() {
+  var expandSvg = '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>';
+  var shrinkSvg = '<path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/>';
+
+  // Fullscreen: Native API auf Overlay + Box-Styles anpassen
+  var _wzFsOvSaved = null;
+  var _wzFsBoxSaved = null;
+
+  function _wzFsEnter(ov, box) {
+    _wzFsOvSaved = { padding: ov.style.padding, alignItems: ov.style.alignItems, background: ov.style.background, overflowY: ov.style.overflowY };
+    ov.style.padding = "0";
+    ov.style.alignItems = "stretch";
+    ov.style.background = "var(--bg)";
+    ov.style.overflowY = "hidden";
+    _wzFsBoxSaved = { width: box.style.width, maxWidth: box.style.maxWidth, height: box.style.height, maxHeight: box.style.maxHeight, borderRadius: box.style.borderRadius, border: box.style.border, boxShadow: box.style.boxShadow };
+    box.style.width = "100%";
+    box.style.maxWidth = "100%";
+    box.style.height = "100%";
+    box.style.maxHeight = "100%";
+    box.style.borderRadius = "0";
+    box.style.border = "none";
+    box.style.boxShadow = "none";
+    // Trace-Panel im Fullscreen vergrößern
+    var tp = document.getElementById("wz-trace-panel");
+    if (tp) { tp._savedWidth = tp.style.width; tp.style.width = "600px"; }
+    var tl = document.getElementById("wz-trace-list");
+    if (tl) { tl._savedFontSize = tl.style.fontSize; tl.style.fontSize = "16px"; }
+    var ts = document.getElementById("wz-trace-summary");
+    if (ts) { ts._savedFontSize = ts.style.fontSize; ts.style.fontSize = "16px"; }
+  }
+
+  function _wzFsLeave(ov, box) {
+    if (_wzFsOvSaved) {
+      ov.style.padding = _wzFsOvSaved.padding;
+      ov.style.alignItems = _wzFsOvSaved.alignItems;
+      ov.style.background = _wzFsOvSaved.background;
+      ov.style.overflowY = _wzFsOvSaved.overflowY;
+    }
+    if (_wzFsBoxSaved) {
+      box.style.width = _wzFsBoxSaved.width;
+      box.style.maxWidth = _wzFsBoxSaved.maxWidth;
+      box.style.height = _wzFsBoxSaved.height;
+      box.style.maxHeight = _wzFsBoxSaved.maxHeight;
+      box.style.borderRadius = _wzFsBoxSaved.borderRadius;
+      box.style.border = _wzFsBoxSaved.border;
+      box.style.boxShadow = _wzFsBoxSaved.boxShadow;
+    }
+    _wzFsOvSaved = null;
+    _wzFsBoxSaved = null;
+    // Trace-Panel zurücksetzen
+    var tp = document.getElementById("wz-trace-panel");
+    if (tp && tp._savedWidth !== undefined) { tp.style.width = tp._savedWidth; }
+    var tl = document.getElementById("wz-trace-list");
+    if (tl && tl._savedFontSize !== undefined) { tl.style.fontSize = tl._savedFontSize; }
+    var ts = document.getElementById("wz-trace-summary");
+    if (ts && ts._savedFontSize !== undefined) { ts.style.fontSize = ts._savedFontSize; }
+  }
+
+  window.wzToggleFullscreen = function(elId) {
+    var ov = document.getElementById("wz-live-overlay");
+    var box = document.getElementById("wz-live-box");
+    if (!ov || !box) return;
+    var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+    if (fsEl === ov) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else {
+      _wzFsEnter(ov, box);
+      (ov.requestFullscreen || ov.webkitRequestFullscreen).call(ov);
+    }
+  };
+
+  document.addEventListener("fullscreenchange", function() {
+    var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+    var ov = document.getElementById("wz-live-overlay");
+    var box = document.getElementById("wz-live-box");
+    var isFull = !!(fsEl && ov && fsEl === ov);
+    // Beim Verlassen des Fullscreen Styles wiederherstellen
+    if (!isFull && ov && box && _wzFsOvSaved) {
+      _wzFsLeave(ov, box);
+    }
+    // Icon aktualisieren
+    document.querySelectorAll("[onclick*='wzToggleFullscreen']").forEach(function(btn) {
+      var s = btn.querySelector("svg");
+      if (s) s.innerHTML = isFull ? shrinkSvg : expandSvg;
+    });
+    // Leaflet-Maps invalidieren
+    setTimeout(function() {
+      if (window.WZ && WZ._liveMap) WZ._liveMap.invalidateSize();
+    }, 150);
+  });
+})();
+</script>
+
+<!-- WZ Modules -->
+{% set cache_ts = range(100000,999999)|random %}
+<script src="/static/js/wz/wz_core.js?v={{ cache_ts }}"></script>
+{% for p in wz_plugins %}{% if p.meta.js_file %}
+<script src="{{ p.meta.js_file }}?v={{ cache_ts }}"></script>
+{% endif %}{% endfor %}
+<script src="/static/js/plugins.js?v={{ cache_ts }}"></script>
+<script src="/static/js/wb_diff.js?v={{ cache_ts }}"></script>
+<script>window.addEventListener("load",function(){wzSelectPanel("global");});</script>
+{% endblock %}

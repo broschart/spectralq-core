@@ -1,0 +1,2307 @@
+{% extends "base.html" %}
+
+{% block title %}Admin – spectralQ{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Workflow-Liste ── */
+  .backend-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    margin-bottom: 8px;
+    cursor: default;
+    user-select: none;
+  }
+  .backend-row.disabled-row { opacity: .45; }
+  .backend-move {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .backend-move button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 1px 5px;
+    font-size: 12px;
+    border-radius: 4px;
+    line-height: 1.1;
+  }
+  .backend-move button:hover { background: var(--border); color: var(--text); }
+  .backend-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+  .backend-info { flex: 1; }
+  .backend-info strong { font-size: 14px; }
+  .backend-info small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .backend-status {
+    font-size: 11px; font-weight: 600; padding: 3px 10px;
+    border-radius: 10px; letter-spacing: .04em;
+  }
+  .bs-on  { background: var(--badge-green-bg); color: var(--success); }
+  .bs-off { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+
+  /* Toggle-Switch */
+  .toggle-wrap { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .toggle {
+    position: relative; width: 36px; height: 20px;
+    background: var(--border); border-radius: 10px;
+    transition: background .2s;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: "";
+    position: absolute;
+    width: 14px; height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: transform .2s;
+  }
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* Log-Tabelle */
+  .log-errors {
+    max-width: 320px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+    cursor: pointer;
+  }
+  .log-errors.expanded {
+    white-space: pre-wrap; word-break: break-word;
+    text-overflow: unset; overflow: visible;
+    max-width: none;
+  }
+
+  /* Badge für "keine Daten" */
+  .badge-orange { background: #2d1d05; color: #f97316; }
+
+  /* ── Einklappbare Karten ── */
+  .card-hdr {
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer; user-select: none;
+    margin: -20px; padding: 20px;   /* negativer Margin = volle Kartenbreite */
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .card-hdr:hover { background: var(--surface2); }
+  .card-hdr.collapsed { border-radius: var(--radius); }
+  .card-toggle {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 16px; padding: 2px 6px;
+    border-radius: 4px; line-height: 1; flex-shrink: 0;
+    transition: color .15s, transform .2s;
+    pointer-events: none;   /* Klick geht an .card-hdr */
+  }
+  .card-toggle.collapsed { transform: rotate(-90deg); }
+  .card-body { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .card-body.collapsed { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Admin</h1>
+
+<!-- ── Farbschema ── -->
+<div class="card" id="card-theme">
+  <div class="card-hdr">
+    <button class="card-toggle" data-card="card-theme" title="Ein-/ausklappen" data-i18n-title="collapse_expand">▾</button>
+    <h2 style="margin:0;" data-i18n="card_theme">Farbschema</h2>
+    <span class="text-muted text-sm" data-i18n="card_theme_sub">Helles oder dunkles Erscheinungsbild</span>
+  </div>
+  <div class="card-body" id="card-theme-body">
+    <div style="display:flex;gap:12px;">
+      <button id="theme-btn-light" class="btn btn-ghost" style="min-width:100px;" onclick="setUiTheme('light')">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3.5"/><line x1="8" y1="1" x2="8" y2="3"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="1" y1="8" x2="3" y2="8"/><line x1="13" y1="8" x2="15" y2="8"/><line x1="3.05" y1="3.05" x2="4.46" y2="4.46"/><line x1="11.54" y1="11.54" x2="12.95" y2="12.95"/><line x1="3.05" y1="12.95" x2="4.46" y2="11.54"/><line x1="11.54" y1="4.46" x2="12.95" y2="3.05"/></svg>
+        <span data-i18n="btn_light">Hell</span>
+      </button>
+      <button id="theme-btn-dark" class="btn btn-ghost" style="min-width:100px;" onclick="setUiTheme('dark')">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M13.5 8.5a5.5 5.5 0 1 1-6-6 4.5 4.5 0 0 0 6 6z"/></svg>
+        <span data-i18n="btn_dark">Dunkel</span>
+      </button>
+    </div>
+    <!-- Akzentfarben -->
+    <div style="margin-top:16px;">
+      <label style="font-size:13px;font-weight:600;" data-i18n="lbl_accent_colors">Akzentfarben</label>
+      <div style="display:flex;gap:20px;margin-top:6px;align-items:center;">
+        <div>
+          <label style="display:block;margin-bottom:4px;font-size:12px;" data-i18n="lbl_accent1">Akzent 1 (primär)</label>
+          <input id="inp-accent1" type="color" value="#7c3aed"
+                 style="width:48px;height:34px;padding:2px 3px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);" />
+        </div>
+        <div>
+          <label style="display:block;margin-bottom:4px;font-size:12px;" data-i18n="lbl_accent2">Akzent 2 (sekundär)</label>
+          <input id="inp-accent2" type="color" value="#4f8ef7"
+                 style="width:48px;height:34px;padding:2px 3px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);" />
+        </div>
+        <button id="btn-accent-reset" class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:16px;" data-i18n="btn_accent_reset">Zurücksetzen</button>
+      </div>
+      <div class="text-muted text-sm" style="margin-top:4px;" data-i18n="accent_help">Akzent 1 für primäre Aktionen (Buttons, Navigation). Akzent 2 für sekundäre Elemente.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Anzeigeformat ── -->
+<div class="card" id="card-format">
+  <div class="card-hdr">
+    <button class="card-toggle" data-card="card-format" title="Ein-/ausklappen" data-i18n-title="collapse_expand">▾</button>
+    <h2 style="margin:0;" data-i18n="card_format">Datums- &amp; Zeitformat</h2>
+    <span class="text-muted text-sm" data-i18n="card_format_sub">Persönliche Einstellung</span>
+    <span class="card-hdr-btns" style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <button id="btn-save-format" class="btn btn-primary btn-sm" data-i18n="btn_save">Speichern</button>
+    </span>
+  </div>
+  <div class="card-body" id="card-format-body">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;max-width:520px;">
+      <div style="flex:1;min-width:140px;">
+        <label data-i18n="lbl_date_format">Datumsformat</label>
+        <select id="inp-date-format" style="width:100%;">
+          <option value="DD.MM.YY">DD.MM.YY &mdash; 31.12.24</option>
+          <option value="DD.MM.YYYY">DD.MM.YYYY &mdash; 31.12.2024</option>
+          <option value="MM/DD/YYYY">MM/DD/YYYY &mdash; 12/31/2024</option>
+          <option value="YYYY-MM-DD">YYYY-MM-DD &mdash; 2024-12-31</option>
+          <option value="DD/MM/YYYY">DD/MM/YYYY &mdash; 31/12/2024</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <label data-i18n="lbl_time_format">Zeitformat</label>
+        <select id="inp-time-format" style="width:100%;">
+          <option value="HH:mm">24 h &mdash; 14:30</option>
+          <option value="HH:mm:ss">24 h mit Sekunden &mdash; 14:30:45</option>
+          <option value="hh:mm A">12 h &mdash; 02:30 PM</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:12px;max-width:520px;">
+      <label data-i18n="lbl_trends_tz">Google Trends Zeitzone (pytrends <code>tz</code>-Offset in Minuten)</label>
+      <select id="inp-trends-tz" style="width:100%;max-width:320px;">
+        <option value="-480">UTC&minus;8 &mdash; PST (Los Angeles)</option>
+        <option value="-420">UTC&minus;7 &mdash; MST (Denver)</option>
+        <option value="-360">UTC&minus;6 &mdash; CST (Chicago)</option>
+        <option value="-300">UTC&minus;5 &mdash; EST (New York)</option>
+        <option value="-180">UTC&minus;3 &mdash; BRT (Brasília)</option>
+        <option value="0">UTC&plusmn;0 &mdash; GMT (London)</option>
+        <option value="60">UTC+1 &mdash; CET/MEZ (Berlin, Paris)</option>
+        <option value="120">UTC+2 &mdash; CEST/MESZ / EET (Helsinki)</option>
+        <option value="180">UTC+3 &mdash; MSK (Moskau)</option>
+        <option value="330">UTC+5:30 &mdash; IST (Neu-Delhi)</option>
+        <option value="480">UTC+8 &mdash; CST/HKT (Peking, Singapur)</option>
+        <option value="540">UTC+9 &mdash; JST (Tokio)</option>
+        <option value="600">UTC+10 &mdash; AEST (Sydney)</option>
+      </select>
+      <div class="text-muted text-sm" style="margin-top:4px;" data-i18n="trends_tz_help">Bestimmt, welche Zeitzone Google Trends für den Datenabruf verwendet. Standard: UTC+1 (MEZ).</div>
+    </div>
+    <div style="margin-top:12px;max-width:520px;">
+      <label data-i18n="lbl_ui_lang">Oberflächensprache / Interface Language</label>
+      <select id="inp-ui-lang" style="width:100%;max-width:320px;">
+        <option value="de">Deutsch</option>
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="es">Español</option>
+      </select>
+      <div class="text-muted text-sm" style="margin-top:4px;" data-i18n="ui_lang_help">Sprache der Benutzeroberfläche. Wird schrittweise auf alle Seiten ausgerollt.</div>
+    </div>
+    <div style="margin-top:12px;max-width:520px;">
+      <label data-i18n="lbl_query_lang">Abfragesprache (Google Trends)</label>
+      <select id="inp-query-lang" style="width:100%;max-width:320px;">
+        <option value="auto" data-i18n="ql_auto">Automatisch (Browsersprache)</option>
+        <option value="de">Deutsch</option>
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="es">Español</option>
+        <option value="it">Italiano</option>
+        <option value="pt">Português</option>
+        <option value="nl">Nederlands</option>
+        <option value="pl">Polski</option>
+        <option value="tr">Türkçe</option>
+        <option value="ru">Русский</option>
+        <option value="ja">日本語</option>
+        <option value="ko">한국어</option>
+        <option value="zh">中文</option>
+        <option value="ar">العربية</option>
+      </select>
+      <div class="text-muted text-sm" style="margin-top:4px;" data-i18n="query_lang_help">Bestimmt, in welcher Sprache Google Trends Metadaten liefert (Regionsnamen, verwandte Suchanfragen). Beeinflusst nicht die Trend-Daten selbst.</div>
+    </div>
+    <div style="margin-top:8px;">
+      <span class="text-muted text-sm" data-i18n="lbl_preview">Vorschau: </span>
+      <span id="lbl-fmt-preview" class="text-sm"
+            style="color:var(--accent);font-family:monospace;"></span>
+    </div>
+    <div id="fmt-global-row" style="display:none;margin-top:10px;">
+      <label class="toggle-wrap" style="cursor:pointer;gap:8px;">
+        <span class="toggle" id="toggle-fmt-global"></span>
+        <span class="text-sm" data-i18n="lbl_system_default">Als Systemstandard festlegen (gilt für alle Nutzer ohne eigene Einstellung)</span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- ── Abruf-Workflow ── -->
+<div class="card" id="card-workflow">
+  <div class="card-hdr">
+    <button class="card-toggle" data-card="card-workflow" title="Ein-/ausklappen" data-i18n-title="collapse_expand">▾</button>
+    <h2 style="margin:0;" data-i18n="card_workflow">Abruf-Workflow</h2>
+    <span class="text-muted text-sm" data-i18n="card_workflow_sub">Reihenfolge und aktive Backends festlegen</span>
+    <span class="card-hdr-btns" style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <button id="btn-save-workflow" class="btn btn-primary btn-sm" data-i18n="btn_save">Speichern</button>
+    </span>
+  </div>
+  <div class="card-body" id="card-workflow-body">
+    <div id="workflow-list"></div>
+    <p class="text-muted text-sm" style="margin-top:10px;" data-i18n="workflow_help">
+      Beim Abruf wird das erste aktive Backend versucht. Bei Fehler folgt das nächste.
+    </p>
+  </div>
+</div>
+
+<!-- ── API & Konfiguration ── -->
+<div class="card" id="card-config">
+  <div class="card-hdr">
+    <button class="card-toggle" data-card="card-config" title="Ein-/ausklappen" data-i18n-title="collapse_expand">▾</button>
+    <h2 style="margin:0;" data-i18n="card_api">API & Konfiguration</h2>
+    <span class="card-hdr-btns" style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <button id="btn-save-config" class="btn btn-primary btn-sm" data-i18n="btn_save">Speichern</button>
+    </span>
+  </div>
+  <div class="card-body" id="card-config-body">
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:520px;">
+
+    <!-- ── Trend-Daten ── -->
+    <div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;
+                  letter-spacing:.07em;margin-bottom:14px;" data-i18n="section_trend">Trend-Datenquellen</div>
+
+      <div>
+        <label data-i18n="lbl_serpapi_key">SerpAPI-Schlüssel</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="inp-serpapi-key" type="password" placeholder="Schlüssel eingeben…"
+                 style="flex:1;" autocomplete="off" data-i18n-placeholder="ph_enter_key" />
+          <button id="btn-show-key" class="btn btn-ghost btn-sm" data-i18n="btn_show">Anzeigen</button>
+        </div>
+        <span class="text-muted text-sm"><span data-i18n="serpapi_help">Google Trends · 100 kostenlose Anfragen/Monat</span> ·
+          <a href="https://serpapi.com/manage-api-key" target="_blank"
+             style="color:var(--accent);">serpapi.com</a>
+        </span>
+      </div>
+      <div style="margin-top:10px;">
+        <label data-i18n="lbl_cookies_file">Cookies-Datei (Pfad)</label>
+        <input id="inp-cookies-file" type="text" placeholder="/pfad/zu/cookies.json"
+               style="width:100%;" />
+        <span class="text-muted text-sm" data-i18n="cookies_help">Für Playwright-Backend – mit Cookie-Editor exportieren</span>
+      </div>
+      <div style="margin-top:10px;">
+        <label data-i18n="lbl_newsapi_key">NewsAPI-Schlüssel</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="inp-newsapi-key" type="password" placeholder="Schlüssel eingeben…"
+                 style="flex:1;" autocomplete="off" data-i18n-placeholder="ph_enter_key" />
+          <button id="btn-show-newsapi-key" class="btn btn-ghost btn-sm" data-i18n="btn_show">Anzeigen</button>
+        </div>
+        <span class="text-muted text-sm"><span data-i18n="newsapi_help">Für „Meldungen finden" · 100 kostenlose Anfragen/Tag</span> ·
+          <a href="https://newsapi.org" target="_blank"
+             style="color:var(--accent);">newsapi.org</a>
+        </span>
+      </div>
+    </div>
+
+    <!-- Soziale Netzwerke, Telegram und Copernicus → Plugin-Seite -->
+
+    <!-- ── Zeitplan ── -->
+    <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;
+                  letter-spacing:.07em;margin-bottom:14px;" data-i18n="section_automation">Automatisierung</div>
+      <div>
+        <label data-i18n="lbl_daily_fetch">Geplanter täglicher Abruf</label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input id="inp-fetch-hour" type="number" min="0" max="23" style="width:60px;text-align:center;" />
+          <span style="opacity:.5;">:</span>
+          <input id="inp-fetch-minute" type="number" min="0" max="59" style="width:60px;text-align:center;" />
+          <span class="text-muted text-sm" data-i18n="lbl_clock">Uhr (Serverzeit)</span>
+        </div>
+        <span id="lbl-next-run" class="text-muted text-sm"></span>
+      </div>
+    </div>
+
+    <!-- KI-Anbieter, Modell und API-Schlüssel → Plugin-Seite -->
+
+  </div>
+  </div><!-- /card-config-body -->
+</div>
+
+<!-- API-Richtlinien → Plugin-Seite -->
+
+<!-- E-Mail (SMTP) — derzeit nicht genutzt -->
+
+<!-- ── Präsentationstemplate ── -->
+<div class="card" id="card-tmpl">
+  <div class="card-hdr">
+    <button class="card-toggle" data-card="card-tmpl" title="Ein-/ausklappen" data-i18n-title="collapse_expand">▾</button>
+    <h2 style="margin:0;" data-i18n="card_template">Präsentationstemplate</h2>
+    <span class="card-hdr-btns" style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <button id="btn-save-tmpl" class="btn btn-primary btn-sm" data-i18n="btn_save">Speichern</button>
+    </span>
+  </div>
+  <div class="card-body" id="card-tmpl-body">
+  <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
+
+    <!-- Minivorschau -->
+    <div style="flex-shrink:0;">
+      <div class="text-muted text-sm" style="margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;" data-i18n="section_preview">Vorschau</div>
+      <div style="width:280px;height:157px;overflow:hidden;border-radius:6px;border:1px solid var(--border);">
+        <div id="tmpl-prv" style="width:560px;height:315px;transform:scale(.5);transform-origin:top left;display:flex;flex-direction:column;background:#0f1117;color:#e2e4ef;font-family:Inter,system-ui,sans-serif;overflow:hidden;">
+          <div id="prv-hdr" style="height:44px;display:flex;align-items:center;padding:0 20px;gap:10px;border-bottom:2px solid #2e3147;flex-shrink:0;">
+            <img id="prv-logo" src="" alt="" style="height:22px;object-fit:contain;display:none;max-width:80px;" />
+            <span id="prv-proj" style="font-weight:600;font-size:14px;">Projektname</span>
+            <span id="prv-fill" style="flex:1;"></span>
+            <span id="prv-author" style="font-size:12px;opacity:.5;">Autor</span>
+            <span id="prv-date" style="font-size:12px;opacity:.42;margin-left:10px;">2024-01-01</span>
+          </div>
+          <div style="display:flex;flex:1;min-height:0;">
+            <div style="flex:1.6;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.28);">
+              <span style="font-size:36px;opacity:.18;">📈</span>
+            </div>
+            <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:10px;justify-content:center;">
+              <div style="height:10px;background:rgba(255,255,255,.14);border-radius:4px;width:85%;"></div>
+              <div style="height:8px;background:rgba(255,255,255,.08);border-radius:4px;width:65%;"></div>
+              <div style="height:8px;background:rgba(255,255,255,.08);border-radius:4px;width:75%;"></div>
+              <div style="height:8px;background:rgba(255,255,255,.06);border-radius:4px;width:50%;"></div>
+            </div>
+          </div>
+          <div id="prv-ftr" style="height:30px;display:none;align-items:center;padding:0 20px;border-top:1px solid #2e3147;flex-shrink:0;">
+            <span id="prv-ftr-txt" style="font-size:12px;opacity:.38;"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Einstellungen -->
+    <div style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:22px;">
+
+      <!-- Farben -->
+      <div>
+        <div class="text-muted text-sm" style="margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;" data-i18n="section_colors">Farben</div>
+        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;">
+          <div>
+            <label style="display:block;margin-bottom:4px;font-size:12px;" data-i18n="lbl_text_light">Textfarbe hell</label>
+            <input id="inp-tmpl-fg1" type="color" value="#f0f0f2" style="width:42px;height:32px;padding:2px 3px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);" />
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:4px;font-size:12px;" data-i18n="lbl_text_dark">Textfarbe dunkel</label>
+            <input id="inp-tmpl-fg2" type="color" value="#1a1a2e" style="width:42px;height:32px;padding:2px 3px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);" />
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:4px;font-size:12px;" data-i18n="lbl_accent">Akzentfarbe</label>
+            <input id="inp-tmpl-accent" type="color" value="#4f8ef7" style="width:42px;height:32px;padding:2px 3px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);" />
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:4px;font-size:12px;" data-i18n="lbl_separator">Trennlinie</label>
+            <input id="inp-tmpl-sep" type="color" value="#2e3147" style="width:42px;height:32px;padding:2px 3px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);" />
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:4px;font-size:12px;" data-i18n="lbl_bg_light">Hintergrund hell</label>
+            <input id="inp-tmpl-bg1" type="color" value="#f2f2f6" style="width:42px;height:32px;padding:2px 3px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);" />
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:4px;font-size:12px;" data-i18n="lbl_bg_dark">Hintergrund dunkel</label>
+            <input id="inp-tmpl-bg2" type="color" value="#0f1117" style="width:42px;height:32px;padding:2px 3px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Hintergrundbild -->
+      <div>
+        <div class="text-muted text-sm" style="margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;" data-i18n="section_bg_img">Hintergrundbild</div>
+        <div id="tmpl-bgimg-drop" style="border:2px dashed var(--border);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative;max-width:360px;">
+          <img id="tmpl-bgimg-preview" src="" alt="" style="max-height:64px;max-width:100%;display:none;margin:0 auto 8px;border-radius:4px;object-fit:cover;" />
+          <div id="tmpl-bgimg-hint" style="font-size:13px;color:var(--text-muted);" data-i18n="ph_drag_bg">Hintergrundbild ziehen oder klicken</div>
+          <button id="tmpl-bgimg-clear" type="button" style="display:none;position:absolute;top:6px;right:8px;z-index:1;background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-muted);" title="Entfernen" data-i18n-title="btn_remove">✕</button>
+          <input id="tmpl-bgimg-file" type="file" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
+        </div>
+        <input id="inp-tmpl-bgimg" type="hidden" value="" />
+      </div>
+
+      <!-- Schrift -->
+      <div>
+        <div class="text-muted text-sm" style="margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;" data-i18n="section_font">Schrift</div>
+        <select id="inp-tmpl-font" style="width:200px;">
+          <option value="Inter">Inter (Standard)</option>
+          <option value="Roboto">Roboto</option>
+          <option value="Open Sans">Open Sans</option>
+          <option value="Lato">Lato</option>
+          <option value="Montserrat">Montserrat</option>
+          <option value="Playfair Display">Playfair Display</option>
+        </select>
+      </div>
+
+      <!-- Logo & Autor -->
+      <div>
+        <div class="text-muted text-sm" style="margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;">Logo &amp; Autor</div>
+        <div style="display:flex;flex-direction:column;gap:10px;max-width:360px;">
+          <div>
+            <label data-i18n="lbl_logo">Logo</label>
+            <div id="tmpl-logo-drop" style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative;">
+              <img id="tmpl-logo-preview" src="" alt="" style="max-height:48px;max-width:160px;display:none;margin:0 auto 8px;" />
+              <div id="tmpl-logo-hint" style="font-size:13px;color:var(--text-muted);" data-i18n="ph_drag_img">Bild hierher ziehen oder klicken</div>
+              <button id="tmpl-logo-clear" type="button" style="display:none;position:absolute;top:6px;right:8px;z-index:1;background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-muted);" title="Entfernen" data-i18n-title="btn_remove">✕</button>
+              <input id="tmpl-logo-file" type="file" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
+            </div>
+            <input id="inp-tmpl-logo" type="hidden" value="" />
+          </div>
+          <div>
+            <label data-i18n="lbl_logo_align">Logo-Ausrichtung</label>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-ghost btn-sm tmpl-logo-align btn-primary" data-align="left" data-i18n="btn_left">Links</button>
+              <button class="btn btn-ghost btn-sm tmpl-logo-align" data-align="center" data-i18n="btn_center">Mitte</button>
+              <button class="btn btn-ghost btn-sm tmpl-logo-align" data-align="right" data-i18n="btn_right">Rechts</button>
+            </div>
+          </div>
+          <div>
+            <label data-i18n="lbl_author">Autor</label>
+            <input id="inp-tmpl-author" type="text" placeholder="Name des Autors" style="width:100%;" data-i18n-placeholder="ph_author" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Kopfzeilen-Variante -->
+      <div>
+        <div class="text-muted text-sm" style="margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;" data-i18n="section_header">Kopfzeilen-Variante</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn btn-ghost btn-sm tmpl-hdr-btn btn-primary" data-layout="A"
+                  title="Logo links · Projektname · Autor und Datum rechts"
+                  style="font-family:monospace;font-size:10px;padding:5px 10px;line-height:1.5;">[🖼] Titel ·· Autor | Datum</button>
+          <button class="btn btn-ghost btn-sm tmpl-hdr-btn" data-layout="B"
+                  title="Projektname links · Logo mittig · Datum rechts"
+                  style="font-family:monospace;font-size:10px;padding:5px 10px;line-height:1.5;">Titel · [🖼] · Datum</button>
+          <button class="btn btn-ghost btn-sm tmpl-hdr-btn" data-layout="C"
+                  title="Logo links · Projektname zentriert"
+                  style="font-family:monospace;font-size:10px;padding:5px 10px;line-height:1.5;">[🖼] ·· Titel ··········</button>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-show-proj" checked /> <span data-i18n="lbl_show_projname">Projektname</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-show-author" checked /> <span data-i18n="lbl_show_author">Autor</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-show-date" checked /> <span data-i18n="lbl_show_date">Datum</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Fußzeile -->
+      <div>
+        <div class="text-muted text-sm" style="margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;" data-i18n="section_footer">Fußzeile</div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-bottom:8px;">
+          <input type="checkbox" id="chk-tmpl-footer" /> <span data-i18n="lbl_show_footer">Fußzeile anzeigen</span>
+        </label>
+        <input id="inp-tmpl-footer-text" type="text" placeholder="Fußzeilentext (optional)" data-i18n-placeholder="ph_footer_text"
+               style="width:100%;max-width:360px;" disabled />
+      </div>
+
+    </div><!-- /Einstellungen -->
+  </div><!-- /layout -->
+  </div><!-- /card-tmpl-body -->
+</div>
+
+<!-- ── Abruf-Logs ── -->
+<div class="card" id="card-logs">
+  <div class="card-hdr">
+    <button class="card-toggle" data-card="card-logs" title="Ein-/ausklappen" data-i18n-title="collapse_expand">▾</button>
+    <h2 style="margin:0;" data-i18n="card_logs">Abruf-Logs</h2>
+    <span id="log-count" class="text-muted text-sm"></span>
+    <span class="card-hdr-btns" style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <button id="btn-refresh-logs" class="btn btn-ghost btn-sm" data-i18n="btn_refresh">Aktualisieren</button>
+      <button id="btn-clear-logs-init" class="btn btn-ghost btn-sm" style="color:var(--danger);" data-i18n="btn_delete_logs">Logs löschen</button>
+    </span>
+  </div>
+  <div class="card-body" id="card-logs-body">
+  <div id="clear-logs-zone"
+       style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.35);
+              border-radius:8px;padding:12px 16px;margin-bottom:12px;
+              display:none;align-items:center;gap:12px;flex-wrap:wrap;">
+    <span style="color:var(--danger);font-weight:600;" data-i18n="confirm_delete_logs">Alle Fetch-Logs unwiderruflich löschen?</span>
+    <button id="btn-clear-logs-confirm" class="btn btn-danger btn-sm" data-i18n="btn_yes_delete">Ja, löschen</button>
+    <button id="btn-clear-logs-cancel" class="btn btn-ghost btn-sm" data-i18n="btn_cancel">Abbrechen</button>
+  </div>
+  <table id="log-table">
+    <thead>
+      <tr>
+        <th data-i18n="th_time">Zeit</th>
+        <th data-i18n="th_status">Status</th>
+        <th data-i18n="th_backend">Backend</th>
+        <th data-i18n="th_ok_total">OK / Gesamt</th>
+        <th data-i18n="th_error">Fehler</th>
+        <th data-i18n="th_duration">Laufzeit</th>
+        <th data-i18n="th_details">Details</th>
+      </tr>
+    </thead>
+    <tbody id="log-body">
+      <tr><td colspan="7" class="text-muted" style="text-align:center;padding:24px;" data-i18n="msg_loading">Lade…</td></tr>
+    </tbody>
+  </table>
+  <div id="adm-log-pagination" style="display:none;align-items:center;justify-content:space-between;margin-top:14px;gap:8px;flex-wrap:wrap;">
+    <span id="adm-log-range" style="font-size:12px;color:var(--muted);"></span>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button id="adm-log-prev" class="btn btn-ghost btn-sm" data-i18n="btn_back">&#8592; Zurück</button>
+      <span id="adm-log-pages" style="display:flex;gap:4px;"></span>
+      <button id="adm-log-next" class="btn btn-ghost btn-sm" data-i18n="btn_next">Weiter &#8594;</button>
+    </div>
+  </div>
+  </div><!-- /card-logs-body -->
+</div>
+
+<!-- Audit Trail -->
+<div class="card" id="card-audit">
+  <div class="card-hdr">
+    <button class="card-toggle" data-card="card-audit" title="Ein-/ausklappen" data-i18n-title="collapse_expand">▾</button>
+    <h2 style="margin:0;" data-i18n="card_audit">Audit Trail</h2>
+  </div>
+  <div class="card-body" id="card-audit-body">
+    <p class="text-muted text-sm" style="margin-bottom:14px;" data-i18n="audit_help">
+      Strukturierter, hash-verketteter Protokoll-Verlauf aller projektrelevanten Aktionen.
+      Ermöglicht forensische Nachweisbarkeit und Integritätsprüfung.
+    </p>
+    <div class="toggle-wrap" onclick="toggleAuditTrail()">
+      <div class="toggle" id="toggle-audit"></div>
+      <span style="font-size:13px;" data-i18n="lbl_enable_audit">Audit Trail aktivieren</span>
+    </div>
+  </div>
+</div>
+
+<!-- Daten verwalten -->
+<div class="card" id="card-data" style="border-left:3px solid var(--danger);">
+  <div class="card-hdr">
+    <button class="card-toggle" data-card="card-data" title="Ein-/ausklappen" data-i18n-title="collapse_expand">▾</button>
+    <h2 style="color:var(--danger);margin:0;" data-i18n="card_data">Daten verwalten</h2>
+  </div>
+  <div class="card-body" id="card-data-body">
+    <p class="text-muted text-sm" style="margin-bottom:14px;" data-i18n="data_help">
+      Keywords, Ereignisse und Alerts bleiben erhalten. Gelöscht werden: Trend-Datenpunkte, verwandte Suchanfragen und Abruf-Protokolle.
+    </p>
+    <button id="btn-delete-init" class="btn btn-danger" data-i18n="btn_delete_all">Alle Daten löschen</button>
+    <div id="confirm-zone" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.35);border-radius:8px;padding:14px 18px;margin-top:12px;align-items:center;gap:14px;flex-wrap:wrap;">
+      <span style="color:var(--danger);font-weight:600;" data-i18n="confirm_delete_all">Wirklich alle Daten unwiderruflich löschen?</span>
+      <button id="btn-delete-confirm" class="btn btn-danger" data-i18n="btn_yes_delete">Ja, löschen</button>
+      <button id="btn-delete-cancel" class="btn btn-ghost" data-i18n="btn_cancel">Abbrechen</button>
+    </div>
+  </div><!-- /card-data-body -->
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+window._mergeI18n({
+  de: {
+    card_theme: "Farbschema",
+    card_theme_sub: "Helles oder dunkles Erscheinungsbild",
+    btn_light: "Hell",
+    btn_dark: "Dunkel",
+    card_format: "Datums- & Zeitformat",
+    card_format_sub: "Persönliche Einstellung",
+    btn_save: "Speichern",
+    lbl_date_format: "Datumsformat",
+    lbl_time_format: "Zeitformat",
+    lbl_trends_tz: "Google Trends Zeitzone (pytrends tz-Offset in Minuten)",
+    trends_tz_help: "Bestimmt, welche Zeitzone Google Trends für den Datenabruf verwendet. Standard: UTC+1 (MEZ).",
+    lbl_ui_lang: "Oberflächensprache / Interface Language",
+    ui_lang_help: "Sprache der Benutzeroberfläche. Wird schrittweise auf alle Seiten ausgerollt.",
+    lbl_query_lang: "Abfragesprache (Google Trends)",
+    ql_auto: "Automatisch (Browsersprache)",
+    query_lang_help: "Bestimmt, in welcher Sprache Google Trends Metadaten liefert (Regionsnamen, verwandte Suchanfragen). Beeinflusst nicht die Trend-Daten selbst.",
+    lbl_accent_colors: "Akzentfarben",
+    lbl_accent1: "Akzent 1 (primär)",
+    lbl_accent2: "Akzent 2 (sekundär)",
+    btn_accent_reset: "Zurücksetzen",
+    accent_help: "Akzent 1 für primäre Aktionen (Buttons, Navigation). Akzent 2 für sekundäre Elemente.",
+    lbl_preview: "Vorschau:",
+    lbl_system_default: "Als Systemstandard festlegen (gilt für alle Nutzer ohne eigene Einstellung)",
+    card_workflow: "Abruf-Workflow",
+    card_workflow_sub: "Reihenfolge und aktive Backends festlegen",
+    workflow_help: "Beim Abruf wird das erste aktive Backend versucht. Bei Fehler folgt das nächste.",
+    card_api: "API & Konfiguration",
+    section_trend: "Trend-Datenquellen",
+    lbl_serpapi_key: "SerpAPI-Schlüssel",
+    ph_enter_key: "Schlüssel eingeben…",
+    btn_show: "Anzeigen",
+    btn_hide: "Verbergen",
+    serpapi_help: "Google Trends · 100 kostenlose Anfragen/Monat",
+    lbl_cookies_file: "Cookies-Datei (Pfad)",
+    cookies_help: "Für Playwright-Backend – mit Cookie-Editor exportieren",
+    lbl_newsapi_key: "NewsAPI-Schlüssel",
+    newsapi_help: 'Für \u201eMeldungen finden\u201c · 100 kostenlose Anfragen/Tag',
+    section_social: "Soziale Netzwerke",
+    lbl_censys_id: "Censys API ID",
+    lbl_censys_secret: "Censys API Secret",
+    section_satellite: "Satellitenbilder",
+    lbl_copernicus_email: "Copernicus Data Space – E-Mail",
+    ph_email: "E-Mail-Adresse",
+    lbl_copernicus_pw: "Copernicus Data Space – Passwort",
+    ph_password: "Passwort",
+    satellite_help: "Satellitenbilder & NDVI · Sentinel-2 · kostenlos",
+    section_automation: "Automatisierung",
+    lbl_daily_fetch: "Geplanter täglicher Abruf",
+    lbl_clock: "Uhr (Serverzeit)",
+    lbl_next_fetch: "Nächster Abruf:",
+    section_ai: "KI-Analyse",
+    lbl_provider: "Anbieter",
+    lbl_model: "Modell",
+    lbl_anthropic_key: "Anthropic API-Schlüssel",
+    lbl_openai_key: "OpenAI API-Schlüssel",
+    lbl_gemini_key: "Google Gemini API-Schlüssel",
+    lbl_mistral_key: "Mistral AI API-Schlüssel",
+    section_telegram: "Telegram – Session",
+    lbl_tg_status: "Status wird geprüft…",
+    ph_phone: "+49170…",
+    btn_send_code: "Code senden",
+    ph_code: "Code",
+    ph_2fa: "2FA-Passwort (optional)",
+    btn_verify: "Verifizieren",
+    card_policies: "API-Richtlinien",
+    policies_help: "Legt fest, wie Nutzer auf APIs zugreifen dürfen. Admin-Schlüssel: Nutzer verwenden den global hinterlegten Schlüssel. Eigener Schlüssel: Nutzer müssen einen eigenen Schlüssel hinterlegen. Nicht erlaubt: API ist für Nutzer gesperrt.",
+    opt_admin_key: "Admin-Schlüssel verwenden",
+    opt_own_key: "Eigener Schlüssel erlaubt",
+    opt_not_allowed: "Nicht erlaubt",
+    card_smtp: "E-Mail (SMTP)",
+    btn_send_test: "Testmail senden",
+    lbl_smtp_host: "SMTP-Server",
+    lbl_smtp_port: "Port",
+    lbl_smtp_user: "Benutzername",
+    lbl_smtp_pw: "Passwort",
+    lbl_smtp_from: "Absender-Adresse",
+    lbl_smtp_tls: "TLS verwenden",
+    smtp_tls_help: "Port 587 = STARTTLS, Port 465 = SSL/TLS",
+    card_template: "Präsentationstemplate",
+    section_preview: "Vorschau",
+    section_colors: "Farben",
+    lbl_text_light: "Textfarbe hell",
+    lbl_text_dark: "Textfarbe dunkel",
+    lbl_accent: "Akzentfarbe",
+    lbl_separator: "Trennlinie",
+    lbl_bg_light: "Hintergrund hell",
+    lbl_bg_dark: "Hintergrund dunkel",
+    section_bg_img: "Hintergrundbild",
+    ph_drag_bg: "Hintergrundbild ziehen oder klicken",
+    btn_remove: "Entfernen",
+    section_font: "Schrift",
+    lbl_logo: "Logo",
+    ph_drag_img: "Bild hierher ziehen oder klicken",
+    lbl_logo_align: "Logo-Ausrichtung",
+    btn_left: "Links",
+    btn_center: "Mitte",
+    btn_right: "Rechts",
+    lbl_author: "Autor",
+    ph_author: "Name des Autors",
+    section_header: "Kopfzeilen-Variante",
+    lbl_show_projname: "Projektname",
+    lbl_show_author: "Autor",
+    lbl_show_date: "Datum",
+    section_footer: "Fußzeile",
+    lbl_show_footer: "Fußzeile anzeigen",
+    ph_footer_text: "Fußzeilentext (optional)",
+    card_logs: "Abruf-Logs",
+    btn_refresh: "Aktualisieren",
+    btn_delete_logs: "Logs löschen",
+    confirm_delete_logs: "Alle Fetch-Logs unwiderruflich löschen?",
+    btn_yes_delete: "Ja, löschen",
+    btn_cancel: "Abbrechen",
+    th_time: "Zeit",
+    th_status: "Status",
+    th_backend: "Backend",
+    th_ok_total: "OK / Gesamt",
+    th_error: "Fehler",
+    th_duration: "Laufzeit",
+    th_details: "Details",
+    msg_loading: "Lade…",
+    btn_back: "← Zurück",
+    btn_next: "Weiter →",
+    card_audit: "Audit Trail",
+    audit_help: "Strukturierter, hash-verketteter Protokoll-Verlauf aller projektrelevanten Aktionen. Ermöglicht forensische Nachweisbarkeit und Integritätsprüfung.",
+    lbl_enable_audit: "Audit Trail aktivieren",
+    card_data: "Daten verwalten",
+    data_help: "Keywords, Ereignisse und Alerts bleiben erhalten. Gelöscht werden: Trend-Datenpunkte, verwandte Suchanfragen und Abruf-Protokolle.",
+    btn_delete_all: "Alle Daten löschen",
+    confirm_delete_all: "Wirklich alle Daten unwiderruflich löschen?",
+    collapse_expand: "Ein-/ausklappen",
+    be_playwright_name: "Chromium (Playwright)",
+    be_playwright_desc: "Browser-Automatisierung mit optionalen Cookies. Zuverlässig, aber langsamer.",
+    be_pytrends_name: "pytrends",
+    be_pytrends_desc: "Leichtgewichtige Python-Bibliothek, kein Browser nötig. Anfälliger für Rate-Limiting.",
+    be_serpapi_name: "SerpAPI",
+    be_serpapi_desc: "Zuverlässige API-Lösung, 100 kostenlose Anfragen/Monat. API-Schlüssel erforderlich.",
+    badge_active: "Aktiv",
+    badge_inactive: "Inaktiv",
+    title_disable: "Deaktivieren",
+    title_enable: "Aktivieren",
+    entries_suffix: "Einträge",
+    no_logs: "Noch keine Logs",
+    log_running: "läuft…",
+    log_click_expand: "Klicken zum Aufklappen",
+    toast_workflow_saved: "Workflow gespeichert",
+    toast_config_saved: "Konfiguration gespeichert",
+    toast_policies_saved: "API-Richtlinien gespeichert",
+    toast_email_saved: "E-Mail-Einstellungen gespeichert",
+    toast_template_saved: "Template gespeichert",
+    toast_format_saved: "Format gespeichert",
+    toast_logs_deleted: "Fetch-Logs gelöscht",
+    toast_data_deleted: "Alle Daten gelöscht",
+    toast_audit_enabled: "Audit Trail aktiviert",
+    toast_audit_disabled: "Audit Trail deaktiviert",
+    toast_error: "Fehler: ",
+    tg_session_active: "✓ Session aktiv",
+    tg_no_session: "Keine aktive Session",
+    alert_enter_phone: "Bitte Telefonnummer eingeben",
+    alert_code_sent: "Code wurde gesendet!",
+    alert_enter_code: "Bitte Code eingeben",
+    alert_tg_connected: "Telegram-Session erfolgreich verbunden!",
+    toast_test_email_sent: "Testmail erfolgreich gesendet!",
+    toast_send_error: "Fehler beim Senden",
+    btn_sending: "Sende…",
+    btn_deleting: "Lösche…",
+    settings_load_failed: "Einstellungen konnten nicht geladen werden: ",
+  },
+  en: {
+    card_theme: "Color scheme",
+    card_theme_sub: "Light or dark appearance",
+    btn_light: "Light",
+    btn_dark: "Dark",
+    card_format: "Date & time format",
+    card_format_sub: "Personal setting",
+    btn_save: "Save",
+    lbl_date_format: "Date format",
+    lbl_time_format: "Time format",
+    lbl_trends_tz: "Google Trends timezone (pytrends tz offset in minutes)",
+    trends_tz_help: "Determines which timezone Google Trends uses for data retrieval. Default: UTC+1 (CET).",
+    lbl_ui_lang: "Interface language",
+    ui_lang_help: "User interface language. Being rolled out to all pages gradually.",
+    lbl_query_lang: "Query language (Google Trends)",
+    ql_auto: "Automatic (browser language)",
+    query_lang_help: "Determines the language of Google Trends metadata (region names, related queries). Does not affect the trend data itself.",
+    lbl_accent_colors: "Accent colors",
+    lbl_accent1: "Accent 1 (primary)",
+    lbl_accent2: "Accent 2 (secondary)",
+    btn_accent_reset: "Reset",
+    accent_help: "Accent 1 for primary actions (buttons, navigation). Accent 2 for secondary elements.",
+    lbl_preview: "Preview:",
+    lbl_system_default: "Set as system default (applies to all users without their own setting)",
+    card_workflow: "Fetch workflow",
+    card_workflow_sub: "Set order and active backends",
+    workflow_help: "During fetch, the first active backend is tried. On error, the next one follows.",
+    card_api: "API & Configuration",
+    section_trend: "Trend data sources",
+    lbl_serpapi_key: "SerpAPI key",
+    ph_enter_key: "Enter key…",
+    btn_show: "Show",
+    btn_hide: "Hide",
+    serpapi_help: "Google Trends · 100 free requests/month",
+    lbl_cookies_file: "Cookies file (path)",
+    cookies_help: "For Playwright backend – export with cookie editor",
+    lbl_newsapi_key: "NewsAPI key",
+    newsapi_help: "For \"Find news\" · 100 free requests/day",
+    section_social: "Social networks",
+    lbl_censys_id: "Censys API ID",
+    lbl_censys_secret: "Censys API Secret",
+    section_satellite: "Satellite images",
+    lbl_copernicus_email: "Copernicus Data Space – Email",
+    ph_email: "Email address",
+    lbl_copernicus_pw: "Copernicus Data Space – Password",
+    ph_password: "Password",
+    satellite_help: "Satellite images & NDVI · Sentinel-2 · free",
+    section_automation: "Automation",
+    lbl_daily_fetch: "Scheduled daily fetch",
+    lbl_clock: "o'clock (server time)",
+    lbl_next_fetch: "Next fetch:",
+    section_ai: "AI analysis",
+    lbl_provider: "Provider",
+    lbl_model: "Model",
+    lbl_anthropic_key: "Anthropic API key",
+    lbl_openai_key: "OpenAI API key",
+    lbl_gemini_key: "Google Gemini API key",
+    lbl_mistral_key: "Mistral AI API key",
+    section_telegram: "Telegram – Session",
+    lbl_tg_status: "Checking status…",
+    ph_phone: "+49170…",
+    btn_send_code: "Send code",
+    ph_code: "Code",
+    ph_2fa: "2FA password (optional)",
+    btn_verify: "Verify",
+    card_policies: "API policies",
+    policies_help: "Defines how users may access APIs. Admin key: users use the globally stored key. Own key: users must provide their own key. Not allowed: API is blocked for users.",
+    opt_admin_key: "Use admin key",
+    opt_own_key: "Own key allowed",
+    opt_not_allowed: "Not allowed",
+    card_smtp: "Email (SMTP)",
+    btn_send_test: "Send test email",
+    lbl_smtp_host: "SMTP server",
+    lbl_smtp_port: "Port",
+    lbl_smtp_user: "Username",
+    lbl_smtp_pw: "Password",
+    lbl_smtp_from: "Sender address",
+    lbl_smtp_tls: "Use TLS",
+    smtp_tls_help: "Port 587 = STARTTLS, Port 465 = SSL/TLS",
+    card_template: "Presentation template",
+    section_preview: "Preview",
+    section_colors: "Colors",
+    lbl_text_light: "Light text color",
+    lbl_text_dark: "Dark text color",
+    lbl_accent: "Accent color",
+    lbl_separator: "Separator line",
+    lbl_bg_light: "Light background",
+    lbl_bg_dark: "Dark background",
+    section_bg_img: "Background image",
+    ph_drag_bg: "Drag or click background image",
+    btn_remove: "Remove",
+    section_font: "Font",
+    lbl_logo: "Logo",
+    ph_drag_img: "Drag image here or click",
+    lbl_logo_align: "Logo alignment",
+    btn_left: "Left",
+    btn_center: "Center",
+    btn_right: "Right",
+    lbl_author: "Author",
+    ph_author: "Author name",
+    section_header: "Header variant",
+    lbl_show_projname: "Project name",
+    lbl_show_author: "Author",
+    lbl_show_date: "Date",
+    section_footer: "Footer",
+    lbl_show_footer: "Show footer",
+    ph_footer_text: "Footer text (optional)",
+    card_logs: "Fetch logs",
+    btn_refresh: "Refresh",
+    btn_delete_logs: "Delete logs",
+    confirm_delete_logs: "Permanently delete all fetch logs?",
+    btn_yes_delete: "Yes, delete",
+    btn_cancel: "Cancel",
+    th_time: "Time",
+    th_status: "Status",
+    th_backend: "Backend",
+    th_ok_total: "OK / Total",
+    th_error: "Error",
+    th_duration: "Duration",
+    th_details: "Details",
+    msg_loading: "Loading…",
+    btn_back: "← Back",
+    btn_next: "Next →",
+    card_audit: "Audit trail",
+    audit_help: "Structured, hash-chained log history of all project-relevant actions. Enables forensic traceability and integrity verification.",
+    lbl_enable_audit: "Enable audit trail",
+    card_data: "Manage data",
+    data_help: "Keywords, events and alerts are retained. Deleted: trend data points, related queries and fetch logs.",
+    btn_delete_all: "Delete all data",
+    confirm_delete_all: "Really permanently delete all data?",
+    collapse_expand: "Collapse/expand",
+    be_playwright_name: "Chromium (Playwright)",
+    be_playwright_desc: "Browser automation with optional cookies. Reliable but slower.",
+    be_pytrends_name: "pytrends",
+    be_pytrends_desc: "Lightweight Python library, no browser needed. More susceptible to rate limiting.",
+    be_serpapi_name: "SerpAPI",
+    be_serpapi_desc: "Reliable API solution, 100 free requests/month. API key required.",
+    badge_active: "Active",
+    badge_inactive: "Inactive",
+    title_disable: "Disable",
+    title_enable: "Enable",
+    entries_suffix: "entries",
+    no_logs: "No logs yet",
+    log_running: "running…",
+    log_click_expand: "Click to expand",
+    toast_workflow_saved: "Workflow saved",
+    toast_config_saved: "Configuration saved",
+    toast_policies_saved: "API policies saved",
+    toast_email_saved: "Email settings saved",
+    toast_template_saved: "Template saved",
+    toast_format_saved: "Format saved",
+    toast_logs_deleted: "Fetch logs deleted",
+    toast_data_deleted: "All data deleted",
+    toast_audit_enabled: "Audit trail enabled",
+    toast_audit_disabled: "Audit trail disabled",
+    toast_error: "Error: ",
+    tg_session_active: "✓ Session active",
+    tg_no_session: "No active session",
+    alert_enter_phone: "Please enter phone number",
+    alert_code_sent: "Code sent!",
+    alert_enter_code: "Please enter code",
+    alert_tg_connected: "Telegram session successfully connected!",
+    toast_test_email_sent: "Test email sent successfully!",
+    toast_send_error: "Send error",
+    btn_sending: "Sending…",
+    btn_deleting: "Deleting…",
+    settings_load_failed: "Failed to load settings: ",
+  },
+  fr: {
+    card_theme: "Thème de couleur",
+    card_theme_sub: "Apparence claire ou sombre",
+    btn_light: "Clair",
+    btn_dark: "Sombre",
+    card_format: "Format de date & heure",
+    card_format_sub: "Paramètre personnel",
+    btn_save: "Enregistrer",
+    lbl_date_format: "Format de date",
+    lbl_time_format: "Format d'heure",
+    lbl_trends_tz: "Fuseau horaire Google Trends (décalage tz pytrends en minutes)",
+    trends_tz_help: "Détermine le fuseau horaire utilisé par Google Trends pour la récupération des données. Par défaut : UTC+1 (CET).",
+    lbl_ui_lang: "Langue de l'interface",
+    ui_lang_help: "Langue de l'interface utilisateur. Déploiement progressif sur toutes les pages.",
+    lbl_query_lang: "Langue de requête (Google Trends)",
+    ql_auto: "Automatique (langue du navigateur)",
+    query_lang_help: "Détermine la langue des métadonnées Google Trends (noms de régions, requêtes associées). N'affecte pas les données de tendance.",
+    lbl_accent_colors: "Couleurs d'accentuation",
+    lbl_accent1: "Accent 1 (primaire)",
+    lbl_accent2: "Accent 2 (secondaire)",
+    btn_accent_reset: "Réinitialiser",
+    accent_help: "Accent 1 pour les actions principales (boutons, navigation). Accent 2 pour les éléments secondaires.",
+    lbl_preview: "Aperçu :",
+    lbl_system_default: "Définir comme paramètre système par défaut (s'applique à tous les utilisateurs sans paramètre personnel)",
+    card_workflow: "Flux de récupération",
+    card_workflow_sub: "Définir l'ordre et les backends actifs",
+    workflow_help: "Lors de la récupération, le premier backend actif est essayé. En cas d'erreur, le suivant prend le relais.",
+    card_api: "API & Configuration",
+    section_trend: "Sources de données de tendances",
+    lbl_serpapi_key: "Clé SerpAPI",
+    ph_enter_key: "Entrer la clé…",
+    btn_show: "Afficher",
+    btn_hide: "Masquer",
+    serpapi_help: "Google Trends · 100 requêtes gratuites/mois",
+    lbl_cookies_file: "Fichier cookies (chemin)",
+    cookies_help: "Pour le backend Playwright – exporter avec l'éditeur de cookies",
+    lbl_newsapi_key: "Clé NewsAPI",
+    newsapi_help: "Pour « Trouver des actualités » · 100 requêtes gratuites/jour",
+    section_social: "Réseaux sociaux",
+    lbl_censys_id: "Censys API ID",
+    lbl_censys_secret: "Censys API Secret",
+    section_satellite: "Images satellite",
+    lbl_copernicus_email: "Copernicus Data Space – E-mail",
+    ph_email: "Adresse e-mail",
+    lbl_copernicus_pw: "Copernicus Data Space – Mot de passe",
+    ph_password: "Mot de passe",
+    satellite_help: "Images satellite & NDVI · Sentinel-2 · gratuit",
+    section_automation: "Automatisation",
+    lbl_daily_fetch: "Récupération quotidienne planifiée",
+    lbl_clock: "h (heure serveur)",
+    lbl_next_fetch: "Prochaine récupération :",
+    section_ai: "Analyse IA",
+    lbl_provider: "Fournisseur",
+    lbl_model: "Modèle",
+    lbl_anthropic_key: "Clé API Anthropic",
+    lbl_openai_key: "Clé API OpenAI",
+    lbl_gemini_key: "Clé API Google Gemini",
+    lbl_mistral_key: "Clé API Mistral AI",
+    section_telegram: "Telegram – Session",
+    lbl_tg_status: "Vérification du statut…",
+    ph_phone: "+33…",
+    btn_send_code: "Envoyer le code",
+    ph_code: "Code",
+    ph_2fa: "Mot de passe 2FA (optionnel)",
+    btn_verify: "Vérifier",
+    card_policies: "Politiques d'API",
+    policies_help: "Définit comment les utilisateurs peuvent accéder aux API. Clé admin : les utilisateurs utilisent la clé globale. Clé personnelle : les utilisateurs doivent fournir leur propre clé. Non autorisé : l'API est bloquée pour les utilisateurs.",
+    opt_admin_key: "Utiliser la clé admin",
+    opt_own_key: "Clé personnelle autorisée",
+    opt_not_allowed: "Non autorisé",
+    card_smtp: "E-mail (SMTP)",
+    btn_send_test: "Envoyer un e-mail test",
+    lbl_smtp_host: "Serveur SMTP",
+    lbl_smtp_port: "Port",
+    lbl_smtp_user: "Nom d'utilisateur",
+    lbl_smtp_pw: "Mot de passe",
+    lbl_smtp_from: "Adresse d'expéditeur",
+    lbl_smtp_tls: "Utiliser TLS",
+    smtp_tls_help: "Port 587 = STARTTLS, Port 465 = SSL/TLS",
+    card_template: "Modèle de présentation",
+    section_preview: "Aperçu",
+    section_colors: "Couleurs",
+    lbl_text_light: "Couleur du texte clair",
+    lbl_text_dark: "Couleur du texte sombre",
+    lbl_accent: "Couleur d'accentuation",
+    lbl_separator: "Ligne de séparation",
+    lbl_bg_light: "Arrière-plan clair",
+    lbl_bg_dark: "Arrière-plan sombre",
+    section_bg_img: "Image d'arrière-plan",
+    ph_drag_bg: "Glisser ou cliquer sur l'image d'arrière-plan",
+    btn_remove: "Retirer",
+    section_font: "Police",
+    lbl_logo: "Logo",
+    ph_drag_img: "Glisser l'image ici ou cliquer",
+    lbl_logo_align: "Alignement du logo",
+    btn_left: "Gauche",
+    btn_center: "Centre",
+    btn_right: "Droite",
+    lbl_author: "Auteur",
+    ph_author: "Nom de l'auteur",
+    section_header: "Variante d'en-tête",
+    lbl_show_projname: "Nom du projet",
+    lbl_show_author: "Auteur",
+    lbl_show_date: "Date",
+    section_footer: "Pied de page",
+    lbl_show_footer: "Afficher le pied de page",
+    ph_footer_text: "Texte du pied de page (optionnel)",
+    card_logs: "Journaux de récupération",
+    btn_refresh: "Actualiser",
+    btn_delete_logs: "Supprimer les journaux",
+    confirm_delete_logs: "Supprimer définitivement tous les journaux de récupération ?",
+    btn_yes_delete: "Oui, supprimer",
+    btn_cancel: "Annuler",
+    th_time: "Heure",
+    th_status: "Statut",
+    th_backend: "Backend",
+    th_ok_total: "OK / Total",
+    th_error: "Erreur",
+    th_duration: "Durée",
+    th_details: "Détails",
+    msg_loading: "Chargement…",
+    btn_back: "← Retour",
+    btn_next: "Suivant →",
+    card_audit: "Journal d'audit",
+    audit_help: "Historique structuré et chaîné par hash de toutes les actions liées au projet. Permet la traçabilité forensique et la vérification de l'intégrité.",
+    lbl_enable_audit: "Activer le journal d'audit",
+    card_data: "Gérer les données",
+    data_help: "Les mots-clés, événements et alertes sont conservés. Supprimés : points de données de tendances, requêtes associées et journaux de récupération.",
+    btn_delete_all: "Supprimer toutes les données",
+    confirm_delete_all: "Vraiment supprimer définitivement toutes les données ?",
+    collapse_expand: "Réduire/développer",
+    be_playwright_name: "Chromium (Playwright)",
+    be_playwright_desc: "Automatisation du navigateur avec cookies optionnels. Fiable mais plus lent.",
+    be_pytrends_name: "pytrends",
+    be_pytrends_desc: "Bibliothèque Python légère, pas de navigateur nécessaire. Plus susceptible au rate limiting.",
+    be_serpapi_name: "SerpAPI",
+    be_serpapi_desc: "Solution API fiable, 100 requêtes gratuites/mois. Clé API requise.",
+    badge_active: "Actif",
+    badge_inactive: "Inactif",
+    title_disable: "Désactiver",
+    title_enable: "Activer",
+    entries_suffix: "entrées",
+    no_logs: "Pas encore de journaux",
+    log_running: "en cours…",
+    log_click_expand: "Cliquer pour développer",
+    toast_workflow_saved: "Flux de travail enregistré",
+    toast_config_saved: "Configuration enregistrée",
+    toast_policies_saved: "Politiques d'API enregistrées",
+    toast_email_saved: "Paramètres e-mail enregistrés",
+    toast_template_saved: "Modèle enregistré",
+    toast_format_saved: "Format enregistré",
+    toast_logs_deleted: "Journaux supprimés",
+    toast_data_deleted: "Toutes les données supprimées",
+    toast_audit_enabled: "Journal d'audit activé",
+    toast_audit_disabled: "Journal d'audit désactivé",
+    toast_error: "Erreur : ",
+    tg_session_active: "✓ Session active",
+    tg_no_session: "Aucune session active",
+    alert_enter_phone: "Veuillez entrer un numéro de téléphone",
+    alert_code_sent: "Code envoyé !",
+    alert_enter_code: "Veuillez entrer le code",
+    alert_tg_connected: "Session Telegram connectée avec succès !",
+    toast_test_email_sent: "E-mail test envoyé avec succès !",
+    toast_send_error: "Erreur d'envoi",
+    btn_sending: "Envoi…",
+    btn_deleting: "Suppression…",
+    settings_load_failed: "Impossible de charger les paramètres : ",
+  },
+  es: {
+    card_theme: "Esquema de colores",
+    card_theme_sub: "Apariencia clara u oscura",
+    btn_light: "Claro",
+    btn_dark: "Oscuro",
+    card_format: "Formato de fecha y hora",
+    card_format_sub: "Configuración personal",
+    btn_save: "Guardar",
+    lbl_date_format: "Formato de fecha",
+    lbl_time_format: "Formato de hora",
+    lbl_trends_tz: "Zona horaria Google Trends (desplazamiento tz de pytrends en minutos)",
+    trends_tz_help: "Determina qué zona horaria usa Google Trends para recuperar datos. Por defecto: UTC+1 (CET).",
+    lbl_ui_lang: "Idioma de la interfaz",
+    ui_lang_help: "Idioma de la interfaz de usuario. Se desplegará gradualmente en todas las páginas.",
+    lbl_query_lang: "Idioma de consulta (Google Trends)",
+    ql_auto: "Automático (idioma del navegador)",
+    query_lang_help: "Determina el idioma de los metadatos de Google Trends (nombres de regiones, consultas relacionadas). No afecta los datos de tendencia.",
+    lbl_accent_colors: "Colores de acento",
+    lbl_accent1: "Acento 1 (primario)",
+    lbl_accent2: "Acento 2 (secundario)",
+    btn_accent_reset: "Restablecer",
+    accent_help: "Acento 1 para acciones principales (botones, navegación). Acento 2 para elementos secundarios.",
+    lbl_preview: "Vista previa:",
+    lbl_system_default: "Establecer como predeterminado del sistema (se aplica a todos los usuarios sin configuración propia)",
+    card_workflow: "Flujo de recuperación",
+    card_workflow_sub: "Establecer orden y backends activos",
+    workflow_help: "Durante la recuperación se intenta el primer backend activo. En caso de error, se pasa al siguiente.",
+    card_api: "API y Configuración",
+    section_trend: "Fuentes de datos de tendencias",
+    lbl_serpapi_key: "Clave SerpAPI",
+    ph_enter_key: "Introducir clave…",
+    btn_show: "Mostrar",
+    btn_hide: "Ocultar",
+    serpapi_help: "Google Trends · 100 solicitudes gratuitas/mes",
+    lbl_cookies_file: "Archivo de cookies (ruta)",
+    cookies_help: "Para backend Playwright – exportar con editor de cookies",
+    lbl_newsapi_key: "Clave NewsAPI",
+    newsapi_help: "Para «Buscar noticias» · 100 solicitudes gratuitas/día",
+    section_social: "Redes sociales",
+    lbl_censys_id: "Censys API ID",
+    lbl_censys_secret: "Censys API Secret",
+    section_satellite: "Imágenes satelitales",
+    lbl_copernicus_email: "Copernicus Data Space – Email",
+    ph_email: "Dirección de email",
+    lbl_copernicus_pw: "Copernicus Data Space – Contraseña",
+    ph_password: "Contraseña",
+    satellite_help: "Imágenes satelitales & NDVI · Sentinel-2 · gratis",
+    section_automation: "Automatización",
+    lbl_daily_fetch: "Recuperación diaria programada",
+    lbl_clock: "h (hora del servidor)",
+    lbl_next_fetch: "Próxima recuperación:",
+    section_ai: "Análisis IA",
+    lbl_provider: "Proveedor",
+    lbl_model: "Modelo",
+    lbl_anthropic_key: "Clave API Anthropic",
+    lbl_openai_key: "Clave API OpenAI",
+    lbl_gemini_key: "Clave API Google Gemini",
+    lbl_mistral_key: "Clave API Mistral AI",
+    section_telegram: "Telegram – Sesión",
+    lbl_tg_status: "Verificando estado…",
+    ph_phone: "+34…",
+    btn_send_code: "Enviar código",
+    ph_code: "Código",
+    ph_2fa: "Contraseña 2FA (opcional)",
+    btn_verify: "Verificar",
+    card_policies: "Políticas de API",
+    policies_help: "Define cómo los usuarios pueden acceder a las API. Clave admin: los usuarios usan la clave global. Clave propia: los usuarios deben proporcionar su propia clave. No permitido: la API está bloqueada para los usuarios.",
+    opt_admin_key: "Usar clave admin",
+    opt_own_key: "Clave propia permitida",
+    opt_not_allowed: "No permitido",
+    card_smtp: "Email (SMTP)",
+    btn_send_test: "Enviar email de prueba",
+    lbl_smtp_host: "Servidor SMTP",
+    lbl_smtp_port: "Puerto",
+    lbl_smtp_user: "Nombre de usuario",
+    lbl_smtp_pw: "Contraseña",
+    lbl_smtp_from: "Dirección de remitente",
+    lbl_smtp_tls: "Usar TLS",
+    smtp_tls_help: "Puerto 587 = STARTTLS, Puerto 465 = SSL/TLS",
+    card_template: "Plantilla de presentación",
+    section_preview: "Vista previa",
+    section_colors: "Colores",
+    lbl_text_light: "Color de texto claro",
+    lbl_text_dark: "Color de texto oscuro",
+    lbl_accent: "Color de acento",
+    lbl_separator: "Línea separadora",
+    lbl_bg_light: "Fondo claro",
+    lbl_bg_dark: "Fondo oscuro",
+    section_bg_img: "Imagen de fondo",
+    ph_drag_bg: "Arrastrar o clic en imagen de fondo",
+    btn_remove: "Eliminar",
+    section_font: "Fuente",
+    lbl_logo: "Logo",
+    ph_drag_img: "Arrastrar imagen aquí o clic",
+    lbl_logo_align: "Alineación del logo",
+    btn_left: "Izquierda",
+    btn_center: "Centro",
+    btn_right: "Derecha",
+    lbl_author: "Autor",
+    ph_author: "Nombre del autor",
+    section_header: "Variante de encabezado",
+    lbl_show_projname: "Nombre del proyecto",
+    lbl_show_author: "Autor",
+    lbl_show_date: "Fecha",
+    section_footer: "Pie de página",
+    lbl_show_footer: "Mostrar pie de página",
+    ph_footer_text: "Texto del pie de página (opcional)",
+    card_logs: "Registros de recuperación",
+    btn_refresh: "Actualizar",
+    btn_delete_logs: "Eliminar registros",
+    confirm_delete_logs: "¿Eliminar permanentemente todos los registros de recuperación?",
+    btn_yes_delete: "Sí, eliminar",
+    btn_cancel: "Cancelar",
+    th_time: "Hora",
+    th_status: "Estado",
+    th_backend: "Backend",
+    th_ok_total: "OK / Total",
+    th_error: "Error",
+    th_duration: "Duración",
+    th_details: "Detalles",
+    msg_loading: "Cargando…",
+    btn_back: "← Atrás",
+    btn_next: "Siguiente →",
+    card_audit: "Registro de auditoría",
+    audit_help: "Historial de registro estructurado y encadenado por hash de todas las acciones relevantes del proyecto. Permite la trazabilidad forense y la verificación de integridad.",
+    lbl_enable_audit: "Activar registro de auditoría",
+    card_data: "Gestionar datos",
+    data_help: "Las palabras clave, eventos y alertas se conservan. Se eliminan: puntos de datos de tendencias, consultas relacionadas y registros de recuperación.",
+    btn_delete_all: "Eliminar todos los datos",
+    confirm_delete_all: "¿Realmente eliminar todos los datos permanentemente?",
+    collapse_expand: "Colapsar/expandir",
+    be_playwright_name: "Chromium (Playwright)",
+    be_playwright_desc: "Automatización del navegador con cookies opcionales. Fiable pero más lento.",
+    be_pytrends_name: "pytrends",
+    be_pytrends_desc: "Biblioteca Python ligera, sin navegador necesario. Más susceptible al rate limiting.",
+    be_serpapi_name: "SerpAPI",
+    be_serpapi_desc: "Solución API fiable, 100 solicitudes gratuitas/mes. Se requiere clave API.",
+    badge_active: "Activo",
+    badge_inactive: "Inactivo",
+    title_disable: "Desactivar",
+    title_enable: "Activar",
+    entries_suffix: "entradas",
+    no_logs: "Aún no hay registros",
+    log_running: "ejecutando…",
+    log_click_expand: "Clic para expandir",
+    toast_workflow_saved: "Flujo de trabajo guardado",
+    toast_config_saved: "Configuración guardada",
+    toast_policies_saved: "Políticas de API guardadas",
+    toast_email_saved: "Configuración de email guardada",
+    toast_template_saved: "Plantilla guardada",
+    toast_format_saved: "Formato guardado",
+    toast_logs_deleted: "Registros eliminados",
+    toast_data_deleted: "Todos los datos eliminados",
+    toast_audit_enabled: "Registro de auditoría activado",
+    toast_audit_disabled: "Registro de auditoría desactivado",
+    toast_error: "Error: ",
+    tg_session_active: "✓ Sesión activa",
+    tg_no_session: "Sin sesión activa",
+    alert_enter_phone: "Por favor introduce el número de teléfono",
+    alert_code_sent: "¡Código enviado!",
+    alert_enter_code: "Por favor introduce el código",
+    alert_tg_connected: "¡Sesión de Telegram conectada con éxito!",
+    toast_test_email_sent: "¡Email de prueba enviado con éxito!",
+    toast_send_error: "Error al enviar",
+    btn_sending: "Enviando…",
+    btn_deleting: "Eliminando…",
+    settings_load_failed: "Error al cargar la configuración: ",
+  },
+});
+window._applyI18n();
+
+  // ─────────────────────────────────────────────────────────────
+  // Farbschema
+  // ─────────────────────────────────────────────────────────────
+  function setUiTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("ui_theme", theme);
+    highlightThemeBtn(theme);
+    if (typeof applyThemeLogos === "function") applyThemeLogos();
+    // serverseitig speichern
+    fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: "ui_theme", value: theme }),
+    }).catch(() => {});
+  }
+  function highlightThemeBtn(theme) {
+    document.getElementById("theme-btn-light").style.borderColor = theme === "light" ? "var(--accent)" : "";
+    document.getElementById("theme-btn-light").style.color        = theme === "light" ? "var(--accent)" : "";
+    document.getElementById("theme-btn-dark").style.borderColor  = theme === "dark"  ? "var(--accent)" : "";
+    document.getElementById("theme-btn-dark").style.color         = theme === "dark"  ? "var(--accent)" : "";
+  }
+  highlightThemeBtn(document.documentElement.getAttribute("data-theme") || "dark");
+
+  // ─────────────────────────────────────────────────────────────
+  // State
+  // ─────────────────────────────────────────────────────────────
+  let workflow = [];
+
+  const BACKEND_META = {
+    playwright: {
+      icon: "🌐",
+      get name() { return window.t("be_playwright_name","Chromium (Playwright)"); },
+      get desc() { return window.t("be_playwright_desc","Browser-Automatisierung mit optionalen Cookies. Zuverlässig, aber langsamer."); },
+      color: "#4f8ef7",
+    },
+    pytrends: {
+      icon: "🐍",
+      get name() { return window.t("be_pytrends_name","pytrends"); },
+      get desc() { return window.t("be_pytrends_desc","Leichtgewichtige Python-Bibliothek, kein Browser nötig. Anfälliger für Rate-Limiting."); },
+      color: "#22c55e",
+    },
+    serpapi: {
+      icon: "🔑",
+      get name() { return window.t("be_serpapi_name","SerpAPI"); },
+      get desc() { return window.t("be_serpapi_desc","Zuverlässige API-Lösung, 100 kostenlose Anfragen/Monat. API-Schlüssel erforderlich."); },
+      color: "#f59e0b",
+    },
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Workflow-UI
+  // ─────────────────────────────────────────────────────────────
+  function renderWorkflow() {
+    const list = document.getElementById("workflow-list");
+    list.innerHTML = workflow.map((entry, idx) => {
+      const meta = BACKEND_META[entry.backend] || { icon: "?", name: entry.backend, desc: "" };
+      const isOn = entry.enabled !== false;
+      return `
+        <div class="backend-row${isOn ? "" : " disabled-row"}" data-idx="${idx}">
+          <div class="backend-move">
+            <button onclick="moveBackend(${idx}, -1)" title="Höher" ${idx === 0 ? "disabled" : ""}>▲</button>
+            <button onclick="moveBackend(${idx},  1)" title="Tiefer" ${idx === workflow.length - 1 ? "disabled" : ""}>▼</button>
+          </div>
+          <div class="backend-icon" style="background:${meta.color}22;color:${meta.color};">${meta.icon}</div>
+          <div class="backend-info">
+            <strong>${esc(meta.name)}</strong>
+            <small>${esc(meta.desc)}</small>
+          </div>
+          <span class="backend-status ${isOn ? "bs-on" : "bs-off"}">${isOn ? window.t("badge_active","Aktiv") : window.t("badge_inactive","Inaktiv")}</span>
+          <label class="toggle-wrap" title="${isOn ? window.t("title_disable","Deaktivieren") : window.t("title_enable","Aktivieren")}">
+            <div class="toggle${isOn ? " on" : ""}" onclick="toggleBackend(${idx})"></div>
+          </label>
+        </div>`;
+    }).join("");
+  }
+
+  function toggleBackend(idx) {
+    workflow[idx].enabled = !(workflow[idx].enabled !== false);
+    renderWorkflow();
+  }
+
+  function moveBackend(idx, dir) {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= workflow.length) return;
+    [workflow[idx], workflow[newIdx]] = [workflow[newIdx], workflow[idx]];
+    renderWorkflow();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Speichern: Workflow
+  // ─────────────────────────────────────────────────────────────
+  document.getElementById("btn-save-workflow").addEventListener("click", async () => {
+    const btn = document.getElementById("btn-save-workflow");
+    btn.disabled = true;
+    try {
+      await api("/api/admin/settings", {
+        method: "POST",
+        body: JSON.stringify({ fetch_workflow: workflow }),
+      });
+      toast(window.t("toast_workflow_saved"), "ok");
+    } catch(e) {
+      toast(window.t("toast_error") + e.message, "error");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Speichern: API & Konfiguration
+  // ─────────────────────────────────────────────────────────────
+  document.getElementById("btn-save-config").addEventListener("click", async () => {
+    const btn  = document.getElementById("btn-save-config");
+    btn.disabled = true;
+    try {
+      const hh = parseInt(document.getElementById("inp-fetch-hour").value,   10);
+      const mm = parseInt(document.getElementById("inp-fetch-minute").value, 10);
+      await api("/api/admin/settings", {
+        method: "POST",
+        body: JSON.stringify({
+          serpapi_key:       document.getElementById("inp-serpapi-key").value,
+          newsapi_key:       document.getElementById("inp-newsapi-key").value,
+          // Bluesky, Telegram, Copernicus → Plugin-Seite
+          // copernicus → Plugin-Seite
+          cookies_file:      document.getElementById("inp-cookies-file").value,
+          fetch_hour:        isNaN(hh) ? 6 : hh,
+          fetch_minute:      isNaN(mm) ? 0 : mm,
+          // KI-Anbieter + API-Schlüssel → Plugin-Seite
+        }),
+      });
+      toast(window.t("toast_config_saved"), "ok");
+    } catch(e) {
+      toast(window.t("toast_error") + e.message, "error");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // API-Richtlinien
+  // ─────────────────────────────────────────────────────────────
+  const _API_POLICY_LABELS = {
+    serpapi:    { label: "SerpAPI",           icon: "🔍", desc: "Google Trends / SERP-Daten" },
+    newsapi:    { label: "NewsAPI",           icon: "📰", desc: "Nachrichtenartikel" },
+    anthropic:  { label: "Anthropic Claude",  icon: "🤖", desc: "KI-Analyse & Berichte" },
+    openai:     { label: "OpenAI",            icon: "🤖", desc: "ChatGPT-Modelle" },
+    gemini:     { label: "Google Gemini",     icon: "🤖", desc: "Gemini-Modelle" },
+    mistral:    { label: "Mistral AI",        icon: "🤖", desc: "Mistral-Modelle" },
+    bluesky:    { label: "Bluesky",           icon: "🦋", desc: "Bluesky-Postingvolumen" },
+    telegram:   { label: "Telegram",          icon: "✈️",  desc: "Telegram-Kanalanalyse" },
+    copernicus: { label: "Copernicus",        icon: "🛰️",  desc: "Sentinel-2 / NDVI" },
+    censys:     { label: "Censys",            icon: "🔒", desc: "Internet-Scan-Daten" },
+  };
+
+  function renderApiPolicies(policies) {
+    const grid = document.getElementById("api-policies-grid");
+    if (!grid) return; // → Plugin-Seite
+    grid.innerHTML = Object.entries(_API_POLICY_LABELS).map(([group, meta]) => {
+      const cur = policies[group] || "admin_key";
+      return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:18px;">${meta.icon}</span>
+          <div>
+            <div style="font-size:13px;font-weight:600;">${meta.label}</div>
+            <div style="font-size:11px;color:var(--muted);">${meta.desc}</div>
+          </div>
+        </div>
+        <select data-policy-group="${group}"
+                style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;">
+          <option value="admin_key" ${cur==="admin_key"?"selected":""}>${window.t("opt_admin_key","Admin-Schlüssel verwenden")}</option>
+          <option value="own_key"   ${cur==="own_key"  ?"selected":""}>${window.t("opt_own_key","Eigener Schlüssel erlaubt")}</option>
+          <option value="disabled"  ${cur==="disabled" ?"selected":""}>${window.t("opt_not_allowed","Nicht erlaubt")}</option>
+        </select>
+      </div>`;
+    }).join("");
+  }
+
+  // API-Richtlinien → Plugin-Seite
+  var _polBtn = document.getElementById("btn-save-api-policies");
+  if (_polBtn) _polBtn.addEventListener("click", function() {});
+
+  // ─────────────────────────────────────────────────────────────
+  // Template-Editor
+  // ─────────────────────────────────────────────────────────────
+  let tmplLogoAlign = "left";
+  let tmplHdrLayout = "A";
+
+  function tmplGetValues() {
+    return {
+      accent:          document.getElementById("inp-tmpl-accent").value,
+      separator_color: document.getElementById("inp-tmpl-sep").value,
+      bg2:             document.getElementById("inp-tmpl-bg2").value,
+      bg1:             document.getElementById("inp-tmpl-bg1").value,
+      fg1:             document.getElementById("inp-tmpl-fg1").value,
+      fg2:             document.getElementById("inp-tmpl-fg2").value,
+      bg_image:        document.getElementById("inp-tmpl-bgimg").value,
+      font:            document.getElementById("inp-tmpl-font").value,
+      logo_url:        document.getElementById("inp-tmpl-logo").value.trim(),
+      logo_align:      tmplLogoAlign,
+      author:          document.getElementById("inp-tmpl-author").value.trim(),
+      header_layout:   tmplHdrLayout,
+      show_projname:   document.getElementById("chk-show-proj").checked,
+      show_author:     document.getElementById("chk-show-author").checked,
+      show_date:       document.getElementById("chk-show-date").checked,
+      footer:          document.getElementById("chk-tmpl-footer").checked,
+      footer_text:     document.getElementById("inp-tmpl-footer-text").value.trim(),
+    };
+  }
+
+  function tmplUpdatePreview() {
+    const t = tmplGetValues();
+    const prv = document.getElementById("tmpl-prv");
+    prv.style.fontFamily        = t.font + ", Inter, system-ui, sans-serif";
+    if (t.bg2) prv.style.backgroundColor = t.bg2;
+    prv.style.backgroundImage    = t.bg_image ? `url("${t.bg_image}")` : "none";
+    prv.style.backgroundSize     = "cover";
+    prv.style.backgroundPosition = "center";
+    // Header separator
+    const hdr = document.getElementById("prv-hdr");
+    hdr.style.borderBottomColor = t.separator_color;
+    // Logo
+    const logo = document.getElementById("prv-logo");
+    if (t.logo_url) { logo.src = t.logo_url; logo.style.display = ""; }
+    else            { logo.style.display = "none"; }
+    // Element visibility defaults
+    const proj   = document.getElementById("prv-proj");
+    const author = document.getElementById("prv-author");
+    const date   = document.getElementById("prv-date");
+    const fill   = document.getElementById("prv-fill");
+    proj.style.display   = t.show_projname ? "" : "none";
+    author.style.display = t.show_author   ? "" : "none";
+    date.style.display   = t.show_date     ? "" : "none";
+    // Reset flex order
+    [logo, proj, fill, author, date].forEach((el, i) => el.style.order = String(i));
+    fill.style.display = "";
+    // Layout variant overrides
+    if (t.header_layout === "A") {
+      // [logo][proj][fill][author][date]
+      logo.style.order = "0"; proj.style.order = "1"; fill.style.order = "2";
+      author.style.order = "3"; date.style.order = "4";
+    } else if (t.header_layout === "B") {
+      // [proj][fill][logo][date]  — author hidden in this layout
+      proj.style.order = "0"; fill.style.order = "1";
+      logo.style.order = "2"; date.style.order = "3";
+      author.style.display = "none";
+    } else if (t.header_layout === "C") {
+      // [logo][fill][proj]  — author & date hidden
+      logo.style.order = "0"; fill.style.order = "1"; proj.style.order = "2";
+      author.style.display = "none"; date.style.display = "none";
+    }
+    // Footer
+    const ftr = document.getElementById("prv-ftr");
+    if (t.footer) {
+      ftr.style.display = "flex";
+      ftr.style.borderTopColor = t.separator_color;
+      document.getElementById("prv-ftr-txt").textContent = t.footer_text || "Fußzeile";
+    } else {
+      ftr.style.display = "none";
+    }
+  }
+
+  function tmplSetValues(t) {
+    if (t.accent)          document.getElementById("inp-tmpl-accent").value  = t.accent;
+    if (t.separator_color) document.getElementById("inp-tmpl-sep").value     = t.separator_color;
+    if (t.bg2)             document.getElementById("inp-tmpl-bg2").value     = t.bg2;
+    if (t.bg1)             document.getElementById("inp-tmpl-bg1").value     = t.bg1;
+    if (t.fg1)             document.getElementById("inp-tmpl-fg1").value     = t.fg1;
+    if (t.fg2)             document.getElementById("inp-tmpl-fg2").value     = t.fg2;
+    if (t.bg_image !== undefined) tmplBgImageSetData(t.bg_image || "");
+    if (t.font)            document.getElementById("inp-tmpl-font").value     = t.font;
+    if (t.logo_url  !== undefined) tmplLogoSetData(t.logo_url || "");
+    if (t.author    !== undefined) document.getElementById("inp-tmpl-author").value = t.author;
+    if (t.logo_align) {
+      tmplLogoAlign = t.logo_align;
+      document.querySelectorAll(".tmpl-logo-align").forEach(b =>
+        b.classList.toggle("btn-primary", b.dataset.align === tmplLogoAlign));
+    }
+    if (t.header_layout) {
+      tmplHdrLayout = t.header_layout;
+      document.querySelectorAll(".tmpl-hdr-btn").forEach(b =>
+        b.classList.toggle("btn-primary", b.dataset.layout === tmplHdrLayout));
+    }
+    if (t.show_projname !== undefined) document.getElementById("chk-show-proj").checked   = t.show_projname;
+    if (t.show_author   !== undefined) document.getElementById("chk-show-author").checked = t.show_author;
+    if (t.show_date     !== undefined) document.getElementById("chk-show-date").checked   = t.show_date;
+    const ftrChk = document.getElementById("chk-tmpl-footer");
+    const ftrInp = document.getElementById("inp-tmpl-footer-text");
+    if (t.footer !== undefined) { ftrChk.checked = t.footer; ftrInp.disabled = !t.footer; }
+    if (t.footer_text) ftrInp.value = t.footer_text;
+    tmplUpdatePreview();
+  }
+
+  // ── Logo Drag'n'Drop Upload ────────────────────────────────────
+  function tmplLogoSetData(dataUrl) {
+    document.getElementById("inp-tmpl-logo").value = dataUrl;
+    const prev = document.getElementById("tmpl-logo-preview");
+    const hint = document.getElementById("tmpl-logo-hint");
+    const clr  = document.getElementById("tmpl-logo-clear");
+    if (dataUrl) {
+      prev.src = dataUrl; prev.style.display = "";
+      hint.style.display = "none";
+      clr.style.display  = "";
+    } else {
+      prev.src = ""; prev.style.display = "none";
+      hint.style.display = "";
+      clr.style.display  = "none";
+    }
+    tmplUpdatePreview();
+  }
+
+  document.getElementById("tmpl-logo-file").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => tmplLogoSetData(ev.target.result);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  });
+
+  const _logoDrop = document.getElementById("tmpl-logo-drop");
+  _logoDrop.addEventListener("dragover", e => {
+    e.preventDefault();
+    _logoDrop.style.borderColor = "var(--accent)";
+    _logoDrop.style.background  = "rgba(79,142,247,.06)";
+  });
+  _logoDrop.addEventListener("dragleave", () => {
+    _logoDrop.style.borderColor = "";
+    _logoDrop.style.background  = "";
+  });
+  _logoDrop.addEventListener("drop", e => {
+    e.preventDefault();
+    _logoDrop.style.borderColor = "";
+    _logoDrop.style.background  = "";
+    const file = e.dataTransfer.files[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = ev => tmplLogoSetData(ev.target.result);
+    reader.readAsDataURL(file);
+  });
+  document.getElementById("tmpl-logo-clear").addEventListener("click", e => {
+    e.stopPropagation();
+    tmplLogoSetData("");
+  });
+
+  // ── Hintergrundbild Drag'n'Drop Upload ────────────────────────
+  function tmplBgImageSetData(dataUrl) {
+    document.getElementById("inp-tmpl-bgimg").value = dataUrl;
+    const prev = document.getElementById("tmpl-bgimg-preview");
+    const hint = document.getElementById("tmpl-bgimg-hint");
+    const clr  = document.getElementById("tmpl-bgimg-clear");
+    if (dataUrl) {
+      prev.src = dataUrl; prev.style.display = "";
+      hint.style.display = "none";
+      clr.style.display  = "";
+    } else {
+      prev.src = ""; prev.style.display = "none";
+      hint.style.display = "";
+      clr.style.display  = "none";
+    }
+    tmplUpdatePreview();
+  }
+
+  document.getElementById("tmpl-bgimg-file").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => tmplBgImageSetData(ev.target.result);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  });
+
+  const _bgDrop = document.getElementById("tmpl-bgimg-drop");
+  _bgDrop.addEventListener("dragover", e => {
+    e.preventDefault();
+    _bgDrop.style.borderColor = "var(--accent)";
+    _bgDrop.style.background  = "rgba(79,142,247,.06)";
+  });
+  _bgDrop.addEventListener("dragleave", () => {
+    _bgDrop.style.borderColor = "";
+    _bgDrop.style.background  = "";
+  });
+  _bgDrop.addEventListener("drop", e => {
+    e.preventDefault();
+    _bgDrop.style.borderColor = "";
+    _bgDrop.style.background  = "";
+    const file = e.dataTransfer.files[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = ev => tmplBgImageSetData(ev.target.result);
+    reader.readAsDataURL(file);
+  });
+  document.getElementById("tmpl-bgimg-clear").addEventListener("click", e => {
+    e.stopPropagation();
+    tmplBgImageSetData("");
+  });
+
+  // Logo-Ausrichtung
+  document.querySelectorAll(".tmpl-logo-align").forEach(btn => btn.addEventListener("click", () => {
+    tmplLogoAlign = btn.dataset.align;
+    document.querySelectorAll(".tmpl-logo-align").forEach(b =>
+      b.classList.toggle("btn-primary", b.dataset.align === tmplLogoAlign));
+    tmplUpdatePreview();
+  }));
+
+  // Kopfzeilen-Variante
+  document.querySelectorAll(".tmpl-hdr-btn").forEach(btn => btn.addEventListener("click", () => {
+    tmplHdrLayout = btn.dataset.layout;
+    document.querySelectorAll(".tmpl-hdr-btn").forEach(b =>
+      b.classList.toggle("btn-primary", b.dataset.layout === tmplHdrLayout));
+    tmplUpdatePreview();
+  }));
+
+  // Footer-Checkbox
+  document.getElementById("chk-tmpl-footer").addEventListener("change", function() {
+    document.getElementById("inp-tmpl-footer-text").disabled = !this.checked;
+    tmplUpdatePreview();
+  });
+
+  // Live-Vorschau
+  ["inp-tmpl-accent","inp-tmpl-sep","inp-tmpl-bg2","inp-tmpl-bg1","inp-tmpl-fg1","inp-tmpl-fg2","inp-tmpl-font",
+   "inp-tmpl-author","inp-tmpl-footer-text",
+   "chk-show-proj","chk-show-author","chk-show-date"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.addEventListener("input", tmplUpdatePreview); el.addEventListener("change", tmplUpdatePreview); }
+  });
+
+  // Speichern
+  document.getElementById("btn-save-tmpl").addEventListener("click", async () => {
+    const btn = document.getElementById("btn-save-tmpl");
+    btn.disabled = true;
+    try {
+      await api("/api/settings", { method: "POST", body: JSON.stringify({
+        key: "pres_template", value: JSON.stringify(tmplGetValues()),
+      })});
+      toast(window.t("toast_template_saved"), "ok");
+    } catch(e) {
+      toast(window.t("toast_error") + e.message, "error");
+    } finally { btn.disabled = false; }
+  });
+
+  // API-Keys anzeigen/verbergen
+  function makeShowToggle(btnId, inpId) {
+    document.getElementById(btnId).addEventListener("click", () => {
+      const inp = document.getElementById(inpId);
+      const btn = document.getElementById(btnId);
+      if (inp.type === "password") { inp.type = "text";     btn.textContent = window.t("btn_hide","Verbergen"); }
+      else                         { inp.type = "password"; btn.textContent = window.t("btn_show","Anzeigen");  }
+    });
+  }
+  makeShowToggle("btn-show-key",        "inp-serpapi-key");
+  makeShowToggle("btn-show-newsapi-key", "inp-newsapi-key");
+  // SMTP — derzeit nicht genutzt
+  // Copernicus, Bluesky → Plugin-Seite
+
+  // ─────────────────────────────────────────────────────────────
+  // Telegram – Auth-Funktionen
+  // ─────────────────────────────────────────────────────────────
+  async function tgCheckSession() {
+    const el = document.getElementById("tg-session-status");
+    if (!el) return; // Telegram → Plugin-Seite
+    try {
+      const res = await api("/api/admin/telegram-auth", { step: "check" });
+      if (res.connected) {
+        el.style.color = "var(--success, #22c55e)";
+        el.textContent = window.t("tg_session_active") + (res.user ? ` (${res.user})` : "");
+      } else {
+        el.style.color = "var(--muted)";
+        el.textContent = window.t("tg_no_session");
+      }
+    } catch {
+      el.style.color = "var(--muted)";
+      el.textContent = window.t("tg_no_session");
+    }
+  }
+
+  async function tgSendCode() {
+    const phone = document.getElementById("inp-tg-phone");
+    if (!phone) return; // Telegram → Plugin-Seite
+    const phoneVal = phone.value.trim();
+    if (!phoneVal) { alert(window.t("alert_enter_phone")); return; }
+    const btn = document.getElementById("btn-tg-send-code");
+    btn.disabled = true;
+    try {
+      const res = await api("/api/admin/telegram-auth", { step: "send_code", phone });
+      if (res.error) { alert(res.error); return; }
+      const row = document.getElementById("tg-code-row");
+      row.style.display = "flex";
+      alert(window.t("alert_code_sent"));
+    } catch (e) {
+      alert(window.t("toast_error") + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function tgVerifyCode() {
+    const codeEl = document.getElementById("inp-tg-code");
+    if (!codeEl) return; // Telegram → Plugin-Seite
+    const code = codeEl.value.trim();
+    if (!code) { alert(window.t("alert_enter_code")); return; }
+    const password = document.getElementById("inp-tg-2fa").value.trim();
+    const btn = document.getElementById("btn-tg-verify");
+    btn.disabled = true;
+    try {
+      const payload = { step: "verify_code", code };
+      if (password) payload.password = password;
+      const res = await api("/api/admin/telegram-auth", payload);
+      if (res.error) { alert(res.error); return; }
+      alert(window.t("alert_tg_connected"));
+      document.getElementById("tg-code-row").style.display = "none";
+      tgCheckSession();
+    } catch (e) {
+      alert(window.t("toast_error") + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // Session-Status beim Laden prüfen
+  tgCheckSession();
+
+  // E-Mail (SMTP) — derzeit nicht genutzt
+
+  // Delegierter Show/Hide-Toggle für alle AI-Provider-Keys
+  document.addEventListener("click", e => {
+    const btn = e.target.closest(".ai-show-btn");
+    if (!btn) return;
+    const inp = document.getElementById(btn.dataset.target);
+    if (!inp) return;
+    if (inp.type === "password") { inp.type = "text";     btn.textContent = window.t("btn_hide","Verbergen"); }
+    else                         { inp.type = "password"; btn.textContent = window.t("btn_show","Anzeigen");  }
+  });
+
+  // ── Verfügbare Modelle je Anbieter ──────────────────────────────────────
+  const AI_MODELS = {
+    anthropic: [
+      { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5 (schnell)" },
+      { value: "claude-sonnet-4-6",         label: "Claude Sonnet 4.6" },
+      { value: "claude-opus-4-6",           label: "Claude Opus 4.6 (leistungsstark)" },
+    ],
+    openai: [
+      { value: "gpt-4o-mini",  label: "GPT-4o mini (schnell)" },
+      { value: "gpt-4o",       label: "GPT-4o" },
+      { value: "gpt-4-turbo",  label: "GPT-4 Turbo" },
+    ],
+    gemini: [
+      { value: "gemini-2.0-flash",      label: "Gemini 2.0 Flash (schnell)" },
+      { value: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite (minimal)" },
+      { value: "gemini-1.5-flash",      label: "Gemini 1.5 Flash" },
+    ],
+    mistral: [
+      { value: "mistral-small-latest",  label: "Mistral Small (schnell)" },
+      { value: "mistral-medium-latest", label: "Mistral Medium" },
+      { value: "open-mistral-nemo",     label: "Mistral Nemo (open)" },
+    ],
+  };
+
+  function updateAiProvider(provider, keepModel) {
+    var modelSel = document.getElementById("inp-ai-model");
+    if (!modelSel) return; // KI → Plugin-Seite
+    var prevModel = keepModel ? modelSel.value : null;
+    modelSel.innerHTML = (AI_MODELS[provider] || [])
+      .map(m => `<option value="${m.value}">${m.label}</option>`)
+      .join("");
+    if (prevModel) {
+      var opt = modelSel.querySelector(`option[value="${prevModel}"]`);
+      if (opt) modelSel.value = prevModel;
+    }
+    document.querySelectorAll(".ai-key-wrap").forEach(w => {
+      w.style.display = w.dataset.for === provider ? "" : "none";
+    });
+  }
+
+  var _aiProvSel = document.getElementById("inp-ai-provider");
+  if (_aiProvSel) {
+    _aiProvSel.addEventListener("change", e => { updateAiProvider(e.target.value, false); });
+    updateAiProvider("anthropic", false);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Logs laden
+  // ─────────────────────────────────────────────────────────────
+  let admLogPage = 1;
+
+  async function loadLogs(page) {
+    admLogPage = page ?? admLogPage;
+    const tbody = document.getElementById("log-body");
+    try {
+      const r = await api(`/api/logs?page=${admLogPage}`);
+      const { logs, total, pages } = r;
+      document.getElementById("log-count").textContent = total ? `${total} ${window.t("entries_suffix","Einträge")}` : "";
+      if (!logs.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-muted" style="text-align:center;padding:24px;">${window.t("no_logs","Noch keine Logs")}</td></tr>`;
+        document.getElementById("adm-log-pagination").style.display = "none";
+        return;
+      }
+      tbody.innerHTML = logs.map(l => {
+        const dur = l.finished_at
+          ? Math.round((new Date(l.finished_at) - new Date(l.started_at)) / 1000) + " s"
+          : window.t("log_running","läuft…");
+        return `
+          <tr>
+            <td class="text-sm">${fmtDate(l.started_at)}</td>
+            <td><span class="badge ${statusBadge(l.status)}">${esc(l.status)}</span></td>
+            <td class="text-sm">${esc(l.backend || "–")}</td>
+            <td>${l.keywords_ok} / ${l.keywords_total}</td>
+            <td>${l.keywords_failed || 0}</td>
+            <td class="text-sm text-muted">${dur}</td>
+            <td class="text-sm text-muted log-errors" title="${window.t('log_click_expand','Klicken zum Aufklappen')}"
+                onclick="this.classList.toggle('expanded')">${esc(l.errors || "–")}</td>
+          </tr>`;
+      }).join("");
+
+      const wrap = document.getElementById("adm-log-pagination");
+      if (pages <= 1) { wrap.style.display = "none"; return; }
+      wrap.style.display = "flex";
+      const start = (admLogPage - 1) * 50 + 1;
+      const end   = Math.min(admLogPage * 50, total);
+      document.getElementById("adm-log-range").textContent = `${start}–${end} von ${total}`;
+      document.getElementById("adm-log-prev").disabled = admLogPage === 1;
+      document.getElementById("adm-log-next").disabled = admLogPage === pages;
+      const show = new Set([1, pages, admLogPage, admLogPage-1, admLogPage+1].filter(p=>p>=1&&p<=pages));
+      const sorted = [...show].sort((a,b)=>a-b);
+      let html = ""; let prevP = 0;
+      for (const p of sorted) {
+        if (prevP && p-prevP>1) html += `<span style="color:var(--muted);padding:0 2px;">…</span>`;
+        const act = p===admLogPage ? "style=\"border-color:var(--accent);color:var(--text);\"" : "";
+        html += `<button class="btn btn-ghost btn-sm" ${act} onclick="loadLogs(${p})">${p}</button>`;
+        prevP = p;
+      }
+      document.getElementById("adm-log-pages").innerHTML = html;
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-muted">${window.t("toast_error","Fehler: ")}${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  document.getElementById("btn-refresh-logs").addEventListener("click", () => loadLogs(admLogPage));
+  document.getElementById("adm-log-prev").addEventListener("click", () => loadLogs(admLogPage - 1));
+  document.getElementById("adm-log-next").addEventListener("click", () => loadLogs(admLogPage + 1));
+
+  document.getElementById("btn-clear-logs-init").addEventListener("click", () => {
+    document.getElementById("clear-logs-zone").style.display = "flex";
+  });
+  document.getElementById("btn-clear-logs-cancel").addEventListener("click", () => {
+    document.getElementById("clear-logs-zone").style.display = "none";
+  });
+  document.getElementById("btn-clear-logs-confirm").addEventListener("click", async () => {
+    const btn = document.getElementById("btn-clear-logs-confirm");
+    btn.disabled = true; btn.textContent = window.t("btn_deleting","Lösche…");
+    try {
+      await api("/api/logs/clear", { method: "POST" });
+      toast(window.t("toast_logs_deleted"), "ok");
+      document.getElementById("clear-logs-zone").style.display = "none";
+      loadLogs(1);
+    } catch(e) {
+      toast(window.t("toast_error") + e.message, "error");
+    } finally {
+      btn.disabled = false; btn.textContent = window.t("btn_yes_delete","Ja, löschen");
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Init: Einstellungen + Logs laden
+  // ─────────────────────────────────────────────────────────────
+  let canWorkflow = true, canApis = true;
+  let allowedBackends = null;  // null = alle (superadmin), Array = eingeschränkt
+
+  async function init() {
+    // Berechtigungen prüfen und Bereiche ein-/ausblenden
+    let isSuperadmin = true; // Default für Single-User-Modus
+    try {
+      const me = await api("/api/me");
+      isSuperadmin = me.role === "superadmin";
+      if (!isSuperadmin) {
+        const ab = me.allowed_backends || [];
+        if (!ab.length) {
+          canWorkflow = false;
+          document.getElementById("card-workflow").style.display = "none";
+        } else {
+          allowedBackends = ab;
+        }
+      }
+      if (!isSuperadmin && !me.can_use_own_apis) {
+        canApis = false;
+        document.getElementById("card-config").style.display = "none";
+      }
+      if (!isSuperadmin) {
+        // card-email entfernt
+      } else {
+        document.getElementById("fmt-global-row").style.display = "";
+      }
+    } catch(_) {}
+
+    try {
+      const s = await api("/api/admin/settings");
+
+      if (canWorkflow) {
+        workflow = s.fetch_workflow || [];
+        renderWorkflow();
+      }
+
+      if (canApis) {
+        document.getElementById("inp-serpapi-key").value  = s.serpapi_key  || "";
+        document.getElementById("inp-newsapi-key").value  = s.newsapi_key  || "";
+        document.getElementById("inp-cookies-file").value = s.cookies_file || "";
+
+        const h = String(s.fetch_hour   ?? 6).padStart(2, "0");
+        const m = String(s.fetch_minute ?? 0).padStart(2, "0");
+        document.getElementById("inp-fetch-hour").value   = parseInt(h, 10);
+        document.getElementById("inp-fetch-minute").value = parseInt(m, 10);
+        updateNextRunLabel();
+
+        // KI-Anbieter + API-Schlüssel → Plugin-Seite
+        if (document.getElementById("inp-ai-provider")) {
+          const provider = s.ai_provider || "anthropic";
+          document.getElementById("inp-ai-provider").value = provider;
+          updateAiProvider(provider, false);
+          if (s.ai_model) {
+            const sel = document.getElementById("inp-ai-model");
+            const opt = sel ? sel.querySelector(`option[value="${s.ai_model}"]`) : null;
+            if (opt) sel.value = s.ai_model;
+          }
+        }
+
+        // Bluesky, Telegram, Copernicus → Plugin-Seite
+        // Copernicus → Plugin-Seite
+      }
+
+
+      // E-Mail (SMTP) — derzeit nicht genutzt
+
+      // Audit Trail
+      const auditOn = s.audit_trail_enabled === "1";
+      const toggleEl = document.getElementById("toggle-audit");
+      if (toggleEl) toggleEl.classList.toggle("on", auditOn);
+
+      // API-Richtlinien (nur Superadmin)
+      if (isSuperadmin && s.api_policies && document.getElementById("card-api-policies")) {
+        renderApiPolicies(s.api_policies);
+        document.getElementById("card-api-policies").style.display = "";
+      }
+    } catch(e) {
+      toast(window.t("settings_load_failed") + e.message, "error");
+    }
+
+    // Benutzer-Einstellungen laden (Template + Theme)
+    try {
+      const ps = await api("/api/settings");
+      // Theme aus Server übernehmen (falls vorhanden)
+      if (ps.ui_theme && ps.ui_theme !== localStorage.getItem("ui_theme")) {
+        localStorage.setItem("ui_theme", ps.ui_theme);
+        document.documentElement.setAttribute("data-theme", ps.ui_theme);
+        highlightThemeBtn(ps.ui_theme);
+      }
+      let tmpl = {};
+      if (ps.pres_template) {
+        try { tmpl = JSON.parse(ps.pres_template); } catch(_) {}
+      } else {
+        // Migration aus alten Einzelschlüsseln
+        if (ps.pres_logo_url) tmpl.logo_url = ps.pres_logo_url;
+        if (ps.pres_author)   tmpl.author   = ps.pres_author;
+      }
+      tmplSetValues(tmpl);
+    } catch(_) { tmplUpdatePreview(); }
+
+    await loadLogs();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // ── Nächste Ausführungszeit anzeigen ───────────────────────────
+  function updateNextRunLabel() {
+    const lbl = document.getElementById("lbl-next-run");
+    if (!lbl) return;
+    const hh = parseInt(document.getElementById("inp-fetch-hour").value,   10);
+    const mm = parseInt(document.getElementById("inp-fetch-minute").value, 10);
+    if (isNaN(hh) || isNaN(mm)) { lbl.textContent = ""; return; }
+    const now  = new Date();
+    const next = new Date();
+    next.setHours(hh, mm, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+    const p = n => String(n).padStart(2, "0");
+    lbl.textContent = `${window.t("lbl_next_fetch","Nächster Abruf:")} ${p(next.getDate())}.${p(next.getMonth()+1)}.${next.getFullYear()} ${p(next.getHours())}:${p(next.getMinutes())} Uhr`;
+  }
+  document.getElementById("inp-fetch-hour").addEventListener("change", updateNextRunLabel);
+  document.getElementById("inp-fetch-minute").addEventListener("change", updateNextRunLabel);
+
+  // Helpers
+  // ─────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;")
+                          .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function fmtDate(iso) {
+    return window.fmtDate ? window.fmtDate(iso) : (function() {
+      const d = new Date(iso);
+      const p = n => String(n).padStart(2, "0");
+      return `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    })();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Datums-/Zeitformat-Karte
+  // ─────────────────────────────────────────────────────────────
+  let _fmtGlobalOn = false;
+
+  function updateFmtPreview() {
+    const lbl = document.getElementById("lbl-fmt-preview");
+    if (!lbl) return;
+    const df  = document.getElementById("inp-date-format").value;
+    const tf  = document.getElementById("inp-time-format").value;
+    const p   = n => String(n).padStart(2, "0");
+    const now = new Date();
+    const h   = now.getHours();
+    const h12 = h % 12 || 12;
+    const ampm = h >= 12 ? "PM" : "AM";
+    const date = df.replace("YYYY", now.getFullYear())
+                   .replace("MM",   p(now.getMonth() + 1))
+                   .replace("DD",   p(now.getDate()));
+    const time = tf.replace("HH", p(h))
+                   .replace("hh", p(h12))
+                   .replace("mm", p(now.getMinutes()))
+                   .replace("ss", p(now.getSeconds()))
+                   .replace("A",  ampm);
+    lbl.textContent = date + " " + time;
+  }
+  document.getElementById("inp-date-format").addEventListener("change", updateFmtPreview);
+  document.getElementById("inp-time-format").addEventListener("change", updateFmtPreview);
+
+  /* Toggle: Als Systemstandard */
+  document.getElementById("toggle-fmt-global").addEventListener("click", function() {
+    _fmtGlobalOn = !_fmtGlobalOn;
+    this.classList.toggle("on", _fmtGlobalOn);
+  });
+
+  /* Laden */
+  async function loadFmtSettings() {
+    try {
+      const ps = await api("/api/settings");
+      if (ps.date_format) document.getElementById("inp-date-format").value = ps.date_format;
+      if (ps.time_format) document.getElementById("inp-time-format").value = ps.time_format;
+      if (ps.trends_tz)   document.getElementById("inp-trends-tz").value   = ps.trends_tz;
+      if (ps.ui_language)    document.getElementById("inp-ui-lang").value     = ps.ui_language;
+      if (ps.query_language) document.getElementById("inp-query-lang").value  = ps.query_language;
+      if (ps.accent1) document.getElementById("inp-accent1").value = ps.accent1;
+      if (ps.accent2) document.getElementById("inp-accent2").value = ps.accent2;
+    } catch(_) {
+      /* Fallback: Systemstandard */
+      try {
+        const gs = await fetch("/api/system-settings").then(r => r.json());
+        if (gs.date_format) document.getElementById("inp-date-format").value = gs.date_format;
+        if (gs.time_format) document.getElementById("inp-time-format").value = gs.time_format;
+        if (gs.trends_tz)   document.getElementById("inp-trends-tz").value   = gs.trends_tz;
+        if (gs.ui_language)    document.getElementById("inp-ui-lang").value     = gs.ui_language;
+        if (gs.query_language) document.getElementById("inp-query-lang").value  = gs.query_language;
+        if (gs.accent1) document.getElementById("inp-accent1").value = gs.accent1;
+        if (gs.accent2) document.getElementById("inp-accent2").value = gs.accent2;
+      } catch(__) {}
+    }
+    updateFmtPreview();
+  }
+  loadFmtSettings();
+
+  /* Akzentfarben: Live-Vorschau */
+  function _applyAccentPreview() {
+    const a1 = document.getElementById("inp-accent1").value;
+    const a2 = document.getElementById("inp-accent2").value;
+    document.documentElement.style.setProperty("--accent1", a1);
+    document.documentElement.style.setProperty("--accent2", a2);
+    window._VT_ACCENT1 = a1;
+    window._VT_ACCENT2 = a2;
+  }
+  document.getElementById("inp-accent1").addEventListener("input", _applyAccentPreview);
+  document.getElementById("inp-accent2").addEventListener("input", _applyAccentPreview);
+
+  /* Akzentfarben: Standardwerte */
+  const _ACCENT_DEFAULTS = {
+    dark:  { accent1: "#7c5cbf", accent2: "#4f8ef7" },
+    light: { accent1: "#7c3aed", accent2: "#2563eb" },
+  };
+  document.getElementById("btn-accent-reset").addEventListener("click", () => {
+    const theme = document.documentElement.getAttribute("data-theme") || "dark";
+    const d = _ACCENT_DEFAULTS[theme] || _ACCENT_DEFAULTS.dark;
+    document.getElementById("inp-accent1").value = d.accent1;
+    document.getElementById("inp-accent2").value = d.accent2;
+    _applyAccentPreview();
+  });
+
+  /* Speichern */
+  document.getElementById("btn-save-format").addEventListener("click", async () => {
+    const btn = document.getElementById("btn-save-format");
+    btn.disabled = true;
+    try {
+      const df = document.getElementById("inp-date-format").value;
+      const tf = document.getElementById("inp-time-format").value;
+      const tz = document.getElementById("inp-trends-tz").value;
+      const lg = document.getElementById("inp-ui-lang").value;
+      const ql = document.getElementById("inp-query-lang").value;
+      const a1 = document.getElementById("inp-accent1").value;
+      const a2 = document.getElementById("inp-accent2").value;
+      /* Persönliche Einstellung speichern */
+      await api("/api/settings", { method: "POST", body: JSON.stringify({ key: "date_format", value: df }) });
+      await api("/api/settings", { method: "POST", body: JSON.stringify({ key: "time_format", value: tf }) });
+      await api("/api/settings", { method: "POST", body: JSON.stringify({ key: "trends_tz",   value: tz }) });
+      await api("/api/settings", { method: "POST", body: JSON.stringify({ key: "ui_language", value: lg }) });
+      await api("/api/settings", { method: "POST", body: JSON.stringify({ key: "query_language", value: ql }) });
+      await api("/api/settings", { method: "POST", body: JSON.stringify({ key: "accent1", value: a1 }) });
+      await api("/api/settings", { method: "POST", body: JSON.stringify({ key: "accent2", value: a2 }) });
+      /* Superadmin: ggf. als Systemstandard */
+      if (_fmtGlobalOn) {
+        await api("/api/admin/settings", { method: "POST", body: JSON.stringify({ date_format: df, time_format: tf, trends_tz: parseInt(tz, 10), ui_language: lg, query_language: ql, accent1: a1, accent2: a2 }) });
+      }
+      /* Sprache sofort anwenden */
+      localStorage.setItem("vt_ui_lang", lg);
+      window._VT_LANG = lg;
+      window._applyI18n();
+      /* Globale Hilfsfunktionen sofort aktualisieren */
+      localStorage.setItem("vt_date_format", df);
+      localStorage.setItem("vt_time_format", tf);
+      /* Akzentfarben sofort anwenden + cachen */
+      localStorage.setItem("vt_accent1", a1);
+      localStorage.setItem("vt_accent2", a2);
+      _applyAccentPreview();
+      toast(window.t("toast_format_saved"), "ok");
+    } catch(e) {
+      toast(window.t("toast_error") + e.message, "error");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  function statusBadge(s) {
+    return {
+      ok:"badge-green", partial:"badge-yellow",
+      failed:"badge-red", running:"badge-blue", no_data:"badge-orange",
+    }[s] || "badge-blue";
+  }
+
+  // ── Daten löschen ──────────────────────────────────────────────
+  document.getElementById("btn-delete-init").addEventListener("click", () => {
+    document.getElementById("confirm-zone").style.display = "flex";
+    document.getElementById("btn-delete-init").style.display = "none";
+  });
+  document.getElementById("btn-delete-cancel").addEventListener("click", () => {
+    document.getElementById("confirm-zone").style.display = "none";
+    document.getElementById("btn-delete-init").style.display = "inline-flex";
+  });
+  document.getElementById("btn-delete-confirm").addEventListener("click", async () => {
+    const btn = document.getElementById("btn-delete-confirm");
+    btn.disabled = true; btn.textContent = window.t("btn_deleting","Lösche…");
+    try {
+      await api("/api/data/delete-all", { method: "POST" });
+      toast(window.t("toast_data_deleted"), "ok");
+      document.getElementById("confirm-zone").style.display = "none";
+      document.getElementById("btn-delete-init").style.display = "inline-flex";
+      loadLogs(1);
+    } catch(e) {
+      toast(window.t("toast_error") + e.message, "error");
+      btn.disabled = false; btn.textContent = window.t("btn_yes_delete","Ja, löschen");
+    }
+  });
+
+
+  init();
+
+  // ── Einklappbare Karten ──────────────────────────────────────
+  function toggleCard(cardId) {
+    const card = document.getElementById(cardId);
+    const body = document.getElementById(cardId + '-body');
+    const btn  = document.querySelector(`.card-toggle[data-card="${cardId}"]`);
+    if (!body) return;
+    const nowCollapsed = !body.classList.contains('collapsed');
+    body.classList.toggle('collapsed', nowCollapsed);
+    btn.classList.toggle('collapsed', nowCollapsed);
+    const hdr = card ? card.querySelector('.card-hdr') : null;
+    if (hdr) hdr.classList.toggle('collapsed', nowCollapsed);
+    const hdrBtns = card ? card.querySelector('.card-hdr-btns') : null;
+    if (hdrBtns) hdrBtns.style.display = nowCollapsed ? 'none' : '';
+    const state = JSON.parse(localStorage.getItem('adm-card-state') || '{}');
+    state[cardId] = nowCollapsed;
+    localStorage.setItem('adm-card-state', JSON.stringify(state));
+  }
+
+  document.querySelectorAll('.card-hdr').forEach(hdr => {
+    const cardId = hdr.closest('.card')?.id;
+    if (cardId) hdr.addEventListener('click', () => toggleCard(cardId));
+  });
+  // Action-Buttons sollen den Header-Klick nicht weiterleiten
+  document.querySelectorAll('.card-hdr-btns').forEach(el => {
+    el.addEventListener('click', e => e.stopPropagation());
+  });
+
+  // Gespeicherten Zustand wiederherstellen (Standard: alle eingeklappt)
+  (function restoreCardState() {
+    const state = JSON.parse(localStorage.getItem('adm-card-state') || '{}');
+    const allCards = ['card-workflow', 'card-config', 'card-tmpl', 'card-audit', 'card-logs', 'card-data'];
+    allCards.forEach(id => {
+      // Eingeklappt, außer Nutzer hat explizit geöffnet (state[id] === false)
+      if (state[id] === false) return;
+      const card = document.getElementById(id);
+      const body = document.getElementById(id + '-body');
+      const btn  = document.querySelector(`.card-toggle[data-card="${id}"]`);
+      if (body) body.classList.add('collapsed');
+      if (btn)  btn.classList.add('collapsed');
+      const hdr = card ? card.querySelector('.card-hdr') : null;
+      if (hdr)  hdr.classList.add('collapsed');
+      const hdrBtns = card ? card.querySelector('.card-hdr-btns') : null;
+      if (hdrBtns) hdrBtns.style.display = 'none';
+    });
+  })();
+
+  // Audit Trail Toggle
+  async function toggleAuditTrail() {
+    const el = document.getElementById("toggle-audit");
+    const isOn = el.classList.contains("on");
+    const newVal = !isOn;
+    try {
+      await api("/api/admin/settings", {method: "POST", body: JSON.stringify({audit_trail_enabled: newVal})});
+      el.classList.toggle("on", newVal);
+      // Nav-Link sofort ein-/ausblenden
+      const navAudit = document.getElementById("nav-audit");
+      const navStat  = document.getElementById("nav-statistik");
+      if (navAudit) navAudit.style.display = newVal ? "" : "none";
+      if (navStat)  navStat.style.marginLeft = newVal ? "" : "auto";
+      toast(newVal ? window.t("toast_audit_enabled") : window.t("toast_audit_disabled"));
+    } catch(e) {
+      toast(window.t("toast_error") + e.message, "error");
+    }
+  }
+  window.toggleAuditTrail = toggleAuditTrail;
+</script>
+{% endblock %}

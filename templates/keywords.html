@@ -1,0 +1,1173 @@
+{% extends "base.html" %}
+
+{% block title %}Keywords – spectralQ{% endblock %}
+
+{% block head %}
+<style>
+  tr.kw-row-selected td { background: rgba(99,102,241,0.08); }
+  #kw-sel-bar { border-radius: 0 0 8px 8px; }
+  .proj-mode-bar {
+    display:flex;align-items:center;gap:10px;padding:8px 16px;
+    background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);
+    border-radius:8px;margin-bottom:16px;font-size:13px;
+  }
+  .proj-mode-bar.active { background:rgba(167,139,250,.14);border-color:rgba(167,139,250,.5); }
+  .proj-badge {
+    display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;
+    font-weight:600;background:rgba(167,139,250,.18);color:#a78bfa;
+    border:1px solid rgba(167,139,250,.3);white-space:nowrap;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 data-i18n="kw_page_title">Keyword-Verwaltung</h1>
+
+{% if not current_user.is_superadmin and user_project_count == 0 %}
+<div style="max-width:640px;margin:40px auto;text-align:center;">
+  <div style="padding:24px;background:rgba(124,92,191,.08);border:1px solid rgba(124,92,191,.25);border-radius:10px;">
+    <strong style="font-size:16px;color:var(--accent1);display:block;margin-bottom:8px;" data-i18n="kw_no_project_msg">Bitte zuerst ein Projekt anlegen.</strong>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;" data-i18n="kw_no_project_desc">Um mit der Analyse zu starten, wird ein Projekt benötigt. Dort werden alle Keywords und Ergebnisse organisiert.</p>
+    <a href="/projects" style="display:inline-block;padding:10px 24px;background:var(--accent1);color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;" data-i18n="kw_no_project_btn">Projekt anlegen</a>
+  </div>
+</div>
+{% else %}
+
+<!-- Projekt-Modus-Bar -->
+<div id="proj-mode-bar" class="proj-mode-bar">
+  <span style="color:var(--muted);font-size:12px;white-space:nowrap;" data-i18n="kw_proj_filter">Projekt-Filter:</span>
+  <select id="sel-project" style="flex:1;max-width:300px;padding:4px 8px;border-radius:6px;
+                                   border:1px solid var(--border);background:var(--bg);
+                                   color:var(--text);font-size:13px;">
+    <option value="" data-i18n="kw_all_keywords">Alle Keywords</option>
+  </select>
+  <span id="proj-mode-hint" style="font-size:11px;color:var(--muted);"></span>
+</div>
+
+<!-- Keyword hinzufügen -->
+<div class="card">
+  <h2 data-i18n="kw_card_add">Keyword hinzufügen</h2>
+  <form id="add-form" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+    <div>
+      <label data-i18n="kw_lbl_keyword">Keyword</label>
+      <div style="display:flex;gap:6px;">
+        <input id="inp-keyword" type="text" data-i18n-placeholder="kw_ph_keyword" placeholder="z.B. Klimawandel" style="width:220px;" required />
+        <button type="button" class="btn btn-ghost" id="btn-translate" data-i18n-title="kw_btn_translate_title" title="In EN, ES, FR, ZH, RU übersetzen">
+          <span class="spinner" id="trans-spinner" style="display:none;width:14px;height:14px;"></span>
+          <span id="trans-btn-label" data-i18n="kw_btn_translate">Übersetzen</span>
+        </button>
+      </div>
+    </div>
+    <div>
+      <label data-i18n="kw_lbl_country">Land</label>
+      <select id="inp-geo" style="width:180px;"></select>
+    </div>
+    <div>
+      <label data-i18n="kw_lbl_timeframe">Zeitraum</label>
+      <select id="inp-timeframe" style="width:200px;">
+        <option value="1+7d" selected data-i18n="kw_tf_1_7d">1 Tag + 7 Tage (Standard)</option>
+        <option value="now 1-H" data-i18n="kw_tf_1h">Letzte Stunde (minütlich)</option>
+        <option value="now 4-H" data-i18n="kw_tf_4h">Letzte 4 Stunden (minütlich)</option>
+        <option value="now 1-d" data-i18n="kw_tf_1d">Letzte 24 Stunden (stündlich)</option>
+        <option value="now 7-d" data-i18n="kw_tf_7d">Letzte 7 Tage (stündlich)</option>
+        <option value="today 1-m" data-i18n="kw_tf_1m">Letzter Monat (täglich)</option>
+        <option value="today 3-m" data-i18n="kw_tf_3m">Letzte 3 Monate (täglich)</option>
+        <option value="today 12-m" data-i18n="kw_tf_12m">Letzte 12 Monate (wöchentlich)</option>
+        <option value="today 5-y" data-i18n="kw_tf_5y">Letzte 5 Jahre (monatlich)</option>
+      </select>
+    </div>
+    <div>
+      <label data-i18n="kw_lbl_service">Dienst</label>
+      <select id="inp-gprop" style="width:160px;">
+        <option value="" data-i18n="kw_svc_web">Web (Standard)</option>
+        <option value="news" data-i18n="kw_svc_news">Google News</option>
+        <option value="images" data-i18n="kw_svc_images">Google Bilder</option>
+        <option value="youtube">YouTube</option>
+        <option value="froogle" data-i18n="kw_svc_shopping">Google Shopping</option>
+      </select>
+    </div>
+    <div>
+      <label data-i18n="kw_lbl_note">Notiz (optional)</label>
+      <input id="inp-note" type="text" placeholder="" style="width:180px;" />
+    </div>
+    <button type="submit" class="btn btn-primary" data-i18n="kw_btn_add">+ Hinzufügen</button>
+  </form>
+
+  <!-- Übersetzungs-Panel -->
+  <div id="trans-panel" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+      <span data-i18n="kw_trans_detected">Erkannte Sprache:</span> <strong id="trans-detected-lang" style="color:var(--text);"></strong>
+      &nbsp;·&nbsp; <span data-i18n="kw_trans_hint">Auf Chip klicken um Keyword &amp; Land zu übernehmen</span>
+    </div>
+    <div id="trans-chips" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+  </div>
+</div>
+
+<!-- Aktionen -->
+<div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+  <button class="btn btn-ghost" id="btn-fetch">
+    <span class="spinner" id="fetch-spinner" style="display:none;"></span>
+    <span data-i18n="kw_btn_fetch_now">Jetzt abrufen</span>
+  </button>
+  <span id="fetch-status" class="text-muted text-sm"></span>
+</div>
+
+<!-- Keywords-Tabelle -->
+<div class="card" style="padding:0;overflow:hidden;">
+  <div style="padding:16px 20px 0;">
+    <h2 style="margin:0 0 12px;" data-i18n="kw_tbl_managed">Verwaltete Keywords</h2>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+      <div style="position:relative;display:inline-flex;align-items:center;">
+        <input id="search-inp" type="text" data-i18n-placeholder="kw_search_ph" placeholder="Suchen…" style="width:240px;padding-right:26px;" />
+        <button id="btn-search-clear" onclick="document.getElementById('search-inp').value='';document.getElementById('search-inp').dispatchEvent(new Event('input'));this.style.display='none';"
+                style="display:none;position:absolute;right:6px;background:none;border:none;
+                       cursor:pointer;color:var(--muted);font-size:14px;line-height:1;padding:0;"
+                data-i18n-title="kw_search_clear_title" title="Suche löschen">×</button>
+      </div>
+      <select id="filter-active">
+        <option value="" data-i18n="kw_filter_all">Alle</option>
+        <option value="true" data-i18n="kw_filter_active">Aktiv</option>
+        <option value="false" data-i18n="kw_filter_inactive">Inaktiv</option>
+      </select>
+      <select id="sel-select-preset" class="btn btn-ghost btn-sm" style="cursor:pointer;">
+        <option value="" disabled selected data-i18n="kw_select_preset">Auswählen…</option>
+        <option value="all" data-i18n="kw_select_all">Alle</option>
+        <option value="active" data-i18n="kw_select_active">Alle aktiven</option>
+        <option value="inactive" data-i18n="kw_select_inactive">Alle inaktiven</option>
+      </select>
+    </div>
+  </div>
+  <table id="kw-table">
+    <thead>
+      <tr>
+        <th style="width:32px;"></th>
+        <th data-i18n="kw_th_keyword">Keyword</th>
+        <th data-i18n="kw_th_country">Land</th>
+        <th data-i18n="kw_th_status">Status</th>
+        <th data-i18n="kw_th_datapoints">Datenpunkte</th>
+        <th data-i18n="kw_th_note">Notiz</th>
+        <th data-i18n="kw_th_created">Erstellt</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="kw-body">
+      <tr><td colspan="8" class="text-muted" style="text-align:center;padding:24px;" data-i18n="kw_loading">Lade…</td></tr>
+    </tbody>
+  </table>
+  <!-- Auswahl-Aktionsleiste -->
+  <div id="kw-sel-bar" style="display:none;position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border);padding:10px 20px;align-items:center;gap:12px;justify-content:space-between;z-index:10;">
+    <span id="kw-sel-count" style="font-size:13px;color:var(--muted);"></span>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary btn-sm" id="btn-open-analysis" data-i18n="kw_btn_open_analysis">In Analyse öffnen →</button>
+      <button class="btn btn-sm" id="btn-assign-project-open"
+              style="background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.4);"
+              onclick="openAssignModal()">📁 <span data-i18n="kw_btn_assign_project">Zu Projekt…</span></button>
+      <button class="btn btn-danger btn-sm" id="btn-delete-sel" data-i18n="kw_btn_delete_sel">Ausgewählte löschen</button>
+      <button class="btn btn-ghost btn-sm" id="btn-clear-sel" data-i18n="kw_btn_clear_sel">Auswahl aufheben</button>
+    </div>
+  </div>
+
+  <div id="kw-pagination" style="display:none;align-items:center;justify-content:space-between;margin-top:14px;gap:8px;flex-wrap:wrap;">
+    <span id="pg-info" style="font-size:12px;color:var(--muted);"></span>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button id="pg-prev" class="btn btn-ghost btn-sm" data-i18n="kw_pg_prev">&#8592; Zurück</button>
+      <span id="pg-pages" style="display:flex;gap:4px;"></span>
+      <button id="pg-next" class="btn btn-ghost btn-sm" data-i18n="kw_pg_next">Weiter &#8594;</button>
+    </div>
+  </div>
+</div>
+
+<!-- Projekt-Zuweisungs-Modal -->
+<div id="assign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);
+     z-index:600;align-items:center;justify-content:center;"
+     onclick="if(event.target===this)closeAssignModal()">
+  <div class="card" style="width:400px;padding:24px;position:relative;">
+    <h2 style="margin:0 0 6px;font-size:15px;" data-i18n="kw_modal_assign_title">Zu Projekt zuweisen</h2>
+    <p id="assign-modal-sub" style="margin:0 0 18px;font-size:12px;color:var(--muted);"></p>
+    <div style="display:flex;flex-direction:column;gap:8px;" id="assign-proj-list"></div>
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);
+                display:flex;justify-content:flex-end;">
+      <button class="btn btn-ghost btn-sm" onclick="closeAssignModal()" data-i18n="kw_btn_close">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="edit-modal" style="display:none;position:fixed;inset:0;background:#000a;z-index:500;align-items:center;justify-content:center;">
+  <div class="card" style="width:480px;position:relative;">
+    <h2 data-i18n="kw_modal_edit_title">Keyword bearbeiten</h2>
+    <form id="edit-form" style="display:flex;flex-direction:column;gap:12px;margin-top:12px;">
+      <input type="hidden" id="edit-id" />
+      <div>
+        <label data-i18n="kw_lbl_keyword">Keyword</label>
+        <input id="edit-keyword" type="text" class="w-full" required />
+      </div>
+      <div>
+        <label data-i18n="kw_lbl_country">Land</label>
+        <select id="edit-geo" class="w-full"></select>
+      </div>
+      <div>
+        <label data-i18n="kw_lbl_note_short">Notiz</label>
+        <input id="edit-note" type="text" class="w-full" />
+      </div>
+      <div style="display:flex;gap:12px;">
+        <div style="flex:1;">
+          <label data-i18n="kw_lbl_fetch_tf">Abruf-Zeitraum</label>
+          <select id="edit-timeframe" class="w-full">
+            <option value="now 1-H" data-i18n="kw_tf_1h">Letzte Stunde (minütlich)</option>
+            <option value="now 4-H" data-i18n="kw_tf_4h">Letzte 4 Stunden (minütlich)</option>
+            <option value="now 1-d" data-i18n="kw_tf_1d">Letzte 24 Stunden (stündlich)</option>
+            <option value="now 7-d" data-i18n="kw_tf_7d">Letzte 7 Tage (stündlich)</option>
+            <option value="today 1-m" data-i18n="kw_tf_1m">Letzter Monat (täglich)</option>
+            <option value="today 3-m" data-i18n="kw_tf_3m">Letzte 3 Monate (täglich)</option>
+            <option value="today 12-m" data-i18n="kw_tf_12m">Letzte 12 Monate (wöchentlich)</option>
+            <option value="today 5-y" data-i18n="kw_tf_5y">Letzte 5 Jahre (monatlich)</option>
+          </select>
+        </div>
+        <div style="flex:1;">
+          <label data-i18n="kw_lbl_service">Dienst</label>
+          <select id="edit-gprop" class="w-full">
+            <option value="" data-i18n="kw_svc_web2">Web-Suche (Standard)</option>
+            <option value="news" data-i18n="kw_svc_news">Google News</option>
+            <option value="images" data-i18n="kw_svc_images">Google Bilder</option>
+            <option value="youtube">YouTube</option>
+            <option value="froogle" data-i18n="kw_svc_shopping">Google Shopping</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="edit-active" />
+        <label for="edit-active" style="margin:0;color:var(--text);" data-i18n="kw_lbl_active">Aktiv</label>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+        <button type="button" class="btn btn-ghost" id="edit-cancel" data-i18n="kw_btn_cancel">Abbrechen</button>
+        <button type="submit" class="btn btn-primary" data-i18n="kw_btn_save">Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+window._mergeI18n({
+  de: {
+    kw_page_title: 'Keyword-Verwaltung',
+    kw_no_project_msg: 'Bitte zuerst ein Projekt anlegen.',
+    kw_no_project_desc: 'Um mit der Analyse zu starten, wird ein Projekt ben\u00f6tigt. Dort werden alle Keywords und Ergebnisse organisiert.',
+    kw_no_project_btn: 'Projekt anlegen',
+    kw_proj_filter: 'Projekt-Filter:',
+    kw_all_keywords: 'Alle Keywords',
+    kw_card_add: 'Keyword hinzuf\u00fcgen',
+    kw_lbl_keyword: 'Keyword',
+    kw_lbl_country: 'Land',
+    kw_lbl_timeframe: 'Zeitraum',
+    kw_lbl_service: 'Dienst',
+    kw_lbl_note: 'Notiz (optional)',
+    kw_lbl_note_short: 'Notiz',
+    kw_lbl_fetch_tf: 'Abruf-Zeitraum',
+    kw_lbl_active: 'Aktiv',
+    kw_ph_keyword: 'z.B. Klimawandel',
+    kw_btn_translate: '\u00dcbersetzen',
+    kw_btn_translate_title: 'In EN, ES, FR, ZH, RU \u00fcbersetzen',
+    kw_tf_1_7d: '1 Tag + 7 Tage (Standard)',
+    kw_tf_1h: 'Letzte Stunde (min\u00fctlich)',
+    kw_tf_4h: 'Letzte 4 Stunden (min\u00fctlich)',
+    kw_tf_1d: 'Letzte 24 Stunden (st\u00fcndlich)',
+    kw_tf_7d: 'Letzte 7 Tage (st\u00fcndlich)',
+    kw_tf_1m: 'Letzter Monat (t\u00e4glich)',
+    kw_tf_3m: 'Letzte 3 Monate (t\u00e4glich)',
+    kw_tf_12m: 'Letzte 12 Monate (w\u00f6chentlich)',
+    kw_tf_5y: 'Letzte 5 Jahre (monatlich)',
+    kw_svc_web: 'Web (Standard)',
+    kw_svc_web2: 'Web-Suche (Standard)',
+    kw_svc_news: 'Google News',
+    kw_svc_images: 'Google Bilder',
+    kw_svc_shopping: 'Google Shopping',
+    kw_btn_add: '+ Hinzuf\u00fcgen',
+    kw_trans_detected: 'Erkannte Sprache:',
+    kw_trans_hint: 'Auf Chip klicken um Keyword & Land zu \u00fcbernehmen',
+    kw_btn_fetch_now: 'Jetzt abrufen',
+    kw_tbl_managed: 'Verwaltete Keywords',
+    kw_search_ph: 'Suchen\u2026',
+    kw_search_clear_title: 'Suche l\u00f6schen',
+    kw_th_keyword: 'Keyword',
+    kw_th_country: 'Land',
+    kw_th_status: 'Status',
+    kw_th_datapoints: 'Datenpunkte',
+    kw_th_note: 'Notiz',
+    kw_th_created: 'Erstellt',
+    kw_loading: 'Lade\u2026',
+    kw_no_results: 'Keine Keywords gefunden',
+    kw_filter_all: 'Alle',
+    kw_filter_active: 'Aktiv',
+    kw_filter_inactive: 'Inaktiv',
+    kw_select_preset: 'Ausw\u00e4hlen\u2026',
+    kw_select_all: 'Alle',
+    kw_select_active: 'Alle aktiven',
+    kw_select_inactive: 'Alle inaktiven',
+    kw_btn_open_analysis: 'In Analyse \u00f6ffnen \u2192',
+    kw_btn_assign_project: 'Zu Projekt\u2026',
+    kw_btn_delete_sel: 'Ausgew\u00e4hlte l\u00f6schen',
+    kw_btn_clear_sel: 'Auswahl aufheben',
+    kw_pg_prev: '\u2190 Zur\u00fcck',
+    kw_pg_next: 'Weiter \u2192',
+    kw_modal_assign_title: 'Zu Projekt zuweisen',
+    kw_btn_close: 'Schlie\u00dfen',
+    kw_modal_edit_title: 'Keyword bearbeiten',
+    kw_btn_cancel: 'Abbrechen',
+    kw_btn_save: 'Speichern',
+    kw_badge_active: 'Aktiv',
+    kw_badge_inactive: 'Inaktiv',
+    kw_btn_fetch_row: 'Abrufen',
+    kw_sel_count: '{n} ausgew\u00e4hlt',
+    kw_hint_no_proj: 'Kein Projektfilter aktiv',
+    kw_hint_proj_assign: 'Neue Keywords werden automatisch \u201e{name}\u201c zugewiesen',
+    kw_assign_header: '{n} Keyword{s} ausgew\u00e4hlt \u2013 Projekt w\u00e4hlen:',
+    kw_btn_assign: 'Zuweisen',
+    kw_btn_remove: 'Entfernen',
+    kw_assigned_lbl: '{n}/{total} zugewiesen',
+    kw_fetch_started: 'Abruf gestartet',
+    kw_fetch_starting: 'Starte Abruf\u2026',
+    kw_fetch_running: 'Abruf l\u00e4uft im Hintergrund\u2026',
+    kw_added: '"{name}" hinzugef\u00fcgt',
+    kw_added_multi: '"{name}" ({n} Zeitrahmen) hinzugef\u00fcgt',
+    kw_saved: 'Gespeichert',
+    kw_deleted: '"{name}" gel\u00f6scht',
+    kw_deleted_multi: '{n} Keywords gel\u00f6scht',
+    kw_confirm_delete: '"{name}" wirklich l\u00f6schen? Alle Trend-Daten werden ebenfalls entfernt.',
+    kw_confirm_delete_sel: '{n} Keyword{s} und alle zugeh\u00f6rigen Trend-Daten unwiderruflich l\u00f6schen?',
+    kw_err_load: 'Fehler beim Laden: ',
+    kw_err_trans: '\u00dcbersetzung fehlgeschlagen: ',
+    kw_err_no_keyword: 'Bitte zuerst ein Keyword eingeben',
+    kw_trans_unknown: 'unbekannt',
+    kw_verb_assigned: 'zugewiesen',
+    kw_verb_removed: 'entfernt',
+  },
+  en: {
+    kw_page_title: 'Keyword Management',
+    kw_no_project_msg: 'Please create a project first.',
+    kw_no_project_desc: 'A project is required to start analysing. All keywords and results are organised there.',
+    kw_no_project_btn: 'Create project',
+    kw_proj_filter: 'Project filter:',
+    kw_all_keywords: 'All keywords',
+    kw_card_add: 'Add keyword',
+    kw_lbl_keyword: 'Keyword',
+    kw_lbl_country: 'Country',
+    kw_lbl_timeframe: 'Time range',
+    kw_lbl_service: 'Service',
+    kw_lbl_note: 'Note (optional)',
+    kw_lbl_note_short: 'Note',
+    kw_lbl_fetch_tf: 'Fetch time range',
+    kw_lbl_active: 'Active',
+    kw_ph_keyword: 'e.g. Climate change',
+    kw_btn_translate: 'Translate',
+    kw_btn_translate_title: 'Translate to EN, ES, FR, ZH, RU',
+    kw_tf_1_7d: '1 day + 7 days (default)',
+    kw_tf_1h: 'Last hour (per minute)',
+    kw_tf_4h: 'Last 4 hours (per minute)',
+    kw_tf_1d: 'Last 24 hours (hourly)',
+    kw_tf_7d: 'Last 7 days (hourly)',
+    kw_tf_1m: 'Last month (daily)',
+    kw_tf_3m: 'Last 3 months (daily)',
+    kw_tf_12m: 'Last 12 months (weekly)',
+    kw_tf_5y: 'Last 5 years (monthly)',
+    kw_svc_web: 'Web (default)',
+    kw_svc_web2: 'Web search (default)',
+    kw_svc_news: 'Google News',
+    kw_svc_images: 'Google Images',
+    kw_svc_shopping: 'Google Shopping',
+    kw_btn_add: '+ Add',
+    kw_trans_detected: 'Detected language:',
+    kw_trans_hint: 'Click chip to apply keyword & country',
+    kw_btn_fetch_now: 'Fetch now',
+    kw_tbl_managed: 'Managed keywords',
+    kw_search_ph: 'Search\u2026',
+    kw_search_clear_title: 'Clear search',
+    kw_th_keyword: 'Keyword',
+    kw_th_country: 'Country',
+    kw_th_status: 'Status',
+    kw_th_datapoints: 'Data points',
+    kw_th_note: 'Note',
+    kw_th_created: 'Created',
+    kw_loading: 'Loading\u2026',
+    kw_no_results: 'No keywords found',
+    kw_filter_all: 'All',
+    kw_filter_active: 'Active',
+    kw_filter_inactive: 'Inactive',
+    kw_select_preset: 'Select\u2026',
+    kw_select_all: 'All',
+    kw_select_active: 'All active',
+    kw_select_inactive: 'All inactive',
+    kw_btn_open_analysis: 'Open in analysis \u2192',
+    kw_btn_assign_project: 'Assign to project\u2026',
+    kw_btn_delete_sel: 'Delete selected',
+    kw_btn_clear_sel: 'Clear selection',
+    kw_pg_prev: '\u2190 Back',
+    kw_pg_next: 'Next \u2192',
+    kw_modal_assign_title: 'Assign to project',
+    kw_btn_close: 'Close',
+    kw_modal_edit_title: 'Edit keyword',
+    kw_btn_cancel: 'Cancel',
+    kw_btn_save: 'Save',
+    kw_badge_active: 'Active',
+    kw_badge_inactive: 'Inactive',
+    kw_btn_fetch_row: 'Fetch',
+    kw_sel_count: '{n} selected',
+    kw_hint_no_proj: 'No project filter active',
+    kw_hint_proj_assign: 'New keywords will be automatically assigned to \u201c{name}\u201d',
+    kw_assign_header: '{n} keyword{s} selected \u2013 choose project:',
+    kw_btn_assign: 'Assign',
+    kw_btn_remove: 'Remove',
+    kw_assigned_lbl: '{n}/{total} assigned',
+    kw_fetch_started: 'Fetch started',
+    kw_fetch_starting: 'Starting fetch\u2026',
+    kw_fetch_running: 'Fetch running in background\u2026',
+    kw_added: '"{name}" added',
+    kw_added_multi: '"{name}" ({n} time ranges) added',
+    kw_saved: 'Saved',
+    kw_deleted: '"{name}" deleted',
+    kw_deleted_multi: '{n} keywords deleted',
+    kw_confirm_delete: 'Really delete "{name}"? All trend data will also be removed.',
+    kw_confirm_delete_sel: 'Permanently delete {n} keyword{s} and all associated trend data?',
+    kw_err_load: 'Error loading: ',
+    kw_err_trans: 'Translation failed: ',
+    kw_err_no_keyword: 'Please enter a keyword first',
+    kw_trans_unknown: 'unknown',
+    kw_verb_assigned: 'assigned',
+    kw_verb_removed: 'removed',
+  },
+  fr: {
+    kw_page_title: 'Gestion des mots-cl\u00e9s',
+    kw_no_project_msg: 'Veuillez d\u2019abord cr\u00e9er un projet.',
+    kw_no_project_desc: 'Un projet est n\u00e9cessaire pour commencer l\u2019analyse. Tous les mots-cl\u00e9s et r\u00e9sultats y sont organis\u00e9s.',
+    kw_no_project_btn: 'Cr\u00e9er un projet',
+    kw_proj_filter: 'Filtre projet\u00a0:',
+    kw_all_keywords: 'Tous les mots-cl\u00e9s',
+    kw_card_add: 'Ajouter un mot-cl\u00e9',
+    kw_lbl_keyword: 'Mot-cl\u00e9',
+    kw_lbl_country: 'Pays',
+    kw_lbl_timeframe: 'P\u00e9riode',
+    kw_lbl_service: 'Service',
+    kw_lbl_note: 'Note (optionnel)',
+    kw_lbl_note_short: 'Note',
+    kw_lbl_fetch_tf: 'P\u00e9riode de collecte',
+    kw_lbl_active: 'Actif',
+    kw_ph_keyword: 'ex. Changement climatique',
+    kw_btn_translate: 'Traduire',
+    kw_btn_translate_title: 'Traduire en EN, ES, FR, ZH, RU',
+    kw_tf_1_7d: '1 jour + 7 jours (par d\u00e9faut)',
+    kw_tf_1h: 'Derni\u00e8re heure (par minute)',
+    kw_tf_4h: '4 derni\u00e8res heures (par minute)',
+    kw_tf_1d: '24 derni\u00e8res heures (par heure)',
+    kw_tf_7d: '7 derniers jours (par heure)',
+    kw_tf_1m: 'Dernier mois (par jour)',
+    kw_tf_3m: '3 derniers mois (par jour)',
+    kw_tf_12m: '12 derniers mois (par semaine)',
+    kw_tf_5y: '5 derni\u00e8res ann\u00e9es (par mois)',
+    kw_svc_web: 'Web (par d\u00e9faut)',
+    kw_svc_web2: 'Recherche web (par d\u00e9faut)',
+    kw_svc_news: 'Google Actualit\u00e9s',
+    kw_svc_images: 'Google Images',
+    kw_svc_shopping: 'Google Shopping',
+    kw_btn_add: '+ Ajouter',
+    kw_trans_detected: 'Langue d\u00e9tect\u00e9e\u00a0:',
+    kw_trans_hint: 'Cliquer sur une puce pour appliquer le mot-cl\u00e9 & le pays',
+    kw_btn_fetch_now: 'Collecter maintenant',
+    kw_tbl_managed: 'Mots-cl\u00e9s g\u00e9r\u00e9s',
+    kw_search_ph: 'Rechercher\u2026',
+    kw_search_clear_title: 'Effacer la recherche',
+    kw_th_keyword: 'Mot-cl\u00e9',
+    kw_th_country: 'Pays',
+    kw_th_status: 'Statut',
+    kw_th_datapoints: 'Points de donn\u00e9es',
+    kw_th_note: 'Note',
+    kw_th_created: 'Cr\u00e9\u00e9',
+    kw_loading: 'Chargement\u2026',
+    kw_no_results: 'Aucun mot-cl\u00e9 trouv\u00e9',
+    kw_filter_all: 'Tous',
+    kw_filter_active: 'Actif',
+    kw_filter_inactive: 'Inactif',
+    kw_select_preset: 'S\u00e9lectionner\u2026',
+    kw_select_all: 'Tous',
+    kw_select_active: 'Tous les actifs',
+    kw_select_inactive: 'Tous les inactifs',
+    kw_btn_open_analysis: 'Ouvrir dans l\u2019analyse \u2192',
+    kw_btn_assign_project: 'Assigner au projet\u2026',
+    kw_btn_delete_sel: 'Supprimer la s\u00e9lection',
+    kw_btn_clear_sel: 'D\u00e9s\u00e9lectionner',
+    kw_pg_prev: '\u2190 Pr\u00e9c\u00e9dent',
+    kw_pg_next: 'Suivant \u2192',
+    kw_modal_assign_title: 'Assigner \u00e0 un projet',
+    kw_btn_close: 'Fermer',
+    kw_modal_edit_title: 'Modifier le mot-cl\u00e9',
+    kw_btn_cancel: 'Annuler',
+    kw_btn_save: 'Enregistrer',
+    kw_badge_active: 'Actif',
+    kw_badge_inactive: 'Inactif',
+    kw_btn_fetch_row: 'Collecter',
+    kw_sel_count: '{n} s\u00e9lectionn\u00e9{s}',
+    kw_hint_no_proj: 'Aucun filtre projet actif',
+    kw_hint_proj_assign: 'Les nouveaux mots-cl\u00e9s seront automatiquement assign\u00e9s \u00e0 \u00ab\u00a0{name}\u00a0\u00bb',
+    kw_assign_header: '{n} mot{s}-cl\u00e9 s\u00e9lectionn\u00e9{s} \u2013 choisir un projet\u00a0:',
+    kw_btn_assign: 'Assigner',
+    kw_btn_remove: 'Retirer',
+    kw_assigned_lbl: '{n}/{total} assign\u00e9{s}',
+    kw_fetch_started: 'Collecte d\u00e9marr\u00e9e',
+    kw_fetch_starting: 'D\u00e9marrage de la collecte\u2026',
+    kw_fetch_running: 'Collecte en cours en arri\u00e8re-plan\u2026',
+    kw_added: '"{name}" ajout\u00e9',
+    kw_added_multi: '"{name}" ({n} p\u00e9riodes) ajout\u00e9',
+    kw_saved: 'Enregistr\u00e9',
+    kw_deleted: '"{name}" supprim\u00e9',
+    kw_deleted_multi: '{n} mots-cl\u00e9s supprim\u00e9s',
+    kw_confirm_delete: 'Vraiment supprimer "{name}"\u00a0? Toutes les donn\u00e9es de tendance seront \u00e9galement supprim\u00e9es.',
+    kw_confirm_delete_sel: 'Supprimer d\u00e9finitivement {n} mot{s}-cl\u00e9 et toutes les donn\u00e9es associ\u00e9es\u00a0?',
+    kw_err_load: 'Erreur de chargement\u00a0: ',
+    kw_err_trans: 'Traduction \u00e9chou\u00e9e\u00a0: ',
+    kw_err_no_keyword: 'Veuillez d\u2019abord saisir un mot-cl\u00e9',
+    kw_trans_unknown: 'inconnu',
+    kw_verb_assigned: 'assign\u00e9',
+    kw_verb_removed: 'retir\u00e9',
+  },
+  es: {
+    kw_page_title: 'Gesti\u00f3n de palabras clave',
+    kw_no_project_msg: 'Por favor, crea primero un proyecto.',
+    kw_no_project_desc: 'Se necesita un proyecto para empezar el an\u00e1lisis. All\u00ed se organizan todas las palabras clave y resultados.',
+    kw_no_project_btn: 'Crear proyecto',
+    kw_proj_filter: 'Filtro de proyecto:',
+    kw_all_keywords: 'Todas las palabras clave',
+    kw_card_add: 'A\u00f1adir palabra clave',
+    kw_lbl_keyword: 'Palabra clave',
+    kw_lbl_country: 'Pa\u00eds',
+    kw_lbl_timeframe: 'Per\u00edodo',
+    kw_lbl_service: 'Servicio',
+    kw_lbl_note: 'Nota (opcional)',
+    kw_lbl_note_short: 'Nota',
+    kw_lbl_fetch_tf: 'Per\u00edodo de consulta',
+    kw_lbl_active: 'Activo',
+    kw_ph_keyword: 'ej. Cambio clim\u00e1tico',
+    kw_btn_translate: 'Traducir',
+    kw_btn_translate_title: 'Traducir a EN, ES, FR, ZH, RU',
+    kw_tf_1_7d: '1 d\u00eda + 7 d\u00edas (predeterminado)',
+    kw_tf_1h: '\u00daltima hora (por minuto)',
+    kw_tf_4h: '\u00daltimas 4 horas (por minuto)',
+    kw_tf_1d: '\u00daltimas 24 horas (por hora)',
+    kw_tf_7d: '\u00daltimos 7 d\u00edas (por hora)',
+    kw_tf_1m: '\u00daltimo mes (diario)',
+    kw_tf_3m: '\u00daltimos 3 meses (diario)',
+    kw_tf_12m: '\u00daltimos 12 meses (semanal)',
+    kw_tf_5y: '\u00daltimos 5 a\u00f1os (mensual)',
+    kw_svc_web: 'Web (predeterminado)',
+    kw_svc_web2: 'B\u00fasqueda web (predeterminado)',
+    kw_svc_news: 'Google Noticias',
+    kw_svc_images: 'Google Im\u00e1genes',
+    kw_svc_shopping: 'Google Shopping',
+    kw_btn_add: '+ A\u00f1adir',
+    kw_trans_detected: 'Idioma detectado:',
+    kw_trans_hint: 'Haz clic en un chip para aplicar la palabra clave y el pa\u00eds',
+    kw_btn_fetch_now: 'Consultar ahora',
+    kw_tbl_managed: 'Palabras clave gestionadas',
+    kw_search_ph: 'Buscar\u2026',
+    kw_search_clear_title: 'Borrar b\u00fasqueda',
+    kw_th_keyword: 'Palabra clave',
+    kw_th_country: 'Pa\u00eds',
+    kw_th_status: 'Estado',
+    kw_th_datapoints: 'Puntos de datos',
+    kw_th_note: 'Nota',
+    kw_th_created: 'Creado',
+    kw_loading: 'Cargando\u2026',
+    kw_no_results: 'No se encontraron palabras clave',
+    kw_filter_all: 'Todos',
+    kw_filter_active: 'Activo',
+    kw_filter_inactive: 'Inactivo',
+    kw_select_preset: 'Seleccionar\u2026',
+    kw_select_all: 'Todos',
+    kw_select_active: 'Todos los activos',
+    kw_select_inactive: 'Todos los inactivos',
+    kw_btn_open_analysis: 'Abrir en an\u00e1lisis \u2192',
+    kw_btn_assign_project: 'Asignar a proyecto\u2026',
+    kw_btn_delete_sel: 'Eliminar selecci\u00f3n',
+    kw_btn_clear_sel: 'Deseleccionar',
+    kw_pg_prev: '\u2190 Anterior',
+    kw_pg_next: 'Siguiente \u2192',
+    kw_modal_assign_title: 'Asignar a proyecto',
+    kw_btn_close: 'Cerrar',
+    kw_modal_edit_title: 'Editar palabra clave',
+    kw_btn_cancel: 'Cancelar',
+    kw_btn_save: 'Guardar',
+    kw_badge_active: 'Activo',
+    kw_badge_inactive: 'Inactivo',
+    kw_btn_fetch_row: 'Consultar',
+    kw_sel_count: '{n} seleccionado{s}',
+    kw_hint_no_proj: 'Sin filtro de proyecto activo',
+    kw_hint_proj_assign: 'Las nuevas palabras clave se asignar\u00e1n autom\u00e1ticamente a \u00ab{name}\u00bb',
+    kw_assign_header: '{n} palabra{s} clave seleccionada{s} \u2013 elige proyecto:',
+    kw_btn_assign: 'Asignar',
+    kw_btn_remove: 'Quitar',
+    kw_assigned_lbl: '{n}/{total} asignado{s}',
+    kw_fetch_started: 'Consulta iniciada',
+    kw_fetch_starting: 'Iniciando consulta\u2026',
+    kw_fetch_running: 'Consulta en segundo plano\u2026',
+    kw_added: '"{name}" a\u00f1adido',
+    kw_added_multi: '"{name}" ({n} per\u00edodos) a\u00f1adido',
+    kw_saved: 'Guardado',
+    kw_deleted: '"{name}" eliminado',
+    kw_deleted_multi: '{n} palabras clave eliminadas',
+    kw_confirm_delete: '\u00bfEliminar realmente "{name}"? Todos los datos de tendencia tambi\u00e9n ser\u00e1n eliminados.',
+    kw_confirm_delete_sel: '\u00bfEliminar permanentemente {n} palabra{s} clave y todos los datos asociados?',
+    kw_err_load: 'Error al cargar: ',
+    kw_err_trans: 'Traducci\u00f3n fallida: ',
+    kw_err_no_keyword: 'Por favor, introduce primero una palabra clave',
+    kw_trans_unknown: 'desconocido',
+    kw_verb_assigned: 'asignado',
+    kw_verb_removed: 'eliminado',
+  },
+});
+window._applyI18n();
+
+  const GEO_OPTIONS = [
+    ["DE","Deutschland"],["AT","\u00d6sterreich"],["CH","Schweiz"],
+    ["US","USA"],["GB","Gro\u00dfbritannien"],["FR","Frankreich"],
+    ["IT","Italien"],["ES","Spanien"],["NL","Niederlande"],
+    ["BE","Belgien"],["PL","Polen"],["SE","Schweden"],
+    ["NO","Norwegen"],["DK","D\u00e4nemark"],["FI","Finnland"],
+    ["PT","Portugal"],["CZ","Tschechien"],["RU","Russland"],
+    ["TR","T\u00fcrkei"],["JP","Japan"],["CN","China"],
+    ["KR","S\u00fcdkorea"],["IN","Indien"],["BR","Brasilien"],
+    ["CA","Kanada"],["AU","Australien"],["MX","Mexiko"],
+    ["",  "Welt"],
+  ];
+
+  const GPROP_LABELS = {
+    "":        "Web",
+    "news":    "News",
+    "images":  window.t('kw_svc_images', 'Bilder'),
+    "youtube": "YouTube",
+    "froogle": "Shopping",
+  };
+
+  function buildGeoSelect(selectId, selectedVal) {
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = GEO_OPTIONS.map(([code, name]) =>
+      `<option value="${code}" ${code === selectedVal ? "selected" : ""}>${name}${code ? " (" + code + ")" : ""}</option>`
+    ).join("");
+  }
+
+  buildGeoSelect("inp-geo", "DE");
+  buildGeoSelect("edit-geo", "DE");
+
+  let allKeywords = [];
+  let allProjects = [];
+  let activeProjectId = parseInt(localStorage.getItem("kw_project_id") || "0") || 0;
+  const PAGE_SIZE = 50;
+  let currentPage = 1;
+
+  // Multi-Select
+  const MAX_ANALYSIS = 8;
+  const kwSelection = new Set();
+
+  function updateSelBar() {
+    const bar     = document.getElementById("kw-sel-bar");
+    const count   = document.getElementById("kw-sel-count");
+    const openBtn = document.getElementById("btn-open-analysis");
+    if (kwSelection.size === 0) {
+      bar.style.display = "none";
+    } else {
+      bar.style.display = "flex";
+      count.textContent = window.t('kw_sel_count', '{n} ausgewählt').replace('{n}', kwSelection.size);
+      openBtn.style.display = kwSelection.size <= MAX_ANALYSIS ? "" : "none";
+    }
+  }
+
+  // ── Projektliste laden ──
+  async function loadProjects() {
+    try {
+      allProjects = await api("/api/projects");
+      const sel = document.getElementById("sel-project");
+      sel.innerHTML = `<option value="">${window.t('kw_all_keywords', 'Alle Keywords')}</option>` +
+        allProjects.map(p =>
+          `<option value="${p.id}" ${p.id === activeProjectId ? "selected" : ""}>${esc(p.name)}</option>`
+        ).join("");
+      updateProjModeBar();
+    } catch(e) { /* ignore */ }
+  }
+
+  function updateProjModeBar() {
+    const bar  = document.getElementById("proj-mode-bar");
+    const hint = document.getElementById("proj-mode-hint");
+    if (activeProjectId) {
+      const proj = allProjects.find(p => p.id === activeProjectId);
+      bar.classList.add("active");
+      hint.textContent = proj
+        ? window.t('kw_hint_proj_assign', 'Neue Keywords werden automatisch \u201e{name}\u201c zugewiesen').replace('{name}', proj.name)
+        : "";
+    } else {
+      bar.classList.remove("active");
+      hint.textContent = window.t('kw_hint_no_proj', 'Kein Projektfilter aktiv');
+    }
+  }
+
+  document.getElementById("sel-project").addEventListener("change", function() {
+    activeProjectId = parseInt(this.value) || 0;
+    localStorage.setItem("kw_project_id", activeProjectId || "");
+    updateProjModeBar();
+    kwSelection.clear();
+    updateSelBar();
+    currentPage = 1;
+    loadKeywords();
+  });
+
+  // ── Daten laden ──
+  async function loadKeywords() {
+    try {
+      const url = activeProjectId ? `/api/keywords?project_id=${activeProjectId}` : "/api/keywords";
+      allKeywords = await api(url);
+      renderTable();
+    } catch(e) {
+      toast(window.t('kw_err_load', 'Fehler beim Laden: ') + e.message, "error");
+    }
+  }
+
+  function renderTable() {
+    const search = document.getElementById("search-inp").value.toLowerCase();
+    const activeFilter = document.getElementById("filter-active").value;
+    const tbody = document.getElementById("kw-body");
+
+    let filtered = allKeywords.filter(kw => {
+      if (search && !kw.keyword.toLowerCase().includes(search)) return false;
+      if (activeFilter === "true" && !kw.active) return false;
+      if (activeFilter === "false" && kw.active) return false;
+      return true;
+    });
+
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="8" class="text-muted" style="text-align:center;padding:24px;">${window.t('kw_no_results', 'Keine Keywords gefunden')}</td></tr>`;
+      renderPagination(0, 0);
+      return;
+    }
+
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    if (currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const page  = filtered.slice(start, start + PAGE_SIZE);
+
+    renderPagination(filtered.length, totalPages);
+
+    tbody.innerHTML = page.map(kw => {
+      const showTrans = kw.translation_de &&
+                        kw.translation_de.toLowerCase() !== kw.keyword.toLowerCase();
+      const tfBadge  = kw.timeframe
+        ? `<span class="badge badge-blue" style="margin-left:5px;font-size:10px;">${esc(kw.timeframe)}</span>`
+        : "";
+      const gpBadge  = kw.gprop
+        ? `<span class="badge badge-yellow" style="margin-left:4px;font-size:10px;">${esc(GPROP_LABELS[kw.gprop] || kw.gprop)}</span>`
+        : "";
+      const projBadges = (kw.project_ids || []).map(pid => {
+        const proj = allProjects.find(p => p.id === pid);
+        return proj ? `<span class="proj-badge" style="margin-left:4px;">${esc(proj.name)}</span>` : "";
+      }).join("");
+      const checked  = kwSelection.has(kw.id) ? "checked" : "";
+      return `
+      <tr class="${kwSelection.has(kw.id) ? 'kw-row-selected' : ''}">
+        <td style="text-align:center;">
+          <input type="checkbox" class="kw-sel-cb" data-id="${kw.id}" ${checked}
+            style="cursor:pointer;width:15px;height:15px;" />
+        </td>
+        <td>
+          <strong>${esc(kw.keyword)}</strong>
+          ${showTrans ? `<span class="text-muted text-sm" style="margin-left:5px;">[${esc(kw.translation_de)}]</span>` : ""}
+          ${tfBadge}${gpBadge}${projBadges}
+        </td>
+        <td>${esc(kw.geo)}</td>
+        <td>
+          <span class="badge ${kw.active ? 'badge-green' : 'badge-red'}">
+            ${kw.active ? window.t('kw_badge_active','Aktiv') : window.t('kw_badge_inactive','Inaktiv')}
+          </span>
+        </td>
+        <td class="text-muted">${kw.data_count > 0 ? kw.data_count : '\u2013'}</td>
+        <td class="text-muted">${esc(kw.note || '')}</td>
+        <td class="text-muted text-sm">${fmtDate(kw.created_at)}</td>
+        <td>
+          <div style="display:flex;gap:4px;">
+            <button class="btn btn-ghost btn-sm" id="fetch-btn-${kw.id}" onclick="fetchSingleKeyword(${kw.id})">${window.t('kw_btn_fetch_row','Abrufen')}</button>
+            <button data-tip="${window.t('kw_modal_edit_title','Bearbeiten')}" onclick="openEdit(${kw.id})" style="cursor:pointer;background:none;border:none;color:var(--muted);padding:5px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;transition:background .1s,color .1s;"  onmouseover="this.style.background='var(--surface2)';this.style.color='var(--text)'" onmouseout="this.style.background='none';this.style.color='var(--muted)'"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5l2.5 2.5-7.5 7.5H3.5V10L11 2.5z"/></svg></button>
+            <button data-tip="${window.t('kw_btn_delete_sel','Löschen')}" style="cursor:pointer;background:none;border:none;color:rgba(239,68,68,.6);padding:5px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;transition:background .1s,color .1s;" onclick="deleteKw(${kw.id}, '${esc(kw.keyword)}')" onmouseover="this.style.background='rgba(239,68,68,.1)';this.style.color='#ef4444'" onmouseout="this.style.background='none';this.style.color='rgba(239,68,68,.6)'"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,4.5 13,4.5"/><path d="M6.5 4.5V3h3v1.5"/><rect x="4.5" y="4.5" width="7" height="9" rx="1"/><line x1="6.5" y1="7" x2="6.5" y2="11"/><line x1="9.5" y1="7" x2="9.5" y2="11"/></svg></button>
+          </div>
+        </td>
+      </tr>
+    `; }).join("");
+
+  }
+
+  async function fetchSingleKeyword(id) {
+    const btn = document.getElementById(`fetch-btn-${id}`);
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = "\u2026";
+    try {
+      await api(`/api/fetch/trigger/${id}`, { method: "POST" });
+      toast(window.t('kw_fetch_started', 'Abruf gestartet'), "ok");
+      setTimeout(() => loadKeywords(), 5000);
+    } catch(e) {
+      toast("Fehler: " + e.message, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = window.t('kw_btn_fetch_row', 'Abrufen');
+    }
+  }
+
+  // ── Übersetzen ──
+  document.getElementById("btn-translate").addEventListener("click", async () => {
+    const keyword = document.getElementById("inp-keyword").value.trim();
+    if (!keyword) { toast(window.t('kw_err_no_keyword', 'Bitte zuerst ein Keyword eingeben'), "error"); return; }
+
+    const spinner = document.getElementById("trans-spinner");
+    const label   = document.getElementById("trans-btn-label");
+    spinner.style.display = "inline-block";
+    label.textContent = "";
+    document.getElementById("trans-panel").style.display = "none";
+
+    try {
+      const res = await api("/api/translate", {
+        method: "POST",
+        body: JSON.stringify({ text: keyword }),
+      });
+
+      document.getElementById("trans-detected-lang").textContent =
+        res.detected_lang_name || res.detected_lang || window.t('kw_trans_unknown', 'unbekannt');
+
+      const chips = document.getElementById("trans-chips");
+      chips.innerHTML = Object.entries(res.translations).map(([code, t]) => {
+        if (!t.text) return "";
+        const sameAsInput = t.text.toLowerCase() === keyword.toLowerCase();
+        return `
+          <button type="button"
+            class="trans-chip"
+            data-text="${esc(t.text)}"
+            data-geo="${esc(t.geo)}"
+            style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
+                   background:var(--surface2);border:1px solid var(--border);border-radius:20px;
+                   cursor:pointer;font-size:13px;color:var(--text);transition:border-color .15s;">
+            <span>${t.flag}</span>
+            <span style="color:var(--muted);font-size:11px;">${esc(t.name)}</span>
+            <span style="font-weight:${sameAsInput ? '400' : '600'};">${esc(t.text)}</span>
+            <span style="color:var(--muted);font-size:11px;">(${esc(t.geo || 'WW')})</span>
+          </button>`;
+      }).join("");
+
+      document.getElementById("trans-panel").style.display = "block";
+    } catch(e) {
+      toast(window.t('kw_err_trans', 'Übersetzung fehlgeschlagen: ') + e.message, "error");
+    } finally {
+      spinner.style.display = "none";
+      label.textContent = window.t('kw_btn_translate', 'Übersetzen');
+    }
+  });
+
+  document.getElementById("trans-chips").addEventListener("click", e => {
+    const btn = e.target.closest(".trans-chip");
+    if (!btn) return;
+    document.getElementById("inp-keyword").value = btn.dataset.text;
+    buildGeoSelect("inp-geo", btn.dataset.geo);
+    document.getElementById("inp-keyword").focus();
+  });
+
+  // ── Hinzufügen ──
+  document.getElementById("add-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const keyword   = document.getElementById("inp-keyword").value.trim();
+    const geo       = document.getElementById("inp-geo").value.trim();
+    const note      = document.getElementById("inp-note").value.trim();
+    const timeframe = document.getElementById("inp-timeframe").value;
+    const gprop     = document.getElementById("inp-gprop").value;
+    if (!keyword) return;
+
+    // "1+7d" legt zwei Einträge an: now 1-d und now 7-d
+    const timeframes = timeframe === "1+7d" ? ["now 1-d", "now 7-d"] : [timeframe];
+    let added = 0;
+    const errs = [];
+    for (const tf of timeframes) {
+      try {
+        await api("/api/keywords", {
+          method: "POST",
+          body: JSON.stringify({ keyword, geo, note, timeframe: tf, gprop,
+                                 project_id: activeProjectId || null }),
+        });
+        added++;
+      } catch(err) {
+        errs.push(err.message);
+      }
+    }
+
+    document.getElementById("inp-keyword").value = "";
+    document.getElementById("inp-note").value = "";
+    document.getElementById("inp-timeframe").value = "1+7d";
+    document.getElementById("inp-gprop").value = "";
+
+    if (added > 0) {
+      const msg = added > 1
+        ? window.t('kw_added_multi', '"{name}" ({n} Zeitrahmen) hinzugefügt').replace('{name}', keyword).replace('{n}', added)
+        : window.t('kw_added', '"{name}" hinzugefügt').replace('{name}', keyword);
+      toast(msg, "ok");
+      await loadKeywords();
+    }
+    if (errs.length) toast("Teilfehler: " + errs.join(" / "), "error");
+  });
+
+  // ── Edit ──
+  function openEdit(id) {
+    const kw = allKeywords.find(k => k.id === id);
+    if (!kw) return;
+    document.getElementById("edit-id").value       = kw.id;
+    document.getElementById("edit-keyword").value  = kw.keyword;
+    buildGeoSelect("edit-geo", kw.geo);
+    document.getElementById("edit-note").value     = kw.note;
+    document.getElementById("edit-active").checked = kw.active;
+    document.getElementById("edit-timeframe").value = kw.timeframe || "now 7-d";
+    document.getElementById("edit-gprop").value    = kw.gprop || "";
+    showModal("edit-modal");
+  }
+
+  document.getElementById("edit-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const id = parseInt(document.getElementById("edit-id").value);
+    const body = {
+      keyword:   document.getElementById("edit-keyword").value.trim(),
+      geo:       document.getElementById("edit-geo").value.trim().toUpperCase(),
+      note:      document.getElementById("edit-note").value.trim(),
+      active:    document.getElementById("edit-active").checked,
+      timeframe: document.getElementById("edit-timeframe").value,
+      gprop:     document.getElementById("edit-gprop").value,
+    };
+    try {
+      await api(`/api/keywords/${id}`, { method: "PUT", body: JSON.stringify(body) });
+      hideModal("edit-modal");
+      toast(window.t('kw_saved', 'Gespeichert'), "ok");
+      await loadKeywords();
+    } catch(e) {
+      toast("Fehler: " + e.message, "error");
+    }
+  });
+
+  document.getElementById("edit-cancel").addEventListener("click", () => hideModal("edit-modal"));
+
+  // ── Löschen ──
+  async function deleteKw(id, name) {
+    if (!confirm(window.t('kw_confirm_delete', '"{name}" wirklich löschen? Alle Trend-Daten werden ebenfalls entfernt.').replace('{name}', name))) return;
+    try {
+      await api(`/api/keywords/${id}`, { method: "DELETE" });
+      toast(window.t('kw_deleted', '"{name}" gelöscht').replace('{name}', name), "ok");
+      await loadKeywords();
+    } catch(e) {
+      toast("Fehler: " + e.message, "error");
+    }
+  }
+
+  // ── Manueller Fetch ──
+  document.getElementById("btn-fetch").addEventListener("click", async () => {
+    const spinner = document.getElementById("fetch-spinner");
+    const status  = document.getElementById("fetch-status");
+    spinner.style.display = "inline-block";
+    status.textContent = window.t('kw_fetch_starting', 'Starte Abruf…');
+    try {
+      await api("/api/fetch/trigger", { method: "POST" });
+      status.textContent = window.t('kw_fetch_running', 'Abruf läuft im Hintergrund…');
+      toast(window.t('kw_fetch_started', 'Fetch-Lauf gestartet'), "ok");
+    } catch(e) {
+      toast("Fehler: " + e.message, "error");
+      status.textContent = "";
+    } finally {
+      spinner.style.display = "none";
+    }
+  });
+
+  // ── Paginierung ──
+  function renderPagination(total, totalPages) {
+    const wrap    = document.getElementById("kw-pagination");
+    const info    = document.getElementById("pg-info");
+    const pagesEl = document.getElementById("pg-pages");
+    const prev    = document.getElementById("pg-prev");
+    const next    = document.getElementById("pg-next");
+
+    if (totalPages <= 1) { wrap.style.display = "none"; return; }
+    wrap.style.display = "flex";
+
+    const start = (currentPage - 1) * PAGE_SIZE + 1;
+    const end   = Math.min(currentPage * PAGE_SIZE, total);
+    info.textContent = `${start}\u2013${end} von ${total}`;
+
+    prev.disabled = currentPage === 1;
+    next.disabled = currentPage === totalPages;
+
+    const show = new Set([1, totalPages, currentPage, currentPage - 1, currentPage + 1]
+      .filter(p => p >= 1 && p <= totalPages));
+    const sorted = [...show].sort((a, b) => a - b);
+    let html = "";
+    let prevP = 0;
+    for (const p of sorted) {
+      if (prevP && p - prevP > 1) html += `<span style="color:var(--muted);padding:0 2px;">\u2026</span>`;
+      const active = p === currentPage ? "style=\"border-color:var(--accent);color:var(--text);\"" : "";
+      html += `<button class="btn btn-ghost btn-sm" ${active} onclick="goPage(${p})">${p}</button>`;
+      prevP = p;
+    }
+    pagesEl.innerHTML = html;
+  }
+
+  function goPage(p) { currentPage = p; renderTable(); }
+
+  document.getElementById("pg-prev").addEventListener("click", () => { if (currentPage > 1) { currentPage--; renderTable(); } });
+  document.getElementById("pg-next").addEventListener("click", () => { currentPage++; renderTable(); });
+
+  document.getElementById("search-inp").addEventListener("input", function() {
+    currentPage = 1;
+    renderTable();
+    document.getElementById("btn-search-clear").style.display = this.value ? "" : "none";
+  });
+  document.getElementById("filter-active").addEventListener("change", () => { currentPage = 1; renderTable(); });
+
+  // ── Keyword-Auswahl (Checkboxen) ──
+  document.getElementById("kw-body").addEventListener("change", e => {
+    if (!e.target.classList.contains("kw-sel-cb")) return;
+    const id = parseInt(e.target.dataset.id, 10);
+    if (e.target.checked) {
+      kwSelection.add(id);
+    } else {
+      kwSelection.delete(id);
+    }
+    updateSelBar();
+    renderTable();
+  });
+
+  document.getElementById("btn-open-analysis").addEventListener("click", () => {
+    if (kwSelection.size === 0) return;
+    window.location.href = "/analysis?kw=" + [...kwSelection].join(",");
+  });
+
+  document.getElementById("btn-delete-sel").addEventListener("click", async () => {
+    const ids = [...kwSelection];
+    if (!ids.length) return;
+    const n = ids.length;
+    const s = n > 1 ? "s" : "";
+    if (!confirm(window.t('kw_confirm_delete_sel', '{n} Keywords und alle zugehörigen Trend-Daten unwiderruflich löschen?').replace('{n}', n).replace('{s}', s))) return;
+    let deleted = 0;
+    const errs = [];
+    for (const id of ids) {
+      try {
+        await api(`/api/keywords/${id}`, { method: "DELETE" });
+        deleted++;
+      } catch(e) { errs.push(e.message); }
+    }
+    kwSelection.clear();
+    if (deleted > 0) toast(deleted > 1
+      ? window.t('kw_deleted_multi', '{n} Keywords gelöscht').replace('{n}', deleted)
+      : window.t('kw_deleted', '"{name}" gelöscht').replace('{name}', deleted), "ok");
+    if (errs.length) toast("Fehler: " + errs.join(" / "), "error");
+    await loadKeywords();
+  });
+
+  document.getElementById("sel-select-preset").addEventListener("change", function() {
+    const v = this.value;
+    this.value = "";
+    if (v === "all")      allKeywords.forEach(kw => kwSelection.add(kw.id));
+    if (v === "active")   allKeywords.filter(kw =>  kw.active).forEach(kw => kwSelection.add(kw.id));
+    if (v === "inactive") allKeywords.filter(kw => !kw.active).forEach(kw => kwSelection.add(kw.id));
+    updateSelBar();
+    renderTable();
+  });
+
+  document.getElementById("btn-clear-sel").addEventListener("click", () => {
+    kwSelection.clear();
+    updateSelBar();
+    renderTable();
+  });
+
+  // ── Projekt-Zuweisungs-Modal ──
+  function openAssignModal() {
+    if (kwSelection.size === 0 || !allProjects.length) return;
+    const n = kwSelection.size;
+    const s = n > 1 ? "s" : "";
+    document.getElementById("assign-modal-sub").textContent =
+      window.t('kw_assign_header', '{n} Keywords ausgewählt – Projekt wählen:').replace('{n}', n).replace('{s}', s);
+
+    const list = document.getElementById("assign-proj-list");
+    list.innerHTML = allProjects.map(p => {
+      const selectedKws = [...kwSelection].map(id => allKeywords.find(k => k.id === id)).filter(Boolean);
+      const assignedCount = selectedKws.filter(kw => (kw.project_ids || []).includes(p.id)).length;
+      const allAssigned   = assignedCount === selectedKws.length;
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:8px 10px;border-radius:8px;border:1px solid var(--border);
+                    background:${allAssigned ? 'rgba(167,139,250,.07)' : 'var(--bg)'};">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:10px;height:10px;border-radius:50%;background:${esc(p.color || '#4f8ef7')};
+                         flex-shrink:0;display:inline-block;"></span>
+            <span style="font-size:13px;">${esc(p.name)}</span>
+            ${assignedCount > 0 ? `<span style="font-size:10px;color:#a78bfa;">${window.t('kw_assigned_lbl','{n}/{total} zugewiesen').replace('{n}',assignedCount).replace('{total}',selectedKws.length)}</span>` : ""}
+          </div>
+          <div style="display:flex;gap:6px;">
+            ${!allAssigned ? `<button class="btn btn-sm"
+              style="background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.4);padding:3px 10px;"
+              onclick="doAssign(${p.id}, 'assign')">${window.t('kw_btn_assign','Zuweisen')}</button>` : ""}
+            ${assignedCount > 0 ? `<button class="btn btn-ghost btn-sm" style="padding:3px 10px;"
+              onclick="doAssign(${p.id}, 'remove')">${window.t('kw_btn_remove','Entfernen')}</button>` : ""}
+          </div>
+        </div>`;
+    }).join("");
+
+    document.getElementById("assign-modal").style.display = "flex";
+  }
+
+  function closeAssignModal() {
+    document.getElementById("assign-modal").style.display = "none";
+  }
+
+  window.doAssign = async function(pid, action) {
+    const ids    = [...kwSelection];
+    const method = action === "assign" ? "POST" : "DELETE";
+    let ok = 0;
+    for (const id of ids) {
+      try {
+        const res = await api(`/api/keywords/${id}/projects/${pid}`, { method });
+        const kw  = allKeywords.find(k => k.id === id);
+        if (kw) kw.project_ids = res.project_ids;
+        ok++;
+      } catch(e) { /* ignore */ }
+    }
+    const verb = action === "assign"
+      ? window.t('kw_verb_assigned', 'zugewiesen')
+      : window.t('kw_verb_removed', 'entfernt');
+    if (ok) toast(`${ok} Keyword${ok > 1 ? "s" : ""} ${verb}`, "ok");
+    openAssignModal();
+    renderTable();
+    if (action === "remove" && activeProjectId === pid) {
+      closeAssignModal();
+      kwSelection.clear();
+      updateSelBar();
+      await loadKeywords();
+    }
+  };
+
+  // ── Helpers ──
+  function esc(s) {
+    return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function fmtDate(iso) {
+    return window.fmtDate ? window.fmtDate(iso) : new Date(iso).toLocaleString("de-DE", { dateStyle:"short", timeStyle:"short" });
+  }
+  function showModal(id) {
+    document.getElementById(id).style.display = "flex";
+  }
+  function hideModal(id) {
+    document.getElementById(id).style.display = "none";
+  }
+  document.getElementById("edit-modal").addEventListener("click", e => {
+    if (e.target.id === "edit-modal") hideModal("edit-modal");
+  });
+
+  loadProjects().then(() => loadKeywords());
+
+</script>
+{% endblock %}

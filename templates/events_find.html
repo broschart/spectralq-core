@@ -1,0 +1,2919 @@
+{% extends "base.html" %}
+
+{% block title %}Meldungen finden – spectralQ{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  .color-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.15);
+    display: inline-block;
+    vertical-align: middle;
+  }
+  #find-chart-wrap {
+    display: none;
+    margin-bottom: 14px;
+  }
+  .find-chart-inner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px 10px;
+    position: relative;
+  }
+  .find-chart-inner canvas {
+    display: block;
+    width: 100% !important;
+    height: 220px !important;
+  }
+  /* Hover- und Cross-Highlight für Ergebnis-Karten */
+  #find-results [data-ms] {
+    transition: background 0.1s;
+    cursor: default;
+  }
+  #find-results [data-ms]:hover,
+  #find-results [data-ms].find-result-hi {
+    background: rgba(255,255,255,0.05);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+  }
+  /* Briefing Markdown-Body */
+  .brief-md-body h2 { font-size:16px;font-weight:700;margin:28px 0 6px;color:#a78bfa;
+    border-bottom:1px solid var(--border);padding-bottom:4px; }
+  .brief-md-body h3 { font-size:14px;font-weight:700;margin:14px 0 4px; }
+  .brief-md-body h4 { font-size:13px;font-weight:700;margin:10px 0 3px;color:var(--muted); }
+  .brief-md-body strong { color:var(--text);font-weight:700; }
+  .brief-md-body ul, .brief-md-body ol { margin:4px 0 8px 20px;padding:0; }
+  .brief-md-body li { margin:2px 0; }
+  .brief-md-body p  { margin:6px 0; }
+  .brief-md-body hr { border:none;border-top:1px solid var(--border);margin:14px 0; }
+  .brief-md-body table { border-collapse:collapse;width:100%;margin:10px 0 14px;font-size:13px; }
+  .brief-md-body th, .brief-md-body td { border:1px solid var(--border);padding:5px 10px;text-align:left; }
+  .brief-md-body th { background:rgba(139,92,246,.12);color:#a78bfa;font-weight:700; }
+  .brief-md-body tr:nth-child(even) td { background:rgba(255,255,255,.03); }
+  .brief-md-body code { background:rgba(139,92,246,.1);padding:1px 5px;border-radius:3px;font-size:12px; }
+</style>
+<style>
+  .events-subnav {
+    display: flex; gap: 0;
+    border-bottom: 2px solid var(--border); margin-bottom: 28px;
+  }
+  .events-subnav a {
+    padding: 10px 32px; font-size: 14px; font-weight: 600;
+    color: var(--muted); text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px; white-space: nowrap;
+    transition: color .12s, border-color .12s;
+  }
+  .events-subnav a:hover { color: var(--text); }
+  .events-subnav a.active { color: var(--text); border-bottom-color: var(--accent1); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+  <h1 style="margin:0;" data-i18n="ef_title">Ereignisse</h1>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+    <span style="font-size:11px;color:var(--muted);white-space:nowrap;" data-i18n="ef_projects_label">Projekt:</span>
+    <select id="hdr-evt-project"
+            style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);
+                   background:var(--bg);color:var(--text);font-size:12px;max-width:220px;">
+      {% if current_user.is_superadmin %}<option value="">– Alle –</option>{% endif %}
+    </select>
+  </div>
+</div>
+
+<div class="events-subnav">
+  <a href="/events" data-i18n="ef_nav_manage">Verwalten</a>
+  <a href="/events/find" class="active" data-i18n="ef_nav_find">Meldungen finden</a>
+  <a href="/events/watchzones" data-i18n="ef_nav_watchzones">Watch Zones</a>
+</div>
+
+{% if not current_user.is_superadmin and user_project_count == 0 %}
+<div style="max-width:640px;margin:40px auto;text-align:center;">
+  <div style="padding:24px;background:rgba(124,92,191,.08);border:1px solid rgba(124,92,191,.25);border-radius:10px;">
+    <strong style="font-size:16px;color:var(--accent1);display:block;margin-bottom:8px;" data-i18n="ef_no_project">Bitte zuerst ein Projekt anlegen.</strong>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;" data-i18n="ef_no_project_desc">Um mit der Analyse zu starten, wird ein Projekt benötigt.</p>
+    <a href="/projects" style="display:inline-block;padding:10px 24px;background:var(--accent1);color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;" data-i18n="ef_create_project">Projekt anlegen</a>
+  </div>
+</div>
+{% else %}
+
+<p class="text-muted text-sm" style="margin-bottom:14px;" data-i18n="ef_desc">
+  Durchsucht Nachrichtenquellen zu einem Thema und erstellt ein chronologisches Lagebild.
+  Fremdsprachige Schlagzeilen werden automatisch übersetzt.
+</p>
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <input id="find-q" type="text" style="flex:1;" placeholder="Suchbegriff eingeben …" />
+      <button class="btn btn-primary" id="btn-find-search" data-i18n="ef_search">Suchen</button>
+    </div>
+
+    <!-- Filter -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="margin:0;font-size:12px;white-space:nowrap;" data-i18n="ef_from">Von</label>
+        <input id="find-from" type="text" style="width:140px;font-size:12px;" data-i18n-placeholder="ef_date_placeholder" />
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="margin:0;font-size:12px;white-space:nowrap;" data-i18n="ef_to">Bis</label>
+        <input id="find-to" type="text" style="width:140px;font-size:12px;" data-i18n-placeholder="ef_date_placeholder" />
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="margin:0;font-size:12px;" data-i18n="ef_lang">Sprache</label>
+        <select id="find-lang" style="font-size:12px;">
+          <option value="" data-i18n="ef_lang_all">Alle</option>
+          <option value="German" data-i18n="ef_lang_de">Deutsch</option>
+          <option value="English" data-i18n="ef_lang_en">Englisch</option>
+          <option value="Arabic" data-i18n="ef_lang_ar">Arabisch</option>
+          <option value="French" data-i18n="ef_lang_fr">Französisch</option>
+          <option value="Spanish" data-i18n="ef_lang_es">Spanisch</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="margin:0;font-size:12px;" data-i18n="ef_source">Quelle</label>
+        <select id="find-source" style="font-size:12px;">
+          <option value="google">Google News</option>
+          <option value="bing">Bing News</option>
+          <option value="gdelt">GDELT</option>
+          <option value="all" data-i18n="ef_source_all">Alle (kombiniert)</option>
+          <option value="newsapi">NewsAPI.org</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="margin:0;font-size:12px;white-space:nowrap;" data-i18n="ef_count">Anzahl</label>
+        <select id="find-limit" style="font-size:12px;width:70px;">
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- NewsAPI-Hinweis (nur sichtbar wenn ausgewählt) -->
+    <div id="find-newsapi-hint" style="display:none;font-size:11px;color:var(--muted);
+         background:var(--surface);border:1px solid var(--border);border-radius:6px;
+         padding:7px 11px;margin-bottom:10px;line-height:1.6;">
+      API-Key erforderlich → im
+      <a href="/admin" target="_blank" style="color:var(--accent);">Admin-Bereich</a>
+      unter „API & Konfiguration" eintragen.<br>
+      Kostenloser Key (100 Anfragen/Tag):
+      <a href="https://newsapi.org" target="_blank" rel="noopener"
+         style="color:var(--accent);">newsapi.org</a>
+      &nbsp;·&nbsp;
+      <em>Freier Plan: nur Artikel der letzten 30 Tage.</em>
+    </div>
+
+    <!-- Kalender-Heatmap (wird nach der Suche eingeblendet, volle Breite) -->
+    <div id="find-heatmap-wrap" style="display:none;margin-bottom:10px;">
+      <div class="find-chart-inner" style="padding:10px 16px;overflow-x:auto;">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;" data-i18n="ef_heatmap_label">Meldungsverteilung</div>
+        <div id="find-heatmap"></div>
+      </div>
+    </div>
+    <!-- Verlaufsgraph (wird nach der Suche eingeblendet, nur wenn Trends vorhanden) -->
+    <div id="find-chart-wrap">
+      <div class="find-chart-inner">
+        <canvas id="find-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- AI-Analyse Button (erscheint nach Suche) -->
+    {% if 'report_analysis' in ai_plugins_enabled %}
+    <div id="find-ai-bar" style="display:none;margin-bottom:10px;gap:8px;align-items:center;">
+      <button class="btn btn-sm" id="btn-find-ai"
+              style="background:var(--accent1);color:#fff;border:none;">
+        <svg viewBox="0 0 20 16" width="16" height="13" fill="currentColor"
+             style="vertical-align:middle;margin-right:4px;">
+          <text x="1" y="13" font-family="system-ui,sans-serif" font-size="11"
+                font-weight="700" letter-spacing="0.5">AI</text>
+        </svg><span data-i18n="ef_ai_analyze"> Meldungen analysieren</span>
+      </button>
+    </div>
+    {% endif %}
+
+    <!-- Word-Cloud der häufigsten Begriffe -->
+    <div id="find-wordcloud" style="display:none;margin-bottom:12px;"></div>
+
+    <!-- AI-Analyse Overlay (Spinner + Progress) -->
+    {% if 'report_analysis' in ai_plugins_enabled %}
+    <div id="find-ai-overlay" style="display:none;position:fixed;inset:0;z-index:600;
+         background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;
+                  padding:28px 36px;text-align:center;min-width:320px;max-width:420px;
+                  box-shadow:0 8px 32px #0008;">
+        <div class="spinner" style="width:32px;height:32px;border-width:3px;margin:0 auto 16px;"></div>
+        <div id="find-ai-step" style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text);" data-i18n="ef_ai_loading">
+          Artikel werden geladen …
+        </div>
+        <div id="find-ai-substep" style="font-size:11px;color:var(--muted);margin-bottom:14px;" data-i18n="ef_ai_wait">
+          Bitte einen Moment Geduld
+        </div>
+        <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;">
+          <div id="find-ai-progress" style="width:0%;height:100%;border-radius:4px;
+               background:linear-gradient(90deg,#a78bfa,var(--accent1));
+               transition:width .4s ease;"></div>
+        </div>
+        <div id="find-ai-pct" style="font-size:10px;color:var(--muted);margin-top:5px;">0 %</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Platzhalter: Briefing-Ergebnis wird im eigenen Modal angezeigt -->
+
+    <!-- Ergebnis-Bereich -->
+    <div id="find-results"></div>
+{% if 'report_analysis' in ai_plugins_enabled %}
+<!-- Modal: AI-Briefing Ergebnis (Zwei-Spalten wie APA-Bericht) -->
+<div id="briefing-modal" style="display:none;position:fixed;inset:0;background:#000a;z-index:550;
+     align-items:center;justify-content:center;padding:16px;">
+  <div id="briefing-dialog" style="background:var(--surface);border:1px solid var(--border);
+       border-top:3px solid #a78bfa;border-radius:14px;width:96vw;max-width:1100px;
+       height:88vh;display:flex;flex-direction:column;overflow:hidden;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 20px;
+                border-bottom:1px solid var(--border);flex-shrink:0;">
+      <svg viewBox="0 0 20 16" width="16" height="13" fill="#a78bfa" style="flex-shrink:0;">
+        <text x="1" y="13" font-family="system-ui,sans-serif" font-size="11"
+              font-weight="700" letter-spacing="0.5">AI</text>
+      </svg>
+      <div style="flex:1;">
+        <span style="font-size:15px;color:#a78bfa;font-weight:700;" data-i18n="ef_briefing_title">Meldungs-Briefing</span>
+        <div id="find-ai-meta" class="text-muted" style="font-size:11px;"></div>
+      </div>
+      <button id="briefing-close" style="cursor:pointer;background:none;border:none;
+              color:var(--muted);font-size:22px;line-height:1;padding:0 6px;">&times;</button>
+    </div>
+
+    <!-- Zwei-Spalten: Body links, Sidebar rechts -->
+    <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+
+      <!-- Linke Spalte: Zusammenfassung → Ereignistabelle → Detail-Briefing -->
+      <div id="briefing-body" style="flex:1;min-width:0;overflow-y:auto;padding:20px 24px;">
+
+        <!-- Zusammenfassung (erster Absatz) -->
+        <div id="find-ai-summary" class="brief-md-body" style="font-size:14px;line-height:1.75;"></div>
+
+        <!-- Ereignis-Übersichtstabelle (direkt unter Zusammenfassung) -->
+        <div id="find-ai-timeline" style="display:none;margin-top:18px;padding:14px 16px;
+             background:var(--surface2);border:1px solid var(--border);border-radius:10px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <span style="font-size:13px;font-weight:700;color:var(--text);" data-i18n="ef_events_detected">Erkannte Ereignisse</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead>
+                <tr style="border-bottom:2px solid var(--border);text-align:left;">
+                  <th style="padding:6px 8px;width:30px;">
+                    <input type="checkbox" id="find-tl-all" style="margin:0;" title="Alle auswählen" />
+                  </th>
+                  <th style="padding:6px 8px;white-space:nowrap;" data-i18n="ef_col_date">Datum</th>
+                  <th style="padding:6px 8px;white-space:nowrap;" data-i18n="ef_col_time">Uhrzeit</th>
+                  <th style="padding:6px 8px;" data-i18n="ef_col_report">Meldung</th>
+                  <th style="padding:6px 8px;white-space:nowrap;text-align:center;" data-i18n="ef_col_sources">Quellen</th>
+                  <th style="padding:6px 8px;white-space:nowrap;" data-i18n="ef_col_location">Ort</th>
+                </tr>
+              </thead>
+              <tbody id="find-tl-list"></tbody>
+            </table>
+          </div>
+          <div id="briefing-tl-actions" style="margin-top:10px;display:flex;gap:8px;
+               align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" id="btn-tl-adopt" disabled
+                    style="height:34px;display:inline-flex;align-items:center;" data-i18n="ef_adopt_events">Als Ereignisse übernehmen</button>
+            <button class="btn btn-sm" id="btn-tl-story"
+                    style="background:var(--accent1);color:#fff;border:none;border-radius:8px;padding:6px 16px;
+                           cursor:pointer;height:34px;display:inline-flex;align-items:center;gap:6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              <span data-i18n="ef_story_present">Geo-Story präsentieren</span>
+            </button>
+            <span id="find-tl-count" class="text-muted text-sm"></span>
+          </div>
+        </div>
+
+        <!-- Rest des Briefings (Detail-Chronologie, Einordnung) -->
+        <div id="find-ai-text" class="brief-md-body"
+             style="font-size:14px;line-height:1.75;margin-top:18px;"></div>
+      </div>
+
+      <!-- Rechte Sidebar: Export + Chat -->
+      <div style="width:280px;flex-shrink:0;border-left:1px solid var(--border);
+                  display:flex;flex-direction:column;background:var(--surface2);">
+
+        <!-- Export-Buttons -->
+        <div style="padding:16px;display:flex;flex-direction:column;gap:8px;
+                    border-bottom:1px solid var(--border);flex-shrink:0;">
+          <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;
+                      letter-spacing:.05em;margin-bottom:2px;" data-i18n="ef_export_actions">Export &amp; Aktionen</div>
+          <button class="btn btn-ghost btn-sm" id="btn-brief-copy" style="width:100%;text-align:left;"
+                  data-i18n="ef_copy">Kopieren</button>
+          <button class="btn btn-ghost btn-sm" id="btn-brief-pdf" style="width:100%;text-align:left;">
+            &#8595; PDF</button>
+          <button class="btn btn-ghost btn-sm" id="btn-brief-docx" style="width:100%;text-align:left;">
+            &#8595; DOCX</button>
+          <div style="position:relative;">
+            <button class="btn btn-primary btn-sm" id="btn-brief-slide"
+                    style="width:100%;text-align:left;">&#128196; In Projekt-Slide</button>
+            <div id="brief-slide-picker" style="display:none;position:absolute;bottom:110%;left:0;
+                 background:var(--surface);border:1px solid var(--border);border-radius:8px;
+                 padding:10px;z-index:600;min-width:220px;box-shadow:0 4px 16px #0006;">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;" data-i18n="ef_select_project">Projekt auswählen:</div>
+              <select id="brief-slide-project-sel" style="width:100%;margin-bottom:8px;padding:4px 6px;
+                      border-radius:5px;border:1px solid var(--border);background:var(--surface);
+                      color:var(--text);font-size:12px;"></select>
+              <div style="display:flex;gap:6px;justify-content:flex-end;">
+                <button onclick="document.getElementById('brief-slide-picker').style.display='none'"
+                        style="padding:3px 10px;border-radius:5px;border:1px solid var(--border);
+                               background:none;color:var(--muted);font-size:11px;cursor:pointer;"
+                        data-i18n="ef_cancel">Abbrechen</button>
+                <button id="btn-brief-slide-ok"
+                        style="padding:3px 10px;border-radius:5px;border:none;
+                               background:var(--accent1);color:#fff;font-size:11px;cursor:pointer;"
+                        data-i18n="ef_create_slide">Slide erstellen</button>
+              </div>
+            </div>
+          </div>
+          <span id="find-ai-save-hint" class="text-muted" style="font-size:10px;"></span>
+        </div>
+
+        <!-- Begriffe / Word Cloud -->
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+          <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;
+                      letter-spacing:.05em;margin-bottom:8px;" data-i18n="ef_keywords">Häufige Begriffe</div>
+          <div id="brief-wordcloud" style="display:flex;flex-wrap:wrap;gap:5px;max-height:140px;overflow-y:auto;"></div>
+        </div>
+
+        <!-- Folgefragen / Chat -->
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:12px 16px;">
+          <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;
+                      letter-spacing:.05em;margin-bottom:8px;" data-i18n="ef_followup">Folgefragen</div>
+          <div class="ai-chat-history" id="brief-chat-history"
+               style="flex:1;min-height:0;overflow-y:auto;"></div>
+          <div class="ai-chat-input-row" style="margin-top:8px;">
+            <input id="brief-chat-input" type="text" placeholder="Frage zum Briefing …"
+              style="font-size:12px;"
+              onkeydown="if(event.key==='Enter')_briefingSendChat()">
+            <button id="brief-chat-send" onclick="_briefingSendChat()"
+                    style="font-size:11px;" data-i18n="ef_send">Senden</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+<!-- Story-Präsentation Overlay -->
+<div id="story-overlay" style="display:none;position:fixed;inset:0;z-index:600;">
+  <!-- Karten-Container (eine oder mehrere nebeneinander) -->
+  <div id="story-maps" style="position:absolute;inset:0;z-index:1;display:flex;"></div>
+
+  <!-- Header-Leiste -->
+  <div style="position:absolute;top:0;left:0;right:0;z-index:10;display:flex;align-items:center;
+       justify-content:space-between;padding:10px 20px;">
+    <div style="color:#fff;font-size:13px;font-weight:600;letter-spacing:.03em;
+         background:rgba(20,20,30,.6);padding:5px 14px;border-radius:20px;backdrop-filter:blur(6px);">
+      <span style="color:#a78bfa;">STORY</span>
+      <span id="story-counter" style="margin-left:8px;font-weight:400;opacity:.8;"></span>
+    </div>
+    <!-- Fortschrittsbalken -->
+    <div id="story-progress-bar" style="flex:1;max-width:500px;margin:0 20px;height:3px;
+         background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;display:flex;gap:2px;">
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button onclick="_storyExport('pdf')" style="background:rgba(20,20,30,.6);border:1px solid rgba(255,255,255,.2);
+              color:#fff;font-size:10px;padding:5px 10px;border-radius:6px;cursor:pointer;
+              backdrop-filter:blur(6px);" title="Als PDF exportieren">PDF</button>
+      <button onclick="_storyExport('docx')" style="background:rgba(20,20,30,.6);border:1px solid rgba(255,255,255,.2);
+              color:#fff;font-size:10px;padding:5px 10px;border-radius:6px;cursor:pointer;
+              backdrop-filter:blur(6px);" title="Als Word exportieren">DOCX</button>
+      <button id="story-close" style="background:rgba(20,20,30,.6);border:none;color:#fff;font-size:22px;
+              cursor:pointer;padding:4px 10px;border-radius:50%;backdrop-filter:blur(6px);"
+              title="Schliessen">&times;</button>
+    </div>
+  </div>
+
+  <!-- Layer-Umschalter -->
+  <div id="story-layer-switcher" style="position:absolute;top:52px;right:20px;z-index:10;
+       display:flex;gap:0;border-radius:8px;overflow:hidden;
+       border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(6px);">
+    <button data-layer="Voyager" onclick="_storySetTileLayer('Voyager')"
+            style="background:rgba(167,139,250,.5);border:none;color:#fff;font-size:10px;
+                   padding:5px 10px;cursor:pointer;">Voyager</button>
+    <button data-layer="Dark" onclick="_storySetTileLayer('Dark')"
+            style="background:rgba(0,0,0,.4);border:none;color:#fff;font-size:10px;
+                   padding:5px 10px;cursor:pointer;">Dark</button>
+    <button data-layer="Satellit" onclick="_storySetTileLayer('Satellit')"
+            style="background:rgba(0,0,0,.4);border:none;color:#fff;font-size:10px;
+                   padding:5px 10px;cursor:pointer;">Satellit</button>
+    <button data-layer="Topo" onclick="_storySetTileLayer('Topo')"
+            style="background:rgba(0,0,0,.4);border:none;color:#fff;font-size:10px;
+                   padding:5px 10px;cursor:pointer;">Topo</button>
+    <button data-layer="OSM" onclick="_storySetTileLayer('OSM')"
+            style="background:rgba(0,0,0,.4);border:none;color:#fff;font-size:10px;
+                   padding:5px 10px;cursor:pointer;">OSM</button>
+  </div>
+
+  <!-- Info-Panel unten (eigener halbtransparenter Hintergrund) -->
+  <div id="story-info" style="position:absolute;bottom:0;left:0;right:0;z-index:10;
+       padding:20px 32px 28px;color:#fff;
+       background:linear-gradient(transparent, rgba(20,20,30,.82) 40px, rgba(20,20,30,.92));">
+    <div style="max-width:700px;margin-top:20px;">
+      <div id="story-date" style="font-size:12px;color:#a78bfa;font-weight:600;letter-spacing:.04em;
+           margin-bottom:4px;"></div>
+      <div id="story-title" style="font-size:22px;font-weight:700;line-height:1.3;
+           margin-bottom:6px;"></div>
+      <div id="story-desc" style="font-size:14px;line-height:1.5;opacity:.85;
+           margin-bottom:4px;"></div>
+      <div id="story-sources" style="font-size:11px;color:rgba(255,255,255,.5);"></div>
+      <div id="story-location" style="font-size:11px;color:rgba(255,255,255,.45);margin-top:2px;"></div>
+    </div>
+  </div>
+
+  <!-- Navigation links -->
+  <button id="story-prev" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);z-index:10;
+          background:rgba(20,20,30,.6);border:none;color:#fff;min-width:54px;
+          border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;
+          justify-content:center;backdrop-filter:blur(6px);transition:opacity .2s;padding:10px 14px;"
+          title="Zurück">
+    <span style="font-size:28px;line-height:1;">&#8249;</span>
+    <span id="story-prev-delta" style="font-size:11px;opacity:.8;line-height:1.2;margin-top:4px;
+          font-weight:600;text-align:center;"></span>
+    <span id="story-prev-dist" style="font-size:10px;opacity:.55;line-height:1.1;margin-top:2px;
+          text-align:center;"></span>
+  </button>
+  <!-- Navigation rechts -->
+  <button id="story-next" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);z-index:10;
+          background:rgba(20,20,30,.6);border:none;color:#fff;min-width:54px;
+          border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;
+          justify-content:center;backdrop-filter:blur(6px);transition:opacity .2s;padding:10px 14px;"
+          title="Weiter">
+    <span style="font-size:28px;line-height:1;">&#8250;</span>
+    <span id="story-next-delta" style="font-size:11px;opacity:.8;line-height:1.2;margin-top:4px;
+          font-weight:600;text-align:center;"></span>
+    <span id="story-next-dist" style="font-size:10px;opacity:.55;line-height:1.1;margin-top:2px;
+          text-align:center;"></span>
+  </button>
+</div>
+<!-- Sentinel Vorher/Nachher Vergleich -->
+<div id="sat-compare" style="display:none;position:fixed;inset:0;z-index:700;background:#000e;
+     align-items:center;justify-content:center;cursor:default;"
+     onclick="if(event.target===this)closeSatCompare()">
+  <div style="position:relative;width:90vmin;height:90vmin;max-width:800px;max-height:800px;
+              border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.15);
+              background:#111;" id="sat-cmp-container">
+    <!-- Slider-Modus -->
+    <div id="sat-cmp-slider-mode">
+      <!-- Nachher (full, underneath) -->
+      <img id="sat-cmp-after" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
+      <!-- Vorher (clipped by slider) -->
+      <div id="sat-cmp-clip" style="position:absolute;inset:0;overflow:hidden;width:50%;">
+        <img id="sat-cmp-before" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+             max-width:none;" />
+      </div>
+      <!-- Slider line -->
+      <div id="sat-cmp-slider" style="position:absolute;top:0;bottom:0;left:50%;width:3px;
+           background:#fff;cursor:ew-resize;z-index:2;transform:translateX(-50%);">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                    width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.6);
+                    border:2px solid #fff;display:flex;align-items:center;justify-content:center;">
+          <span style="color:#fff;font-size:16px;line-height:1;">&#8660;</span>
+        </div>
+      </div>
+      <!-- Labels -->
+      <div id="sat-cmp-lbl-before" style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.6);color:#a78bfa;
+           font-size:11px;padding:3px 10px;border-radius:4px;z-index:3;pointer-events:none;" data-i18n="ef_before">Vorher</div>
+      <div id="sat-cmp-lbl-after" style="position:absolute;top:10px;right:12px;background:rgba(0,0,0,.6);color:#a78bfa;
+           font-size:11px;padding:3px 10px;border-radius:4px;z-index:3;pointer-events:none;" data-i18n="ef_after">Nachher</div>
+    </div>
+    <!-- Diff-Modus -->
+    <div id="sat-cmp-diff-mode" style="display:none;">
+      <canvas id="sat-cmp-diff-canvas" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></canvas>
+      <div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.6);color:#ef4444;
+           font-size:11px;padding:3px 10px;border-radius:4px;z-index:3;pointer-events:none;" data-i18n="ef_diff_red">Unterschiede (rot)</div>
+    </div>
+    <!-- OSM-Overlay (Leaflet-Map nur mit Labels) -->
+    <div id="sat-cmp-osm-overlay" style="display:none;position:absolute;inset:0;z-index:4;pointer-events:none;"></div>
+    <!-- Modus-Umschalter -->
+    <div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:5;
+         display:flex;gap:0;border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,.3);">
+      <button id="sat-mode-slider" onclick="_satSetMode('slider')"
+              style="background:rgba(167,139,250,.5);border:none;color:#fff;font-size:11px;
+                     padding:5px 14px;cursor:pointer;">Slider</button>
+      <button id="sat-mode-diff" onclick="_satSetMode('diff')"
+              style="background:rgba(0,0,0,.6);border:none;color:#fff;font-size:11px;
+                     padding:5px 14px;cursor:pointer;" data-i18n="ef_diff">Unterschiede</button>
+      <button id="sat-mode-osm" onclick="_satToggleOsm()"
+              style="background:rgba(0,0,0,.6);border:none;color:#fff;font-size:11px;
+                     padding:5px 14px;cursor:pointer;border-left:1px solid rgba(255,255,255,.2);" data-i18n="ef_map">Karte</button>
+    </div>
+    <!-- Close -->
+    <button onclick="closeSatCompare()" style="position:absolute;top:8px;right:50%;transform:translateX(50%);
+            z-index:6;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.3);color:#fff;
+            width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;line-height:1;">&#10005;</button>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window._mergeI18n({
+    de: {
+      ef_title:'Ereignisse', ef_nav_manage:'Verwalten', ef_nav_find:'Meldungen finden', ef_nav_watchzones:'Watch Zones',
+      ef_no_project:'Bitte zuerst ein Projekt anlegen.',
+      ef_no_project_desc:'Um mit der Analyse zu starten, wird ein Projekt benötigt.',
+      ef_create_project:'Projekt anlegen',
+      ef_desc:'Durchsucht Nachrichtenquellen zu einem Thema und erstellt ein chronologisches Lagebild. Fremdsprachige Schlagzeilen werden automatisch übersetzt.',
+      ef_search_placeholder:'Suchbegriff eingeben …', ef_search:'Suchen',
+      ef_from:'Von', ef_to:'Bis', ef_lang:'Sprache', ef_source:'Quelle', ef_count:'Anzahl',
+      ef_lang_all:'Alle', ef_lang_de:'Deutsch', ef_lang_en:'Englisch', ef_lang_ar:'Arabisch',
+      ef_lang_fr:'Französisch', ef_lang_es:'Spanisch', ef_source_all:'Alle (kombiniert)',
+      ef_heatmap_label:'Meldungsverteilung', ef_ai_analyze:'Meldungen analysieren',
+      ef_ai_loading:'Artikel werden geladen …', ef_ai_wait:'Bitte einen Moment Geduld',
+      ef_briefing_title:'Meldungs-Briefing', ef_events_detected:'Erkannte Ereignisse',
+      ef_col_date:'Datum', ef_col_time:'Uhrzeit', ef_col_report:'Meldung',
+      ef_col_sources:'Quellen', ef_col_location:'Ort',
+      ef_adopt_events:'Als Ereignisse übernehmen', ef_story_present:'Geo-Story präsentieren',
+      ef_export_actions:'Export &amp; Aktionen', ef_copy:'Kopieren',
+      ef_keywords:'Häufige Begriffe', ef_followup:'Folgefragen',
+      ef_chat_placeholder:'Frage zum Briefing …', ef_send:'Senden',
+      ef_select_project:'Projekt auswählen:', ef_cancel:'Abbrechen',
+      ef_create_slide:'Slide erstellen', ef_before:'Vorher', ef_after:'Nachher',
+      ef_diff_red:'Unterschiede (rot)', ef_diff:'Unterschiede', ef_map:'Karte',
+      ef_projects_label:'Projekt:', ef_all_projects:'– Alle –',
+      ef_searching:'Suche läuft…',
+      ef_searching_sources:'Durchsuche Nachrichtenquellen und übersetze Schlagzeilen …',
+      ef_error:'Fehler:', ef_no_results:'Keine Artikel gefunden – anderen Zeitraum oder Suchbegriff versuchen.',
+      ef_of:'von', ef_hits_in_range:'Treffern im ausgewählten Zeitraum',
+      ef_hits_sorted:'Treffer · chronologisch sortiert (älteste zuerst)',
+      ef_original:'Original:', ef_as_event:'Als Ereignis',
+      ef_search_query_label:'· Suchnachfrage:', ef_no_keyword:'· kein passendes Keyword in Datenbank',
+      ef_no_trend:'Keine Trenddaten für diesen Zeitpunkt',
+      ef_months:'Jan,Feb,Mär,Apr,Mai,Jun,Jul,Aug,Sep,Okt,Nov,Dez', ef_days:'Mo,,Mi,,Fr,,So',
+      ef_report:'Meldung', ef_reports:'Meldungen',
+      ef_zoom_reset:'↺ Zoom zurücksetzen', ef_click_adopt:'↵ Klicken → Als Ereignis übernehmen',
+      ef_loading_articles:'Artikel werden vorbereitet …', ef_scraping:'Artikel werden gescrapt …',
+      ef_extracting:'Texte werden extrahiert …', ef_ai_running:'KI-Analyse läuft …',
+      ef_finalizing:'Analyse wird finalisiert …', ef_preparing_result:'Ergebnis wird aufbereitet …',
+      ef_substep_selected:'Meldungen ausgewählt', ef_substep_fulltexts:'Volltexte aus Quellen laden',
+      ef_substep_processing:'Inhalte aufbereiten', ef_substep_creating:'Briefing wird erstellt',
+      ef_substep_checking:'Chronologie und Zeitangaben prüfen', ef_substep_almost:'Fast fertig',
+      ef_briefing_received:'Briefing empfangen', ef_formatting:'Wird formatiert …', ef_done:'Fertig',
+      ef_no_analysis:'Keine Analyse verfügbar.',
+      ef_reports_label:'Meldungen', ef_fulltexts_label:'Volltexte geladen',
+      ef_selected:'ausgewählt', ef_saving:'Wird gespeichert …',
+      ef_saved:'gespeichert', ef_failed:'fehlgeschlagen',
+      ef_adopt_events_reset:'Als Ereignisse übernehmen', ef_analysis_failed:'Analyse fehlgeschlagen:',
+      ef_exporting:'Exportiere…', ef_copied:'Kopiert ✓',
+      ef_slide_created:'✓ Slide erstellt', ef_slide_error:'Fehler beim Erstellen des Slides.',
+      ef_network_error:'Netzwerkfehler.', ef_pdf_export_failed:'PDF-Export fehlgeschlagen:',
+      ef_docx_export_failed:'DOCX-Export fehlgeschlagen:', ef_export_failed:'Export fehlgeschlagen:',
+      ef_satellite_compare:'Satellitenvergleich', ef_loading_sat:'Lade …',
+      ef_slide_picker_loading:'Lädt…', ef_slide_picker_no_projects:'Keine Projekte vorhanden',
+      ef_slide_picker_error:'Fehler beim Laden',
+      ef_story_simultaneous:'zeitgleich', ef_story_before:'vor', ef_story_after:'in',
+      ef_story_one_day:'1 Tag', ef_story_days:'Tage', ef_story_one_month:'1 Monat',
+      ef_story_months:'Mon.', ef_story_min:'Min',
+      ef_story_less_1km:'< 1km entfernt', ef_story_km:'km entfernt', ef_story_tkm:'Tsd.km entfernt',
+      ef_story_sources_label:'Quellen:', ef_story_location_label:'Ort:',
+      ef_gprop_images:'Bilder', ef_timeframe_month:'Mo', ef_timeframe_day:'T', ef_timeframe_year:'J',
+      ef_select_all:'Alle auswählen', ef_checking_trend:'Suchnachfrage in der Datenbank wird geprüft…',
+      ef_trend_days_diff:'T Abstand', ef_event_default:'Ereignis',
+      ef_event_singular_saved:'Ereignis gespeichert', ef_events_plural_saved:'Ereignisse gespeichert',
+    },
+    en: {
+      ef_title:'Events', ef_nav_manage:'Manage', ef_nav_find:'Find Reports', ef_nav_watchzones:'Watch Zones',
+      ef_no_project:'Please create a project first.',
+      ef_no_project_desc:'A project is required to start the analysis.',
+      ef_create_project:'Create Project',
+      ef_desc:'Searches news sources on a topic and creates a chronological situation report. Foreign language headlines are automatically translated.',
+      ef_search_placeholder:'Enter search term …', ef_search:'Search',
+      ef_from:'From', ef_to:'To', ef_lang:'Language', ef_source:'Source', ef_count:'Count',
+      ef_lang_all:'All', ef_lang_de:'German', ef_lang_en:'English', ef_lang_ar:'Arabic',
+      ef_lang_fr:'French', ef_lang_es:'Spanish', ef_source_all:'All (combined)',
+      ef_heatmap_label:'Report Distribution', ef_ai_analyze:'Analyze Reports',
+      ef_ai_loading:'Loading articles …', ef_ai_wait:'Please wait a moment',
+      ef_briefing_title:'News Briefing', ef_events_detected:'Detected Events',
+      ef_col_date:'Date', ef_col_time:'Time', ef_col_report:'Report',
+      ef_col_sources:'Sources', ef_col_location:'Location',
+      ef_adopt_events:'Save as Events', ef_story_present:'Present Geo-Story',
+      ef_export_actions:'Export &amp; Actions', ef_copy:'Copy',
+      ef_keywords:'Frequent Terms', ef_followup:'Follow-up Questions',
+      ef_chat_placeholder:'Question about briefing …', ef_send:'Send',
+      ef_select_project:'Select project:', ef_cancel:'Cancel',
+      ef_create_slide:'Create Slide', ef_before:'Before', ef_after:'After',
+      ef_diff_red:'Differences (red)', ef_diff:'Differences', ef_map:'Map',
+      ef_projects_label:'Project:', ef_all_projects:'– All –',
+      ef_searching:'Searching…',
+      ef_searching_sources:'Searching news sources and translating headlines …',
+      ef_error:'Error:', ef_no_results:'No articles found – try a different date range or search term.',
+      ef_of:'of', ef_hits_in_range:'hits in selected period',
+      ef_hits_sorted:'hits · sorted chronologically (oldest first)',
+      ef_original:'Original:', ef_as_event:'As Event',
+      ef_search_query_label:'· Search query:', ef_no_keyword:'· no matching keyword in database',
+      ef_no_trend:'No trend data for this point in time',
+      ef_months:'Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec', ef_days:'Mo,,We,,Fr,,Su',
+      ef_report:'report', ef_reports:'reports',
+      ef_zoom_reset:'↺ Reset Zoom', ef_click_adopt:'↵ Click → Save as Event',
+      ef_loading_articles:'Preparing articles …', ef_scraping:'Scraping articles …',
+      ef_extracting:'Extracting texts …', ef_ai_running:'AI analysis running …',
+      ef_finalizing:'Finalizing analysis …', ef_preparing_result:'Preparing result …',
+      ef_substep_selected:'reports selected', ef_substep_fulltexts:'Loading full texts from sources',
+      ef_substep_processing:'Processing content', ef_substep_creating:'Creating briefing',
+      ef_substep_checking:'Checking chronology and timestamps', ef_substep_almost:'Almost done',
+      ef_briefing_received:'Briefing received', ef_formatting:'Formatting …', ef_done:'Done',
+      ef_no_analysis:'No analysis available.',
+      ef_reports_label:'reports', ef_fulltexts_label:'full texts loaded',
+      ef_selected:'selected', ef_saving:'Saving …',
+      ef_saved:'saved', ef_failed:'failed',
+      ef_adopt_events_reset:'Save as Events', ef_analysis_failed:'Analysis failed:',
+      ef_exporting:'Exporting…', ef_copied:'Copied ✓',
+      ef_slide_created:'✓ Slide created', ef_slide_error:'Error creating slide.',
+      ef_network_error:'Network error.', ef_pdf_export_failed:'PDF export failed:',
+      ef_docx_export_failed:'DOCX export failed:', ef_export_failed:'Export failed:',
+      ef_satellite_compare:'Satellite Comparison', ef_loading_sat:'Loading …',
+      ef_slide_picker_loading:'Loading…', ef_slide_picker_no_projects:'No projects available',
+      ef_slide_picker_error:'Error loading',
+      ef_story_simultaneous:'simultaneous', ef_story_before:'before', ef_story_after:'in',
+      ef_story_one_day:'1 day', ef_story_days:'days', ef_story_one_month:'1 month',
+      ef_story_months:'mo.', ef_story_min:'min',
+      ef_story_less_1km:'< 1km away', ef_story_km:'km away', ef_story_tkm:'k km away',
+      ef_story_sources_label:'Sources:', ef_story_location_label:'Location:',
+      ef_gprop_images:'Images', ef_timeframe_month:'mo', ef_timeframe_day:'d', ef_timeframe_year:'y',
+      ef_select_all:'Select all', ef_checking_trend:'Checking search query in database…',
+      ef_trend_days_diff:'d diff', ef_event_default:'Event',
+      ef_event_singular_saved:'event saved', ef_events_plural_saved:'events saved',
+    },
+    fr: {
+      ef_title:'Événements', ef_nav_manage:'Gérer', ef_nav_find:'Trouver des actualités', ef_nav_watchzones:'Zones de surveillance',
+      ef_no_project:'Veuillez d\'abord créer un projet.',
+      ef_no_project_desc:'Un projet est nécessaire pour démarrer l\'analyse.',
+      ef_create_project:'Créer un projet',
+      ef_desc:'Recherche dans les sources d\'actualités et crée un rapport chronologique. Les titres en langue étrangère sont automatiquement traduits.',
+      ef_search_placeholder:'Entrez un terme de recherche …', ef_search:'Rechercher',
+      ef_from:'Du', ef_to:'Au', ef_lang:'Langue', ef_source:'Source', ef_count:'Nombre',
+      ef_lang_all:'Tous', ef_lang_de:'Allemand', ef_lang_en:'Anglais', ef_lang_ar:'Arabe',
+      ef_lang_fr:'Français', ef_lang_es:'Espagnol', ef_source_all:'Tous (combinés)',
+      ef_heatmap_label:'Distribution des rapports', ef_ai_analyze:'Analyser les rapports',
+      ef_ai_loading:'Chargement des articles …', ef_ai_wait:'Veuillez patienter un moment',
+      ef_briefing_title:'Briefing d\'informations', ef_events_detected:'Événements détectés',
+      ef_col_date:'Date', ef_col_time:'Heure', ef_col_report:'Rapport',
+      ef_col_sources:'Sources', ef_col_location:'Lieu',
+      ef_adopt_events:'Enregistrer comme événements', ef_story_present:'Présenter la Geo-Story',
+      ef_export_actions:'Export &amp; Actions', ef_copy:'Copier',
+      ef_keywords:'Termes fréquents', ef_followup:'Questions de suivi',
+      ef_chat_placeholder:'Question sur le briefing …', ef_send:'Envoyer',
+      ef_select_project:'Sélectionner un projet :', ef_cancel:'Annuler',
+      ef_create_slide:'Créer une diapositive', ef_before:'Avant', ef_after:'Après',
+      ef_diff_red:'Différences (rouge)', ef_diff:'Différences', ef_map:'Carte',
+      ef_projects_label:'Projet :', ef_all_projects:'– Tous –',
+      ef_searching:'Recherche en cours…',
+      ef_searching_sources:'Recherche dans les sources d\'actualités et traduction des titres …',
+      ef_error:'Erreur :', ef_no_results:'Aucun article trouvé – essayez une autre période ou un autre terme.',
+      ef_of:'sur', ef_hits_in_range:'résultats dans la période sélectionnée',
+      ef_hits_sorted:'résultats · triés chronologiquement (plus anciens en premier)',
+      ef_original:'Original :', ef_as_event:'Comme événement',
+      ef_search_query_label:'· Requête :', ef_no_keyword:'· aucun mot-clé correspondant dans la base',
+      ef_no_trend:'Aucune donnée de tendance pour ce moment',
+      ef_months:'Jan,Fév,Mar,Avr,Mai,Juin,Juil,Aoû,Sep,Oct,Nov,Déc', ef_days:'Lu,,Me,,Ve,,Di',
+      ef_report:'rapport', ef_reports:'rapports',
+      ef_zoom_reset:'↺ Réinitialiser le zoom', ef_click_adopt:'↵ Cliquer → Enregistrer comme événement',
+      ef_loading_articles:'Préparation des articles …', ef_scraping:'Extraction des articles …',
+      ef_extracting:'Extraction des textes …', ef_ai_running:'Analyse IA en cours …',
+      ef_finalizing:'Finalisation de l\'analyse …', ef_preparing_result:'Préparation du résultat …',
+      ef_substep_selected:'rapports sélectionnés', ef_substep_fulltexts:'Chargement des textes complets',
+      ef_substep_processing:'Traitement du contenu', ef_substep_creating:'Création du briefing',
+      ef_substep_checking:'Vérification de la chronologie', ef_substep_almost:'Presque terminé',
+      ef_briefing_received:'Briefing reçu', ef_formatting:'Mise en forme …', ef_done:'Terminé',
+      ef_no_analysis:'Aucune analyse disponible.',
+      ef_reports_label:'rapports', ef_fulltexts_label:'textes complets chargés',
+      ef_selected:'sélectionné(s)', ef_saving:'Enregistrement …',
+      ef_saved:'enregistré(s)', ef_failed:'échoué(s)',
+      ef_adopt_events_reset:'Enregistrer comme événements', ef_analysis_failed:'Analyse échouée :',
+      ef_exporting:'Export…', ef_copied:'Copié ✓',
+      ef_slide_created:'✓ Diapositive créée', ef_slide_error:'Erreur lors de la création de la diapositive.',
+      ef_network_error:'Erreur réseau.', ef_pdf_export_failed:'Échec de l\'export PDF :',
+      ef_docx_export_failed:'Échec de l\'export DOCX :', ef_export_failed:'Échec de l\'export :',
+      ef_satellite_compare:'Comparaison satellite', ef_loading_sat:'Chargement …',
+      ef_slide_picker_loading:'Chargement…', ef_slide_picker_no_projects:'Aucun projet disponible',
+      ef_slide_picker_error:'Erreur de chargement',
+      ef_story_simultaneous:'simultané', ef_story_before:'avant', ef_story_after:'dans',
+      ef_story_one_day:'1 jour', ef_story_days:'jours', ef_story_one_month:'1 mois',
+      ef_story_months:'mois', ef_story_min:'min',
+      ef_story_less_1km:'< 1km de distance', ef_story_km:'km de distance', ef_story_tkm:'milliers km',
+      ef_story_sources_label:'Sources :', ef_story_location_label:'Lieu :',
+      ef_gprop_images:'Images', ef_timeframe_month:'mo', ef_timeframe_day:'j', ef_timeframe_year:'a',
+      ef_select_all:'Tout sélectionner', ef_checking_trend:'Vérification de la requête dans la base…',
+      ef_trend_days_diff:'j d\'écart', ef_event_default:'Événement',
+      ef_event_singular_saved:'événement enregistré', ef_events_plural_saved:'événements enregistrés',
+    },
+    es: {
+      ef_title:'Eventos', ef_nav_manage:'Gestionar', ef_nav_find:'Buscar noticias', ef_nav_watchzones:'Zonas de vigilancia',
+      ef_no_project:'Por favor, cree primero un proyecto.',
+      ef_no_project_desc:'Se necesita un proyecto para iniciar el análisis.',
+      ef_create_project:'Crear proyecto',
+      ef_desc:'Busca fuentes de noticias sobre un tema y crea un informe cronológico. Los titulares en idioma extranjero se traducen automáticamente.',
+      ef_search_placeholder:'Ingresar término de búsqueda …', ef_search:'Buscar',
+      ef_from:'Desde', ef_to:'Hasta', ef_lang:'Idioma', ef_source:'Fuente', ef_count:'Cantidad',
+      ef_lang_all:'Todos', ef_lang_de:'Alemán', ef_lang_en:'Inglés', ef_lang_ar:'Árabe',
+      ef_lang_fr:'Francés', ef_lang_es:'Español', ef_source_all:'Todos (combinado)',
+      ef_heatmap_label:'Distribución de informes', ef_ai_analyze:'Analizar informes',
+      ef_ai_loading:'Cargando artículos …', ef_ai_wait:'Por favor, espere un momento',
+      ef_briefing_title:'Briefing de noticias', ef_events_detected:'Eventos detectados',
+      ef_col_date:'Fecha', ef_col_time:'Hora', ef_col_report:'Informe',
+      ef_col_sources:'Fuentes', ef_col_location:'Lugar',
+      ef_adopt_events:'Guardar como eventos', ef_story_present:'Presentar Geo-Story',
+      ef_export_actions:'Exportar &amp; Acciones', ef_copy:'Copiar',
+      ef_keywords:'Términos frecuentes', ef_followup:'Preguntas de seguimiento',
+      ef_chat_placeholder:'Pregunta sobre el briefing …', ef_send:'Enviar',
+      ef_select_project:'Seleccionar proyecto:', ef_cancel:'Cancelar',
+      ef_create_slide:'Crear diapositiva', ef_before:'Antes', ef_after:'Después',
+      ef_diff_red:'Diferencias (rojo)', ef_diff:'Diferencias', ef_map:'Mapa',
+      ef_projects_label:'Proyecto:', ef_all_projects:'– Todos –',
+      ef_searching:'Buscando…',
+      ef_searching_sources:'Buscando fuentes de noticias y traduciendo titulares …',
+      ef_error:'Error:', ef_no_results:'No se encontraron artículos – intente otro período o término.',
+      ef_of:'de', ef_hits_in_range:'resultados en el período seleccionado',
+      ef_hits_sorted:'resultados · ordenados cronológicamente (más antiguos primero)',
+      ef_original:'Original:', ef_as_event:'Como evento',
+      ef_search_query_label:'· Consulta:', ef_no_keyword:'· ninguna palabra clave coincidente en la base de datos',
+      ef_no_trend:'Sin datos de tendencia para este momento',
+      ef_months:'Ene,Feb,Mar,Abr,May,Jun,Jul,Ago,Sep,Oct,Nov,Dic', ef_days:'Lu,,Mi,,Vi,,Do',
+      ef_report:'informe', ef_reports:'informes',
+      ef_zoom_reset:'↺ Restablecer zoom', ef_click_adopt:'↵ Clic → Guardar como evento',
+      ef_loading_articles:'Preparando artículos …', ef_scraping:'Extrayendo artículos …',
+      ef_extracting:'Extrayendo textos …', ef_ai_running:'Análisis de IA en curso …',
+      ef_finalizing:'Finalizando el análisis …', ef_preparing_result:'Preparando resultado …',
+      ef_substep_selected:'informes seleccionados', ef_substep_fulltexts:'Cargando textos completos',
+      ef_substep_processing:'Procesando contenido', ef_substep_creating:'Creando briefing',
+      ef_substep_checking:'Verificando cronología', ef_substep_almost:'Casi listo',
+      ef_briefing_received:'Briefing recibido', ef_formatting:'Formateando …', ef_done:'Listo',
+      ef_no_analysis:'No hay análisis disponible.',
+      ef_reports_label:'informes', ef_fulltexts_label:'textos completos cargados',
+      ef_selected:'seleccionado(s)', ef_saving:'Guardando …',
+      ef_saved:'guardado(s)', ef_failed:'fallido(s)',
+      ef_adopt_events_reset:'Guardar como eventos', ef_analysis_failed:'Análisis fallido:',
+      ef_exporting:'Exportando…', ef_copied:'Copiado ✓',
+      ef_slide_created:'✓ Diapositiva creada', ef_slide_error:'Error al crear la diapositiva.',
+      ef_network_error:'Error de red.', ef_pdf_export_failed:'Error en la exportación PDF:',
+      ef_docx_export_failed:'Error en la exportación DOCX:', ef_export_failed:'Error en la exportación:',
+      ef_satellite_compare:'Comparación satelital', ef_loading_sat:'Cargando …',
+      ef_slide_picker_loading:'Cargando…', ef_slide_picker_no_projects:'No hay proyectos disponibles',
+      ef_slide_picker_error:'Error al cargar',
+      ef_story_simultaneous:'simultáneo', ef_story_before:'hace', ef_story_after:'en',
+      ef_story_one_day:'1 día', ef_story_days:'días', ef_story_one_month:'1 mes',
+      ef_story_months:'meses', ef_story_min:'min',
+      ef_story_less_1km:'< 1km de distancia', ef_story_km:'km de distancia', ef_story_tkm:'miles km',
+      ef_story_sources_label:'Fuentes:', ef_story_location_label:'Lugar:',
+      ef_gprop_images:'Imágenes', ef_timeframe_month:'mes', ef_timeframe_day:'d', ef_timeframe_year:'a',
+      ef_select_all:'Seleccionar todo', ef_checking_trend:'Verificando consulta en base de datos…',
+      ef_trend_days_diff:'d de diferencia', ef_event_default:'Evento',
+      ef_event_singular_saved:'evento guardado', ef_events_plural_saved:'eventos guardados',
+    },
+  });
+  _applyI18n();
+  document.getElementById("find-q").placeholder = t('ef_search_placeholder','Suchbegriff eingeben …');
+  var _briefChatIn = document.getElementById("brief-chat-input");
+  if (_briefChatIn) _briefChatIn.placeholder = t('ef_chat_placeholder','Frage zum Briefing …');
+  const _tlAllCb = document.getElementById("find-tl-all");
+  if (_tlAllCb) _tlAllCb.title = t('ef_select_all','Alle auswählen');
+</script>
+<script>
+  let allEvents = [];
+  let allProjects = [];
+
+  const _isSuperadmin = {{ 'true' if current_user.is_superadmin else 'false' }};
+
+  function getSelectedProjectId() {
+    return document.getElementById("hdr-evt-project").value || "";
+  }
+
+  async function loadProjects() {
+    try {
+      allProjects = await api("/api/projects");
+      const hdr = document.getElementById("hdr-evt-project");
+      const saved = localStorage.getItem("evt_project_id") || "";
+      const noProj = _isSuperadmin ? `<option value="">${t('ef_all_projects','– Alle –')}</option>` : '';
+      hdr.innerHTML = noProj +
+        allProjects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+      if (saved) hdr.value = saved;
+      if (!hdr.value && allProjects.length) hdr.value = String(allProjects[0].id);
+    } catch(_) {}
+  }
+
+  document.getElementById("hdr-evt-project").addEventListener("change", () => {
+    localStorage.setItem("evt_project_id", getSelectedProjectId());
+  });
+
+  async function loadEvents() {
+    try { allEvents = await api("/api/events"); } catch(_) {}
+  }
+
+  function showModal(id) { document.getElementById(id).style.display = "flex"; }
+  function hideModal(id) { document.getElementById(id).style.display = "none"; }
+
+  function esc(s) {
+    return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;")
+                          .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  function fmtDt(s) {
+    if (!s) return "–";
+    if (s.includes("T")) return window.fmtDate ? window.fmtDate(s) : new Date(s).toLocaleString("de-DE", {dateStyle:"medium", timeStyle:"short"});
+    return window.fmtDateOnly ? window.fmtDateOnly(s + "T00:00") : new Date(s + "T00:00").toLocaleDateString("de-DE", {dateStyle:"medium"});
+  }
+
+  // Datumsformat aus Admin-Einstellungen parsen/formatieren
+  var _dateFmt = localStorage.getItem('vt_date_format') || 'DD.MM.YYYY';
+
+  // Nutzer-Eingabe (im konfigurierten Format) → ISO YYYY-MM-DD
+  function deToIso(v) {
+    if (!v) return "";
+    v = v.trim();
+    var fmt = _dateFmt.toUpperCase();
+    var sep = fmt.replace(/[DMY]/g, "").charAt(0) || ".";
+    var parts = v.split(sep);
+    var fmtParts = fmt.split(sep);
+    if (parts.length < 3) return "";
+    var dd = "", mm = "", yy = "";
+    for (var i = 0; i < fmtParts.length; i++) {
+      var fp = fmtParts[i];
+      if (fp.indexOf("D") >= 0) dd = parts[i];
+      else if (fp.indexOf("M") >= 0) mm = parts[i];
+      else if (fp.indexOf("Y") >= 0) yy = parts[i];
+    }
+    if (yy.length === 2) yy = "20" + yy;
+    if (!dd || !mm || !yy || isNaN(+dd) || isNaN(+mm) || isNaN(+yy)) return "";
+    return yy + "-" + mm.padStart(2, "0") + "-" + dd.padStart(2, "0");
+  }
+
+  // ISO YYYY-MM-DD → Anzeige im konfigurierten Format
+  function isoToDe(iso) {
+    if (!iso) return "";
+    return window.fmtDateOnly ? window.fmtDateOnly(iso + "T00:00") : iso;
+  }
+
+  // Settings abwarten, damit Datumsformat korrekt ist
+  (window._vtSettingsReady || Promise.resolve()).then(() => {
+    _dateFmt = localStorage.getItem('vt_date_format') || 'DD.MM.YYYY';
+    // Placeholder auf aktuelles Format setzen
+    var ph = _dateFmt.toUpperCase();
+    document.getElementById("find-from").placeholder = ph;
+    document.getElementById("find-to").placeholder = ph;
+    loadProjects().then(() => loadEvents());
+  });
+
+  // Autofocus Suchfeld
+  document.getElementById("find-q").focus();
+
+  // ── Meldungen finden (GDELT News-Suche) ──────────────────────────
+  let _findResults       = [];
+  let _lastSearch        = null;   // { q, from, to }
+  let _trendChart        = null;   // Chart.js Instanz
+  let _markerTooltip     = null;   // Floating-Tooltip-Div für News-Marker
+  let _activeHighlightMs = null;   // ms des gehighlighteten Artikels (Hover auf Ergebnis-Karte)
+
+  // Zentrales Highlight: setzt Chart-Marker-Highlight + Karten-CSS-Klasse
+  function _setHighlight(ms) {
+    if (ms === _activeHighlightMs) return;
+    _activeHighlightMs = ms;
+    document.querySelectorAll("#find-results [data-ms]").forEach(el => {
+      const elMs = el.dataset.ms ? Number(el.dataset.ms) : null;
+      el.classList.toggle("find-result-hi", elMs !== null && elMs === ms);
+    });
+    _trendChart?.update("none");
+  }
+
+  document.getElementById("find-source").addEventListener("change", e => {
+    document.getElementById("find-newsapi-hint").style.display =
+      e.target.value === "newsapi" ? "block" : "none";
+  });
+
+  // Hover auf Ergebnis-Karte ↔ Marker im Graph (bidirektional via _setHighlight)
+  (function() {
+    const el = document.getElementById("find-results");
+    el.addEventListener("mouseover", e => {
+      const card = e.target.closest("[data-ms]");
+      _setHighlight(card && card.dataset.ms ? Number(card.dataset.ms) : null);
+    });
+    el.addEventListener("mouseleave", () => _setHighlight(null));
+  })();
+
+  document.getElementById("find-q").addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("btn-find-search").click();
+  });
+
+  // DD.MM.JJJJ → YYYY-MM-DD (leer wenn ungültig)
+  document.getElementById("btn-find-search").addEventListener("click", async () => {
+    const q      = document.getElementById("find-q").value.trim();
+    if (!q) return;
+    const from   = deToIso(document.getElementById("find-from").value);
+    const to     = deToIso(document.getElementById("find-to").value);
+    const lang   = document.getElementById("find-lang").value;
+    const source = document.getElementById("find-source").value;
+    const btn    = document.getElementById("btn-find-search");
+
+    btn.disabled = true; btn.textContent = t('ef_searching','Suche läuft…');
+    document.getElementById("find-results").innerHTML =
+      `<p class="text-muted text-sm" style="text-align:center;padding:20px 0;">
+         ${t('ef_searching_sources','Durchsuche Nachrichtenquellen und übersetze Schlagzeilen …')}</p>`;
+
+    // AI-Briefing und Wordcloud zurücksetzen bei neuer Suche
+    var _aiBar = document.getElementById("find-ai-bar");
+    if (_aiBar) _aiBar.style.display = "none";
+    document.getElementById("find-wordcloud").style.display = "none";
+    _wcActiveFilters.clear();
+    var _briefModal = document.getElementById("briefing-modal");
+    if (_briefModal) _briefModal.style.display = "none";
+
+    _lastSearch = { q, from, to };
+
+    const limit = document.getElementById("find-limit").value;
+    let url = `/api/events/find-news?q=${encodeURIComponent(q)}&limit=${limit}`;
+    if (from)   url += `&from=${encodeURIComponent(from)}`;
+    if (to)     url += `&to=${encodeURIComponent(to)}`;
+    if (lang)   url += `&lang=${encodeURIComponent(lang)}`;
+    if (source) url += `&source=${encodeURIComponent(source)}`;
+
+    try {
+      _findResults = await api(url);
+      renderFindResults();
+    } catch(e) {
+      document.getElementById("find-results").innerHTML =
+        `<p style="color:var(--danger)">${t('ef_error','Fehler:')} ${esc(e.message)}</p>`;
+    } finally {
+      btn.disabled = false; btn.textContent = t('ef_search','Suchen');
+    }
+  });
+
+  // displayResults: optionale gefilterte Teilmenge für Zoom-Ansicht;
+  // wenn weggelassen, werden alle _findResults gerendert + Graph/Indikatoren geladen
+  function renderFindResults(displayResults) {
+    const el      = document.getElementById("find-results");
+    const isFiltered = displayResults !== undefined;
+    const results = isFiltered ? displayResults : _findResults;
+
+    if (!results.length) {
+      el.innerHTML = `<p class="text-muted text-sm">
+        ${t('ef_no_results','Keine Artikel gefunden – anderen Zeitraum oder Suchbegriff versuchen.')}</p>`;
+      return;
+    }
+
+    const totalNote = isFiltered
+      ? `${results.length} ${t('ef_of','von')} ${_findResults.length} ${t('ef_hits_in_range','Treffern im ausgewählten Zeitraum')}`
+      : `${_findResults.length} ${t('ef_hits_sorted','Treffer · chronologisch sortiert (älteste zuerst)')}`;
+
+    el.innerHTML = `
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+        <span>${totalNote}</span>
+        <span id="find-trend-meta" style="font-size:11px;"></span>
+      </div>` +
+      results.map(r => {
+        // Originalindex für adoptNewsResult und Trend-Indikator
+        const origIdx = _findResults.indexOf(r);
+        const dtStr   = r.seendate ? fmtDt(r.seendate) : "–";
+        const srcStr  = [r.domain, r.sourcecountry].filter(Boolean).join(" · ");
+        const origHtml = r.title_original
+          ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;
+                         overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                title="${esc(r.title_original)}">
+               ${t('ef_original','Original:')} ${esc(r.title_original)}
+             </div>` : "";
+        const cardMs = r.seendate ? new Date(r.seendate).getTime() : "";
+        return `
+          <div style="border:1px solid var(--border);border-radius:8px;
+                      padding:12px 14px;margin-bottom:8px;" data-ms="${cardMs}">
+            <div style="display:flex;align-items:flex-start;gap:10px;">
+              <div style="flex:1;min-width:0;">
+                <a href="${esc(r.url)}" target="_blank" rel="noopener"
+                   style="font-size:13px;font-weight:600;color:var(--accent);
+                          text-decoration:none;line-height:1.3;display:block;
+                          overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                   title="${esc(r.title)}">
+                  ${esc(r.title || r.url)}
+                </a>
+                ${origHtml}
+                <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+                  <strong style="color:var(--text);">${esc(dtStr)}</strong>
+                  ${srcStr ? `· ${esc(srcStr)}` : ""}
+                  ${r.language ? `· ${esc(r.language)}` : ""}
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <span id="ti-${origIdx}"
+                      style="display:inline-flex;align-items:center;gap:4px;"
+                      title="${t('ef_checking_trend','Suchnachfrage in der Datenbank wird geprüft…')}">
+                  <span style="font-size:9px;color:var(--muted);opacity:0.5;">⟳</span>
+                </span>
+                <button class="btn btn-primary btn-sm"
+                        onclick="adoptNewsResult(${origIdx})">
+                  ${t('ef_as_event','Als Ereignis')}
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }).join("");
+
+    if (!isFiltered) {
+      // Trend-Indikatoren und Verlaufsgraph asynchron nachladen
+      const qNow = document.getElementById("find-q").value.trim();
+      loadTrendIndicators(qNow);
+      loadTrendChart();
+      renderWordCloud(_findResults);
+    }
+  }
+
+  // ── Word-Cloud der häufigsten Begriffe in Headlines ────────────────────
+  const _wcStopWords = new Set([
+    // DE
+    "der","die","das","den","dem","des","ein","eine","einer","eines","einem","einen",
+    "und","oder","aber","als","auf","aus","bei","bis","für","gegen","in","mit","nach",
+    "ohne","um","von","vor","zu","zum","zur","über","unter","zwischen","durch","an",
+    "nicht","sich","ist","sind","hat","haben","wird","werden","war","kann","auch",
+    "noch","nur","so","wie","was","wer","ich","er","sie","es","wir","ihr","man",
+    "dass","wenn","weil","da","ob","schon","mehr","sehr","alle","kein","keine",
+    "neue","neuer","neues","neuem","neuen","neue",
+    // EN
+    "the","a","an","and","or","but","as","at","by","for","from","in","into","of",
+    "on","to","with","is","are","was","were","be","been","has","have","had","will",
+    "would","could","should","can","may","not","no","its","it","this","that","he",
+    "she","they","we","you","i","my","his","her","our","their","what","who","how",
+    "all","new","says","said","after","over","about","up","out","than","more","do",
+  ]);
+
+  let _wcActiveFilters = new Set();
+
+  function renderWordCloud(results) {
+    const el = document.getElementById("find-wordcloud");
+    if (!results || !results.length) { el.style.display = "none"; _wcActiveFilters.clear(); return; }
+
+    // Wörter zählen aus allen Titeln
+    const freq = {};
+    results.forEach(r => {
+      const title = (r.title || "").trim();
+      if (!title) return;
+      const words = title.toLowerCase().replace(/[^\p{L}\p{N}\s'-]/gu, " ").split(/\s+/);
+      words.forEach(w => {
+        w = w.replace(/^['-]+|['-]+$/g, "");
+        if (w.length < 3 || _wcStopWords.has(w) || /^\d+$/.test(w)) return;
+        freq[w] = (freq[w] || 0) + 1;
+      });
+    });
+
+    // Top 20 sortiert nach Häufigkeit
+    const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 20);
+    if (!sorted.length) { el.style.display = "none"; return; }
+
+    // Alle gleich gross, aber Reihenfolge mischen für Cloud-Optik
+    const shuffled = sorted.map(([word, count]) => ({ word, count }));
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    el.style.display = "block";
+    el.innerHTML =
+      `<div style="display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;
+                   padding:10px 12px;border:1px solid var(--border);border-radius:8px;
+                   background:var(--surface2);">` +
+      shuffled.map(({ word, count }) => {
+        const active = _wcActiveFilters.has(word);
+        return `<span class="wc-tag" data-word="${esc(word)}" title="${count}×"
+                      style="font-size:12px;font-weight:600;padding:3px 8px;
+                      border-radius:4px;white-space:nowrap;cursor:pointer;
+                      transition:all .15s;user-select:none;
+                      color:${active ? '#fff' : 'var(--accent)'};
+                      background:${active ? 'var(--accent1)' : 'rgba(139,92,246,.08)'};">${esc(word)}</span>`;
+      }).join("") +
+      `</div>`;
+
+    // Click-Handler für Filter-Toggle
+    el.querySelectorAll(".wc-tag").forEach(tag => {
+      tag.addEventListener("click", () => {
+        const word = tag.dataset.word;
+        if (_wcActiveFilters.has(word)) {
+          _wcActiveFilters.delete(word);
+          tag.style.color = "var(--accent)";
+          tag.style.background = "rgba(139,92,246,.08)";
+        } else {
+          _wcActiveFilters.add(word);
+          tag.style.color = "#fff";
+          tag.style.background = "var(--accent1)";
+        }
+        _applyWordCloudFilter();
+      });
+    });
+  }
+
+  function _applyWordCloudFilter() {
+    if (!_wcActiveFilters.size) {
+      // Kein Filter → alle anzeigen
+      renderFindResults();
+      return;
+    }
+    const filtered = _findResults.filter(r => {
+      const title = (r.title || "").toLowerCase();
+      for (const w of _wcActiveFilters) {
+        if (title.includes(w)) return true;
+      }
+      return false;
+    });
+    renderFindResults(filtered);
+  }
+
+  function adoptNewsResult(idx) {
+    const r = _findResults[idx];
+    if (!r) return;
+    const params = new URLSearchParams();
+    params.set("start_dt", r.seendate || "");
+    params.set("type", "point");
+    params.set("title", r.title || "");
+    params.set("desc", r.url || "");
+    window.location.href = "/events?" + params.toString();
+  }
+
+  async function loadTrendIndicators(q) {
+    if (!q || !_findResults.length) return;
+
+    const dates = [...new Set(
+      _findResults.map(r => r.seendate ? r.seendate.slice(0, 10) : "").filter(Boolean)
+    )];
+    if (!dates.length) return;
+
+    let resp;
+    try {
+      const url = `/api/events/trend-check?q=${encodeURIComponent(q)}&dates=${encodeURIComponent(dates.join(","))}`;
+      resp = await api(url);
+    } catch (_) { return; }
+
+    const byDate = resp.by_date  || {};
+    const kwList = resp.keywords || [];
+
+    // Meta-Label im Header aktualisieren
+    const metaEl = document.getElementById("find-trend-meta");
+    if (metaEl) {
+      if (kwList.length) {
+        metaEl.innerHTML =
+          `<span style="color:var(--accent);">${t('ef_search_query_label','· Suchnachfrage:')} ${esc(kwList.join(", "))}</span>`;
+      } else {
+        metaEl.innerHTML =
+          `<span style="color:var(--muted);opacity:0.7;">${t('ef_no_keyword','· kein passendes Keyword in Datenbank')}</span>`;
+      }
+    }
+
+    // Indikatoren pro Artikel aktualisieren
+    _findResults.forEach((r, idx) => {
+      const el   = document.getElementById(`ti-${idx}`);
+      if (!el) return;
+      const date = r.seendate ? r.seendate.slice(0, 10) : "";
+      const t    = date ? byDate[date] : undefined;
+
+      if (!t) {
+        el.innerHTML = `<span style="font-size:10px;color:var(--muted);opacity:0.35;">–</span>`;
+        el.title = window.t('ef_no_trend','Keine Trenddaten für diesen Zeitpunkt');
+        return;
+      }
+
+      const val   = t.value;
+      const color = val >= 60 ? "var(--danger)" : val >= 25 ? "#f0a500" : "var(--accent)";
+      const note  = t.days_off > 0 ? ` (±${t.days_off} ${window.t('ef_trend_days_diff','T Abstand')})` : "";
+      el.title    = `${window.t('ef_search_query_label','· Suchnachfrage:').slice(2)} „${t.keyword}" ${t.date}: ${val}/100${note}`;
+      el.innerHTML = `
+        <span style="display:inline-block;width:32px;height:4px;background:var(--border);
+                     border-radius:2px;overflow:hidden;vertical-align:middle;">
+          <span style="display:block;width:${val}%;height:100%;background:${color};
+                       border-radius:2px;"></span>
+        </span>
+        <span style="font-size:11px;color:${color};font-weight:600;line-height:1;">${val}</span>`;
+    });
+  }
+
+  // ── Verlaufsgraph ─────────────────────────────────────────────────
+  const SERIES_COLORS = ["#4f8ef7","#f75f4f","#22c55e","#f59e0b","#a855f7"];
+
+  const _GPROP_LABEL = { "": "Web", "news": "News", "images": t('ef_gprop_images','Images'), "youtube": "YouTube", "froogle": "Shopping" };
+
+  function fmtTimeframe(tf) {
+    if (!tf) return "";
+    const m = tf.match(/^today\s+(\d+)-([mdy])$/i);
+    if (m) {
+      const unit = { m: t('ef_timeframe_month','Mo'), d: t('ef_timeframe_day','T'), y: t('ef_timeframe_year','J') }[m[2].toLowerCase()] || m[2];
+      return `${m[1]}\u202f${unit}`;
+    }
+    const n = tf.match(/^now\s+(\d+)-([mdy])$/i);
+    if (n) {
+      const unit = { m: t('ef_timeframe_month','Mo'), d: t('ef_timeframe_day','T'), y: t('ef_timeframe_year','J') }[n[2].toLowerCase()] || n[2];
+      return `${n[1]}\u202f${unit}`;
+    }
+    return tf.length > 12 ? tf.slice(0, 12) + "…" : tf;
+  }
+
+  function buildSeriesLabel(s) {
+    const parts = [];
+    if (s.geo)      parts.push(s.geo);
+    const svc = _GPROP_LABEL[s.gprop] ?? s.gprop;
+    if (svc)        parts.push(svc);
+    const tf = fmtTimeframe(s.timeframe);
+    if (tf)         parts.push(tf);
+    return parts.length ? `${s.keyword}  [${parts.join("\u2009·\u2009")}]` : s.keyword;
+  }
+
+  async function loadTrendChart() {
+    if (!_lastSearch || !_lastSearch.q) return;
+    const { q, from, to } = _lastSearch;
+
+    let url = `/api/events/trend-series?q=${encodeURIComponent(q)}`;
+    if (from) url += `&from=${encodeURIComponent(from)}`;
+    if (to)   url += `&to=${encodeURIComponent(to)}`;
+
+    let data;
+    try { data = await api(url); } catch (_) { data = {}; }
+
+    // Artikel mit vollständigen Zeitstempeln (minutengenau)
+    const articleItems = _findResults
+      .filter(r => r.seendate)
+      .map(r => ({
+        ms:       new Date(r.seendate).getTime(),
+        seendate: r.seendate,
+        date:     r.seendate.slice(0, 10),
+        title:    r.title || r.url,
+      }));
+
+    // Heatmap immer anzeigen wenn Artikel vorhanden
+    if (articleItems.length) {
+      renderCalendarHeatmap(articleItems);
+    }
+
+    // Trend-Chart zusätzlich anzeigen wenn echte Daten (nicht nur 0-Werte)
+    const hasRealTrendData = data.series && data.series.length &&
+      data.series.some(s => s.data && s.data.length > 0 &&
+        s.data.some(d => d.value > 0));
+    if (hasRealTrendData) {
+      renderTrendChart(data.series, articleItems);
+    }
+  }
+
+  function renderCalendarHeatmap(articles) {
+    // Meldungen pro Tag zählen
+    const dayCounts = {};
+    articles.forEach(a => {
+      const d = a.date;
+      dayCounts[d] = (dayCounts[d] || 0) + 1;
+    });
+    const dates = Object.keys(dayCounts).sort();
+    if (!dates.length) return;
+
+    const startDate = new Date(dates[0] + "T00:00:00");
+    const endDate   = new Date(dates[dates.length - 1] + "T00:00:00");
+    const maxCount  = Math.max(...Object.values(dayCounts));
+
+    // Zum Montag der Startwoche zurückgehen
+    const start = new Date(startDate);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    // Zum Sonntag der Endwoche vorgehen
+    const end = new Date(endDate);
+    end.setDate(end.getDate() + (7 - end.getDay()) % 7);
+
+    const container = document.getElementById("find-heatmap");
+    container.innerHTML = "";
+
+    // Monatslabels und Wochen berechnen
+    const monthLabels = [];
+    let lastMonth = -1;
+    const weeks = [];
+    let cur = new Date(start);
+    while (cur <= end) {
+      const week = [];
+      for (let d = 0; d < 7; d++) {
+        const iso = cur.toISOString().slice(0, 10);
+        const count = dayCounts[iso] || 0;
+        const inRange = cur >= startDate && cur <= endDate;
+        week.push({ iso, count, inRange, day: cur.getDay(), month: cur.getMonth() });
+        if (cur.getMonth() !== lastMonth && inRange) {
+          monthLabels.push({ weekIdx: weeks.length, month: cur.getMonth() });
+          lastMonth = cur.getMonth();
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+      weeks.push(week);
+    }
+
+    // Zellgröße dynamisch berechnen (volle Container-Breite)
+    const wrapEl = document.getElementById("find-heatmap-wrap");
+    wrapEl.style.display = "";
+    const availW = container.clientWidth || 800;
+    const LEFT_PAD = 24;
+    const GAP = 2;
+    const CELL = Math.max(6, Math.min(16, Math.floor((availW - LEFT_PAD) / weeks.length) - GAP));
+    const TOP_PAD = 16;
+
+    const svgW = availW;
+    const svgH = TOP_PAD + 7 * (CELL + GAP);
+
+    const MONTHS_DE = t('ef_months','Jan,Feb,Mär,Apr,Mai,Jun,Jul,Aug,Sep,Okt,Nov,Dez').split(',');
+    const DAYS_DE = t('ef_days','Mo,,Mi,,Fr,,So').split(',');
+
+    let svg = `<svg width="100%" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" style="display:block;">`;
+
+    // Monatslabels
+    monthLabels.forEach(ml => {
+      const x = LEFT_PAD + ml.weekIdx * (CELL + GAP);
+      svg += `<text x="${x}" y="10" fill="var(--muted)" font-size="9" font-family="system-ui">${MONTHS_DE[ml.month]}</text>`;
+    });
+
+    // Wochentag-Labels
+    DAYS_DE.forEach((label, i) => {
+      if (!label) return;
+      const y = TOP_PAD + i * (CELL + GAP) + CELL - 2;
+      svg += `<text x="0" y="${y}" fill="var(--muted)" font-size="8" font-family="system-ui">${label}</text>`;
+    });
+
+    // Zellen
+    weeks.forEach((week, wi) => {
+      week.forEach((day, di) => {
+        const x = LEFT_PAD + wi * (CELL + GAP);
+        const y = TOP_PAD + di * (CELL + GAP);
+        let fill;
+        if (!day.inRange) {
+          fill = "rgba(255,255,255,0.02)";
+        } else if (day.count === 0) {
+          fill = "rgba(255,255,255,0.06)";
+        } else {
+          const intensity = Math.min(1, day.count / maxCount);
+          const r = Math.round(124 + (167 - 124) * intensity);
+          const g = Math.round(60  + (139 - 60)  * (1 - intensity));
+          const b = Math.round(191 + (250 - 191) * intensity);
+          const alpha = 0.3 + 0.7 * intensity;
+          fill = `rgba(${r},${g},${b},${alpha})`;
+        }
+        const _fmtDay = window.fmtDateOnly ? window.fmtDateOnly(day.iso + "T00:00") : day.iso;
+        const title = day.count
+          ? `${_fmtDay}: ${day.count} ${day.count > 1 ? t('ef_reports','Meldungen') : t('ef_report','Meldung')}`
+          : _fmtDay;
+        svg += `<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" rx="2" fill="${fill}" ` +
+               `data-date="${day.iso}" data-count="${day.count}" class="hm-cell" style="cursor:pointer;">` +
+               `<title>${title}</title></rect>`;
+      });
+    });
+
+    svg += "</svg>";
+    container.innerHTML = svg;
+
+    // Hover-Events für Cross-Highlight mit Trend-Chart
+    container.querySelectorAll(".hm-cell").forEach(rect => {
+      rect.addEventListener("mouseenter", () => {
+        const iso = rect.getAttribute("data-date");
+        _heatmapHighlightDate(iso);
+        // Trend-Chart Tooltip positionieren
+        if (_trendChart && _trendChart.scales && _trendChart.scales.x) {
+          const ms = new Date(iso + "T12:00:00").getTime();
+          const xScale = _trendChart.scales.x;
+          const px = xScale.getPixelForValue(ms);
+          if (px >= _trendChart.chartArea.left && px <= _trendChart.chartArea.right) {
+            _trendChart.setActiveElements([]);
+            _trendChart.tooltip.setActiveElements(
+              _trendChart.data.datasets.map((ds, di) => {
+                const idx = ds.data.findIndex(p => Math.abs(p.x - ms) < 86400000);
+                return idx >= 0 ? { datasetIndex: di, index: idx } : null;
+              }).filter(Boolean),
+              { x: px, y: _trendChart.chartArea.top }
+            );
+            _trendChart.update("none");
+          }
+        }
+      });
+      rect.addEventListener("mouseleave", () => {
+        _heatmapHighlightDate(null);
+        if (_trendChart) {
+          _trendChart.setActiveElements([]);
+          _trendChart.tooltip.setActiveElements([], { x: 0, y: 0 });
+          _trendChart.update("none");
+        }
+      });
+    });
+  }
+
+  let _hmHighlightedRect = null;
+  function _heatmapHighlightDate(iso) {
+    if (_hmHighlightedRect) {
+      _hmHighlightedRect.removeAttribute("stroke");
+      _hmHighlightedRect.removeAttribute("stroke-width");
+      _hmHighlightedRect = null;
+    }
+    if (!iso) return;
+    const rect = document.querySelector(`#find-heatmap .hm-cell[data-date="${iso}"]`);
+    if (rect) {
+      rect.setAttribute("stroke", "#fff");
+      rect.setAttribute("stroke-width", "2");
+      _hmHighlightedRect = rect;
+    }
+  }
+
+  // "YYYY-MM-DD" oder "YYYY-MM-DDTHH:MM" → Unix-Timestamp (ms)
+  function dateToMs(s) {
+    return new Date(s.includes("T") ? s : s + "T00:00").getTime();
+  }
+
+  // Timestamp → Datum (konfiguriertes Format)
+  function fmtTs(ms) {
+    return window.fmtDateOnly ? window.fmtDateOnly(new Date(ms).toISOString()) : new Date(ms).toLocaleDateString("de-DE");
+  }
+
+  // Timestamp → "YYYY-MM-DD" (für datepicker – immer ISO, nicht formatabhängig)
+  function fmtIso(ms) {
+    const d = new Date(ms);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  }
+
+  // Timestamp → Datum + Uhrzeit (konfiguriertes Format)
+  function fmtTsFull(ms) {
+    return window.fmtDate ? window.fmtDate(new Date(ms).toISOString()) : new Date(ms).toLocaleString("de-DE", {dateStyle:"short", timeStyle:"short"});
+  }
+
+  function renderTrendChart(series, articleItems) {
+    if (!series.length) return;
+
+    // Datasets mit {x: timestamp, y: value} für lineare Zeitskala
+    const datasets = series.map((s, i) => {
+      const hasData = s.data.length > 0;
+      const color   = SERIES_COLORS[i % SERIES_COLORS.length];
+      return {
+        label:            buildSeriesLabel(s),
+        data:             s.data.map(p => ({ x: dateToMs(p.date), y: p.value })),
+        borderColor:      hasData ? color : color + "55",
+        backgroundColor:  color + "22",
+        borderWidth:      2,
+        borderDash:       hasData ? [] : [5, 4],
+        pointRadius:      0,
+        pointHoverRadius: 4,
+        tension:          0,
+        spanGaps:         true,
+        fill:             false,
+      };
+    });
+
+    // Artikel nach ms gruppieren (minutengenau, mehrere Artikel pro Zeitpunkt möglich)
+    const tsMap = {};
+    articleItems.forEach(a => {
+      if (!tsMap[a.ms]) tsMap[a.ms] = [];
+      tsMap[a.ms].push(a);
+    });
+    const uniqueTs = Object.keys(tsMap).map(Number).sort((a, b) => a - b);
+
+    // Chart-Canvas neu erstellen
+    const wrap  = document.getElementById("find-chart-wrap");
+    const inner = wrap.querySelector(".find-chart-inner");
+    const oldCanvas = document.getElementById("find-chart");
+    if (oldCanvas) oldCanvas.remove();
+    const canvas = document.createElement("canvas");
+    canvas.id    = "find-chart";
+    inner.appendChild(canvas);
+    if (_trendChart) { _trendChart.destroy(); _trendChart = null; }
+
+    // Reset-Button erzeugen / wiederverwenden
+    let resetBtn = document.getElementById("find-chart-reset");
+    if (!resetBtn) {
+      resetBtn = document.createElement("button");
+      resetBtn.id = "find-chart-reset";
+      resetBtn.className = "btn btn-ghost btn-sm";
+      Object.assign(resetBtn.style, {
+        display: "none", position: "absolute", top: "6px", right: "8px",
+        fontSize: "10px", padding: "2px 8px", zIndex: "2",
+      });
+      resetBtn.textContent = t('ef_zoom_reset','↺ Zoom zurücksetzen');
+      resetBtn.addEventListener("click", () => {
+        _trendChart?.resetZoom();
+        resetBtn.style.display = "none";
+        document.getElementById("find-from").value = "";
+        document.getElementById("find-to").value   = "";
+        renderFindResults(); // alle Ergebnisse wiederherstellen
+      });
+      inner.appendChild(resetBtn);
+    }
+    resetBtn.style.display = "none";
+
+    // Nächsten Trend-Wert pro Serie zum gegebenen Zeitpunkt ermitteln
+    function trendAtMs(ms) {
+      const FOUR_DAYS = 86400000 * 4;
+      return datasets.map((ds, i) => {
+        if (!ds.data.length) return null;
+        let closest = null, minDiff = Infinity;
+        for (const pt of ds.data) {
+          const diff = Math.abs(pt.x - ms);
+          if (diff < minDiff) { minDiff = diff; closest = pt; }
+        }
+        if (!closest || minDiff > FOUR_DAYS) return null;
+        return { keyword: series[i].keyword, value: closest.y, color: SERIES_COLORS[i % SERIES_COLORS.length] };
+      }).filter(Boolean);
+    }
+
+    // Floating-Tooltip-Div erzeugen / wiederverwenden
+    if (!_markerTooltip) {
+      _markerTooltip = document.createElement("div");
+      _markerTooltip.id = "find-marker-tooltip";
+      Object.assign(_markerTooltip.style, {
+        position: "fixed", display: "none", zIndex: "600",
+        background: "var(--surface-2, #1e2228)",
+        border: "1px solid var(--border)",
+        borderRadius: "7px", padding: "8px 12px",
+        fontSize: "11px", color: "var(--text)",
+        pointerEvents: "none", maxWidth: "300px",
+        lineHeight: "1.5", boxShadow: "0 4px 14px #0006",
+      });
+      document.body.appendChild(_markerTooltip);
+    }
+
+    // Plugin: vertikale Markierungen (minutengenau)
+    const newsMarkersPlugin = {
+      id: "newsMarkers",
+      afterDraw(chart) {
+        const { ctx, chartArea, scales } = chart;
+        if (!chartArea) return;
+        const xScale = scales.x;
+        ctx.save();
+        uniqueTs.forEach(ms => {
+          const x  = xScale.getPixelForValue(ms);
+          if (x < chartArea.left || x > chartArea.right) return;
+          const hi = ms === _activeHighlightMs;
+          ctx.setLineDash([3, 3]);
+          ctx.strokeStyle = hi ? "rgba(255,255,200,0.95)" : "rgba(255,255,255,0.3)";
+          ctx.lineWidth   = hi ? 2 : 1;
+          ctx.beginPath();
+          ctx.moveTo(x, chartArea.top);
+          ctx.lineTo(x, chartArea.bottom);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          const sz = hi ? 7 : 5;
+          ctx.fillStyle = hi ? "rgba(255,255,160,1)" : "rgba(255,255,255,0.4)";
+          ctx.beginPath();
+          ctx.moveTo(x - sz, chartArea.bottom + 2);
+          ctx.lineTo(x + sz, chartArea.bottom + 2);
+          ctx.lineTo(x,      chartArea.bottom - sz - 1);
+          ctx.closePath();
+          ctx.fill();
+        });
+
+        // ── Ereignis-Linien (rot gestrichelt) ──────────────────────
+        allEvents.forEach(evt => {
+          if (!evt.start_dt) return;
+          const color    = evt.color || "#ef4444";
+          const toMs = s => new Date(s.includes("T") ? s : s + "T00:00").getTime();
+          const startMs  = toMs(evt.start_dt);
+          const xStart   = xScale.getPixelForValue(startMs);
+
+          // Zeitraum: Fläche + End-Linie
+          if (evt.event_type === "zeitraum" && evt.end_dt) {
+            const endMs = toMs(evt.end_dt);
+            const xEnd  = xScale.getPixelForValue(endMs);
+            const xL = Math.max(Math.min(xStart, xEnd), chartArea.left);
+            const xR = Math.min(Math.max(xStart, xEnd), chartArea.right);
+            if (xR > chartArea.left && xL < chartArea.right) {
+              ctx.globalAlpha = 0.1;
+              ctx.fillStyle   = color;
+              ctx.fillRect(xL, chartArea.top, xR - xL, chartArea.bottom - chartArea.top);
+              ctx.globalAlpha = 1;
+            }
+            if (xEnd >= chartArea.left && xEnd <= chartArea.right) {
+              ctx.globalAlpha = 0.45;
+              ctx.setLineDash([4, 4]);
+              ctx.strokeStyle = color;
+              ctx.lineWidth   = 1;
+              ctx.beginPath();
+              ctx.moveTo(xEnd, chartArea.top);
+              ctx.lineTo(xEnd, chartArea.bottom);
+              ctx.stroke();
+              ctx.setLineDash([]);
+              ctx.globalAlpha = 1;
+            }
+          }
+
+          // Start-Linie (immer)
+          if (xStart < chartArea.left || xStart > chartArea.right) return;
+          ctx.setLineDash([5, 4]);
+          ctx.strokeStyle = color;
+          ctx.lineWidth   = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(xStart, chartArea.top);
+          ctx.lineTo(xStart, chartArea.bottom);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Titel-Label horizontal oben an der Linie
+          const label = evt.title.length > 20 ? evt.title.slice(0, 20) + "…" : evt.title;
+          ctx.save();
+          ctx.font        = "bold 10px sans-serif";
+          ctx.textAlign   = "left";
+          ctx.globalAlpha = 0.9;
+          const textW = ctx.measureText(label).width;
+          // Label nach links verschieben wenn es über den rechten Rand läuft
+          const labelX = (xStart + 4 + textW > chartArea.right)
+            ? xStart - textW - 4
+            : xStart + 4;
+          const labelY = chartArea.top + 12;
+          // Hintergrund-Box für Lesbarkeit
+          ctx.globalAlpha = 0.55;
+          ctx.fillStyle   = "#0d1117";
+          ctx.fillRect(labelX - 2, labelY - 10, textW + 6, 14);
+          // Text
+          ctx.globalAlpha = 1;
+          ctx.fillStyle   = color;
+          ctx.fillText(label, labelX, labelY);
+          ctx.restore();
+        });
+
+        ctx.restore();
+      },
+    };
+
+    // X-Achsenbereich aus Trend- und Artikeldaten
+    const allMs = [...datasets.flatMap(d => d.data.map(p => p.x)), ...uniqueTs];
+    const DAY   = 86400000;
+    const xRange = allMs.length
+      ? { min: Math.min(...allMs) - DAY * 3, max: Math.max(...allMs) + DAY * 3 }
+      : {};
+
+    _trendChart = new Chart(canvas, {
+      type: "line",
+      data: { datasets },
+      plugins: [newsMarkersPlugin],
+      options: {
+        animation:   false,
+        responsive:  true,
+        maintainAspectRatio: false,
+        layout: { padding: { bottom: 10 } },
+        interaction: { mode: "x", intersect: false },
+        plugins: {
+          legend: {
+            position: "top",
+            align: "center",
+            labels: { color: "#fff", boxWidth: 12, font: { size: 12 }, padding: 14 },
+          },
+          tooltip: {
+            callbacks: {
+              title: items => items[0] ? fmtTsFull(items[0].parsed.x) : "",
+              label: item  => ` ${item.dataset.label}: ${item.parsed.y ?? "–"}`,
+            },
+          },
+          zoom: {
+            zoom: {
+              drag: {
+                enabled: true,
+                borderColor: "rgba(255,255,255,0.3)",
+                borderWidth: 1,
+                backgroundColor: "rgba(255,255,255,0.04)",
+              },
+              mode: "x",
+              onZoomComplete({ chart }) {
+                const { min, max } = chart.scales.x;
+                document.getElementById("find-from").value = isoToDe(fmtIso(min));
+                document.getElementById("find-to").value   = isoToDe(fmtIso(max));
+                resetBtn.style.display = "";
+                // Suchergebnisse auf den gezoomten Zeitraum filtern
+                const filtered = _findResults.filter(r => {
+                  if (!r.seendate) return false;
+                  const ms = new Date(r.seendate).getTime();
+                  return ms >= min && ms <= max;
+                });
+                renderFindResults(filtered);
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            type: "linear",
+            ...xRange,
+            ticks: {
+              color:         "#fff",
+              font:          { size: 12 },
+              maxTicksLimit: 10,
+              maxRotation:   0,
+              callback: function(val) {
+                const range = this.max - this.min;
+                const d = new Date(val);
+                if (range < DAY * 3) {
+                  return window.fmtDate ? window.fmtDate(d.toISOString()) : `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+                }
+                return fmtTs(val);
+              },
+            },
+            grid: { display: false },
+            border: { display: true, color: "rgba(255,255,255,0.2)" },
+          },
+          y: {
+            min: 0,
+            max: 100,
+            ticks: { color: "#fff", font: { size: 12 }, stepSize: 25 },
+            grid: { color: "rgba(255,255,255,0.06)" },
+            border: { display: true, color: "rgba(255,255,255,0.2)" },
+          },
+        },
+      },
+    });
+
+    // Hover/Klick auf Marker → Tooltip + Artikel als Ereignis übernehmen
+    let currentHitMs = null;
+    canvas.addEventListener("mousemove", e => {
+      const rect   = canvas.getBoundingClientRect();
+      const mx     = e.clientX - rect.left;
+      const xScale = _trendChart?.scales?.x;
+      if (!xScale || !_trendChart?.chartArea) return;
+
+      currentHitMs = null;
+      for (const ms of uniqueTs) {
+        if (Math.abs(mx - xScale.getPixelForValue(ms)) <= 8) { currentHitMs = ms; break; }
+      }
+
+      if (currentHitMs !== null) {
+        const arts = tsMap[currentHitMs] || [];
+        const trendVals = trendAtMs(currentHitMs);
+        const trendHtml = trendVals.length
+          ? `<div style="font-size:10px;margin-top:5px;padding-top:5px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">` +
+            trendVals.map(t =>
+              `<span style="color:${t.color};white-space:nowrap;">${esc(t.keyword)}: <strong>${t.value}</strong></span>`
+            ).join("") + `</div>`
+          : "";
+        _markerTooltip.innerHTML = arts.map((a, i) => {
+          const sep = i > 0
+            ? `<hr style="border:none;border-top:1px solid var(--border);margin:5px 0;">` : "";
+          return `${sep}<div>
+            <strong style="color:var(--accent);font-size:10px;">${esc(fmtTsFull(a.ms))}</strong><br>
+            <span style="font-size:11px;">${esc(a.title)}</span>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;">${t('ef_click_adopt','↵ Klicken → Als Ereignis übernehmen')}</div></div>`;
+        }).join("") + trendHtml || `<span style="color:var(--muted);">${fmtTsFull(currentHitMs)}</span>`;
+        _markerTooltip.style.display = "block";
+        const tw = _markerTooltip.offsetWidth || 280;
+        let left = e.clientX + 14;
+        if (left + tw > window.innerWidth - 8) left = e.clientX - tw - 14;
+        _markerTooltip.style.left = left + "px";
+        _markerTooltip.style.top  = (e.clientY - 24) + "px";
+        canvas.style.cursor = "pointer";
+      } else {
+        _markerTooltip.style.display = "none";
+        canvas.style.cursor = "";
+      }
+      // Ergebnis-Karte und Chart-Marker bidirektional highlighten
+      _setHighlight(currentHitMs);
+      // Heatmap Cross-Highlight: aktuelle X-Position → Datum
+      if (xScale) {
+        const hoverMs = xScale.getValueForPixel(mx);
+        const hoverDate = new Date(hoverMs);
+        const hoverIso = hoverDate.toISOString().slice(0, 10);
+        _heatmapHighlightDate(hoverIso);
+      }
+    });
+    canvas.addEventListener("mouseleave", () => {
+      if (_markerTooltip) _markerTooltip.style.display = "none";
+      currentHitMs = null;
+      _setHighlight(null);
+      _heatmapHighlightDate(null);
+    });
+    canvas.addEventListener("click", () => {
+      if (currentHitMs === null) return;
+      const arts = tsMap[currentHitMs] || [];
+      if (!arts.length) return;
+      const idx = _findResults.findIndex(
+        r => r.seendate && new Date(r.seendate).getTime() === currentHitMs
+      );
+      if (idx >= 0) adoptNewsResult(idx);
+    });
+
+    wrap.style.display = "block";
+  }
+
+  // ── AI-Analyse-Bar einblenden wenn Ergebnisse vorhanden ─────────────────
+  const _origRenderFindResults = renderFindResults;
+  renderFindResults = function(displayResults) {
+    _origRenderFindResults(displayResults);
+    const results = displayResults !== undefined ? displayResults : _findResults;
+    const bar = document.getElementById("find-ai-bar");
+    if (bar) {
+      if (results.length > 0) {
+        bar.style.display = "flex";
+      } else {
+        bar.style.display = "none";
+      }
+    }
+  };
+
+  // ── Meldungen analysieren (Scrape + LLM Briefing) ─────────────────────
+  let _currentVisibleResults = null;
+
+  const _wrapRender = renderFindResults;
+  renderFindResults = function(displayResults) {
+    _currentVisibleResults = displayResults || null;
+    _wrapRender(displayResults);
+  };
+
+  // Progress-Overlay Helpers
+  function showAiOverlay()  { var el = document.getElementById("find-ai-overlay"); if (el) el.style.display = "flex"; }
+  function hideAiOverlay()  { var el = document.getElementById("find-ai-overlay"); if (el) el.style.display = "none"; }
+  function setAiProgress(pct, step, substep) {
+    var el = document.getElementById("find-ai-progress"); if (!el) return;
+    el.style.width = pct + "%";
+    document.getElementById("find-ai-pct").textContent = Math.round(pct) + " %";
+    if (step)    document.getElementById("find-ai-step").textContent    = step;
+    if (substep) document.getElementById("find-ai-substep").textContent = substep;
+  }
+
+  // Briefing-Text formatieren (Absätze, Titel-Zeilen, Zeitangaben hervorheben)
+  // ── Markdown → HTML Renderer (wie APA-Bericht) ──────────────────────
+  function _briefInline(s) {
+    return esc(s)
+      // Markdown-Links: [text](url) → <a> (nach esc, daher &quot; beachten)
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;">$1</a>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g,     '<em>$1</em>')
+      .replace(/`(.+?)`/g,       '<code>$1</code>');
+  }
+
+  function formatBriefing(text) {
+    if (!text) return `<p class='text-muted'>${t('ef_no_analysis','Keine Analyse verfügbar.')}</p>`;
+    let html = '';
+    const lines = text.split('\n');
+    let inUl = false, inOl = false;
+    let tableRows = [];
+
+    function flushTable() {
+      if (!tableRows.length) return;
+      const isSep = r => /^\s*\|[\s\-:|]+\|\s*$/.test(r);
+      if (tableRows.length >= 2 && isSep(tableRows[1])) {
+        const parseCells = row => row.split('|').slice(1, -1).map(c => c.trim());
+        html += '<table><thead><tr>';
+        parseCells(tableRows[0]).forEach(c => { html += `<th>${_briefInline(c)}</th>`; });
+        html += '</tr></thead><tbody>';
+        tableRows.slice(2).forEach(row => {
+          html += '<tr>';
+          parseCells(row).forEach(c => { html += `<td>${_briefInline(c)}</td>`; });
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+      } else {
+        tableRows.forEach(r => { html += `<p>${_briefInline(r)}</p>`; });
+      }
+      tableRows = [];
+    }
+    function closeLists() {
+      if (inUl) { html += '</ul>'; inUl = false; }
+      if (inOl) { html += '</ol>'; inOl = false; }
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      const ln = lines[i];
+      // Table row
+      if (/^\s*\|/.test(ln)) { closeLists(); tableRows.push(ln); continue; }
+      if (tableRows.length) flushTable();
+      // Headings
+      const hm = ln.match(/^(#{1,6}) (.+)/);
+      if (hm) {
+        closeLists();
+        const level = Math.min(hm[1].length, 4);
+        const tag = level <= 1 ? 'h2' : `h${level}`;
+        html += `<${tag}>${_briefInline(hm[2])}</${tag}>`;
+        continue;
+      }
+      // HR
+      if (/^---+$/.test(ln.trim())) { closeLists(); html += '<hr>'; continue; }
+      // Unordered list
+      if (/^[-*] /.test(ln)) {
+        if (inOl) { html += '</ol>'; inOl = false; }
+        if (!inUl) { html += '<ul>'; inUl = true; }
+        html += `<li>${_briefInline(ln.slice(2))}</li>`;
+        continue;
+      }
+      // Ordered list
+      if (/^\d+\. /.test(ln)) {
+        if (inUl) { html += '</ul>'; inUl = false; }
+        if (!inOl) { html += '<ol>'; inOl = true; }
+        html += `<li>${_briefInline(ln.replace(/^\d+\. /, ''))}</li>`;
+        continue;
+      }
+      closeLists();
+      // Blank line
+      if (!ln.trim()) continue;
+      // Normal paragraph
+      html += `<p>${_briefInline(ln)}</p>`;
+    }
+    if (tableRows.length) flushTable();
+    closeLists();
+
+    // Zeitangaben hervorheben
+    html = html.replace(
+      /(\d{1,2}[.:]\d{2})\s*(Uhr\s*)?(UTC|MEZ|MESZ|CET|CEST|EST|PST|GMT|ET|PT|JST|CST|MST|AST|[A-Z]{2,4}T)(?=[\s,.\)<]|$)/gi,
+      '<span style="background:rgba(139,92,246,.15);padding:1px 4px;border-radius:3px;font-weight:600;white-space:nowrap;">$1 $2$3</span>'
+    );
+    // Datumsangaben hervorheben
+    html = html.replace(
+      /(\d{1,2}\.\d{1,2}\.\d{2,4}|\d{4}-\d{2}-\d{2})/g,
+      '<span style="color:var(--accent);font-weight:600;">$1</span>'
+    );
+    return html;
+  }
+
+  var _btnFindAi = document.getElementById("btn-find-ai");
+  if (_btnFindAi) _btnFindAi.addEventListener("click", async () => {
+    const results = _currentVisibleResults || _findResults;
+    if (!results.length) return;
+
+    const btn   = document.getElementById("btn-find-ai");
+    const txtEl = document.getElementById("find-ai-text");
+
+    btn.disabled = true;
+
+    // Overlay anzeigen
+    showAiOverlay();
+    setAiProgress(5, t('ef_loading_articles','Artikel werden vorbereitet …'), `${results.length} ${t('ef_substep_selected','Meldungen ausgewählt')}`);
+
+    const articles = results.map(r => ({
+      title:          r.title || "",
+      title_original: r.title_original || "",
+      url:            r.url || "",
+      seendate:       r.seendate || "",
+      domain:         r.domain || "",
+      sourcecountry:  r.sourcecountry || "",
+      language:       r.language || "",
+    }));
+    const searchQ = document.getElementById("find-q").value.trim();
+
+    // Simulierter Fortschritt während der Analyse
+    let pct = 5;
+    const steps = [
+      { at: 10, step: t('ef_scraping','Artikel werden gescrapt …'),       sub: t('ef_substep_fulltexts','Volltexte aus Quellen laden') },
+      { at: 35, step: t('ef_extracting','Texte werden extrahiert …'),      sub: t('ef_substep_processing','Inhalte aufbereiten') },
+      { at: 55, step: t('ef_ai_running','KI-Analyse läuft …'),             sub: t('ef_substep_creating','Briefing wird erstellt') },
+      { at: 75, step: t('ef_finalizing','Analyse wird finalisiert …'),     sub: t('ef_substep_checking','Chronologie und Zeitangaben prüfen') },
+      { at: 88, step: t('ef_preparing_result','Ergebnis wird aufbereitet …'), sub: t('ef_substep_almost','Fast fertig') },
+    ];
+    let stepIdx = 0;
+    const ticker = setInterval(() => {
+      pct += 0.5 + Math.random() * 1.5;
+      if (stepIdx < steps.length && pct >= steps[stepIdx].at) {
+        setAiProgress(steps[stepIdx].at, steps[stepIdx].step, steps[stepIdx].sub);
+        stepIdx++;
+      } else {
+        setAiProgress(Math.min(pct, 92));
+      }
+      if (pct >= 92) clearInterval(ticker);
+    }, 600);
+
+    try {
+      const resp = await fetch("/api/events/news-briefing", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ articles, query: searchQ }),
+      });
+      clearInterval(ticker);
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: resp.statusText }));
+        throw new Error(err.error || `HTTP ${resp.status}`);
+      }
+
+      setAiProgress(95, t('ef_briefing_received','Briefing empfangen'), t('ef_formatting','Wird formatiert …'));
+      const data = await resp.json();
+
+      setAiProgress(100, t('ef_done','Fertig'), "");
+      await new Promise(r => setTimeout(r, 400));
+      hideAiOverlay();
+
+      // Formatierte Ausgabe: Zusammenfassung und Detail trennen
+      _briefingRawMd = data.briefing || "";
+      const splitIdx = _briefingRawMd.search(/\n##\s/);
+      if (splitIdx > 0) {
+        document.getElementById("find-ai-summary").innerHTML =
+          formatBriefing(_briefingRawMd.slice(0, splitIdx));
+        txtEl.innerHTML = formatBriefing(_briefingRawMd.slice(splitIdx));
+      } else {
+        document.getElementById("find-ai-summary").innerHTML =
+          formatBriefing(_briefingRawMd);
+        txtEl.innerHTML = "";
+      }
+
+      // Meta-Info
+      const metaEl = document.getElementById("find-ai-meta");
+      const scraped = data.scraped_count || 0;
+      metaEl.textContent = `${results.length} ${t('ef_reports_label','Meldungen')} · ${scraped} ${t('ef_fulltexts_label','Volltexte geladen')}`;
+
+      // Chat-History zurücksetzen
+      _briefingChatHistory = [];
+      document.getElementById("brief-chat-history").innerHTML = "";
+
+      // Timeline-Ereignisse rendern
+      _briefingTimeline = data.timeline || [];
+      console.log("[Briefing] Timeline-Daten:", _briefingTimeline.length, "Ereignisse", _briefingTimeline);
+      renderTimeline(_briefingTimeline);
+
+      // Word-Cloud in Sidebar rendern
+      const wcEl = document.getElementById("brief-wordcloud");
+      const topWords = data.top_words || [];
+      if (topWords.length) {
+        wcEl.innerHTML = topWords.map(w =>
+          `<span class="brief-wc-tag" data-word="${esc(w)}"
+                 style="display:inline-block;padding:2px 9px;border-radius:6px;font-size:12px;
+                        background:rgba(167,139,250,.12);color:var(--accent);cursor:pointer;
+                        border:1px solid rgba(167,139,250,.2);transition:all .15s;white-space:nowrap;"
+                 onmouseover="this.style.background='rgba(167,139,250,.25)'"
+                 onmouseout="this.style.background='rgba(167,139,250,.12)'">${esc(w)}</span>`
+        ).join("");
+        wcEl.querySelectorAll(".brief-wc-tag").forEach(tag => {
+          tag.addEventListener("click", () => {
+            const word = tag.dataset.word;
+            // Briefing-Modal schliessen
+            var _bmc = document.getElementById("briefing-modal"); if (_bmc) _bmc.style.display = "none";
+            // Suchfeld setzen und Suche auslösen
+            const searchInput = document.getElementById("find-query");
+            if (searchInput) {
+              searchInput.value = word;
+              searchInput.dispatchEvent(new Event("input"));
+            }
+            const searchBtn = document.getElementById("btn-find-search");
+            if (searchBtn) setTimeout(() => searchBtn.click(), 100);
+          });
+        });
+      } else {
+        wcEl.innerHTML = '<span style="font-size:11px;color:var(--muted);">–</span>';
+      }
+
+      // Hinweis welches Projekt genutzt wird
+      const curProj = allProjects.find(p => String(p.id) === getSelectedProjectId());
+      var _saveHint = document.getElementById("find-ai-save-hint");
+      if (_saveHint) _saveHint.textContent = curProj ? `→ Projekt: ${curProj.name}` : "";
+
+      // Briefing-Modal öffnen
+      var _bmo = document.getElementById("briefing-modal"); if (_bmo) _bmo.style.display = "flex";
+
+    } catch (e) {
+      clearInterval(ticker);
+      hideAiOverlay();
+      alert(t('ef_analysis_failed','Analyse fehlgeschlagen:') + " " + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Briefing-Modal schließen
+  var _briefClose = document.getElementById("briefing-close");
+  if (_briefClose) _briefClose.addEventListener("click", () => {
+    document.getElementById("briefing-modal").style.display = "none";
+  });
+
+  // ── Timeline-Ereignisse ──────────────────────────────────────────────
+  let _briefingTimeline = [];
+  let _briefingRawMd = "";
+  let _briefingChatHistory = [];
+
+  function renderTimeline(items) {
+    const wrap  = document.getElementById("find-ai-timeline");
+    const list  = document.getElementById("find-tl-list");
+    const allCb = document.getElementById("find-tl-all");
+    const btn   = document.getElementById("btn-tl-adopt");
+    const count = document.getElementById("find-tl-count");
+    const tlActions = document.getElementById("briefing-tl-actions");
+
+    if (!wrap || !items.length) { if (wrap) wrap.style.display = "none"; if (tlActions) tlActions.style.display = "none"; return; }
+    tlActions.style.display = "flex";
+    wrap.style.display = "block";
+    allCb.checked = false;
+
+    list.innerHTML = items.map((ev, i) => {
+      const dt = ev.dt || "–";
+      const tz = ev.tz ? ` ${esc(ev.tz)}` : "";
+      // Datum und Uhrzeit getrennt
+      let datePart = "–", timePart = "–";
+      if (/^\d{4}-\d{2}-\d{2}/.test(dt)) {
+        const parts = dt.split("T");
+        datePart = window.fmtDateOnly ? window.fmtDateOnly(parts[0] + "T00:00") : parts[0];
+        if (parts[1]) {
+          timePart = (window.fmtTimeOnly ? window.fmtTimeOnly(dt) : parts[1].replace(/:\d{2}$/, "")) + tz;
+        }
+        else timePart = "–" + tz;
+      } else {
+        datePart = esc(dt);
+      }
+      const title = esc(ev.title || "–");
+      const location = ev.location ? esc(ev.location) : "–";
+
+      // Quellen: Anzahl + Domains (String-Array oder [{domain,url}])
+      const sources = Array.isArray(ev.sources) ? ev.sources : [];
+      const srcCount = sources.length;
+      const domainList = sources.map(s => typeof s === 'string' ? s : (s.domain || '?'));
+      const srcCell = srcCount > 0
+        ? `<span style="cursor:help;" title="${domainList.map(d => esc(d)).join(', ')}">${srcCount}</span>
+           <div class="tl-src-detail" style="display:none;font-size:11px;margin-top:3px;">${domainList.map(d => esc(d)).join(', ')}</div>`
+        : '<span style="color:var(--muted);">–</span>';
+
+      return `<tr style="border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;"
+                  onmouseover="this.style.background='rgba(139,92,246,.06)'"
+                  onmouseout="this.style.background=''">
+        <td style="padding:7px 8px;vertical-align:top;">
+          <input type="checkbox" class="tl-cb" data-idx="${i}" style="margin:0;" />
+        </td>
+        <td style="padding:7px 8px;white-space:nowrap;font-weight:600;color:var(--accent);vertical-align:top;">
+          ${datePart}
+        </td>
+        <td style="padding:7px 8px;white-space:nowrap;vertical-align:top;">
+          ${timePart}
+        </td>
+        <td style="padding:7px 8px;vertical-align:top;">${title}</td>
+        <td style="padding:7px 8px;vertical-align:top;text-align:center;">${srcCell}</td>
+        <td style="padding:7px 8px;vertical-align:top;white-space:nowrap;">${location}</td>
+      </tr>`;
+    }).join("");
+
+    // Click on row toggles checkbox
+    list.querySelectorAll("tr").forEach(row => {
+      row.addEventListener("click", (e) => {
+        if (e.target.tagName === "INPUT" || e.target.tagName === "A") return;
+        const cb = row.querySelector(".tl-cb");
+        cb.checked = !cb.checked;
+        cb.dispatchEvent(new Event("change"));
+      });
+    });
+
+    // Checkbox-Logik
+    function updateCount() {
+      const checked = list.querySelectorAll(".tl-cb:checked").length;
+      btn.disabled = checked === 0;
+      count.textContent = checked > 0 ? `${checked} ${t('ef_selected','ausgewählt')}` : "";
+      allCb.checked = checked === items.length;
+      allCb.indeterminate = checked > 0 && checked < items.length;
+    }
+    list.querySelectorAll(".tl-cb").forEach(cb => cb.addEventListener("change", updateCount));
+    allCb.onchange = () => {
+      list.querySelectorAll(".tl-cb").forEach(cb => { cb.checked = allCb.checked; });
+      updateCount();
+    };
+    updateCount();
+  }
+
+  // Ausgewählte Timeline-Ereignisse als Events anlegen
+  document.getElementById("btn-tl-adopt").addEventListener("click", async () => {
+    const checked = document.querySelectorAll("#find-tl-list .tl-cb:checked");
+    if (!checked.length) return;
+
+    const btn = document.getElementById("btn-tl-adopt");
+    btn.disabled = true;
+    btn.textContent = t('ef_saving','Wird gespeichert …');
+
+    // Projekt-ID aus dem Header-Dropdown
+    const projectId = getSelectedProjectId() || null;
+
+    let ok = 0, fail = 0;
+    for (const cb of checked) {
+      const ev = _briefingTimeline[parseInt(cb.dataset.idx)];
+      if (!ev) { fail++; continue; }
+
+      // dt → start_dt (ISO), ggf. Zeitzone in Beschreibung aufnehmen
+      let startDt = ev.dt || "";
+      if (startDt && !startDt.includes("T")) startDt += "T00:00";
+      const tzNote = ev.tz ? ` (${ev.tz})` : "";
+      const locNote = ev.location ? ` · ${t('ef_story_location_label','Ort:')} ${ev.location}` : "";
+      const desc = (ev.description || "") + tzNote + locNote;
+
+      try {
+        const resp = await fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title:      ev.title || t('ef_event_default','Ereignis'),
+            description: desc,
+            event_type: "point",
+            start_dt:   startDt,
+            color:      "#a78bfa",
+            project_id: projectId,
+          }),
+        });
+        if (resp.ok) { ok++; cb.closest("tr").style.opacity = "0.4"; cb.disabled = true; }
+        else fail++;
+      } catch (_) { fail++; }
+    }
+
+    btn.textContent = fail
+      ? `✓ ${ok} ${t('ef_saved','gespeichert')}, ${fail} ${t('ef_failed','fehlgeschlagen')}`
+      : `✓ ${ok} ${ok !== 1 ? t('ef_events_plural_saved','Ereignisse gespeichert') : t('ef_event_singular_saved','Ereignis gespeichert')}`;
+    setTimeout(() => {
+      btn.textContent = t('ef_adopt_events_reset','Als Ereignisse übernehmen');
+      btn.disabled = document.querySelectorAll("#find-tl-list .tl-cb:checked:not(:disabled)").length === 0;
+    }, 2500);
+
+    // Ereignisliste im Hintergrund aktualisieren
+    try { allEvents = await api("/api/events"); renderTable(); } catch(_) {}
+  });
+
+  // ── Story-Präsentation ──────────────────────────────────────────────────
+  let _storyMaps = [], _storyIdx = 0, _storyItems = [];
+  let _hasCopernicus = false;
+  fetch("/api/ext-source-availability").then(r => r.json()).then(d => { _hasCopernicus = !!d.copernicus; }).catch(() => {});
+  const _geoCache = {};  // location → {lat, lon}
+
+  async function _geocode(location) {
+    if (!location) return null;
+    const key = location.trim().toLowerCase();
+    if (_geoCache[key] !== undefined) return _geoCache[key];
+    try {
+      const resp = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`,
+        { headers: { "Accept-Language": "de" } }
+      );
+      const data = await resp.json();
+      if (data.length) {
+        _geoCache[key] = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+      } else {
+        _geoCache[key] = null;
+      }
+    } catch (_) { _geoCache[key] = null; }
+    return _geoCache[key];
+  }
+
+  // Ort-String in einzelne Orte aufteilen
+  function _parseLocations(loc) {
+    if (!loc) return [];
+    return loc.split(/[,;\/]/).map(s => s.trim()).filter(Boolean);
+  }
+
+  function _storyBuildProgress() {
+    const bar = document.getElementById("story-progress-bar");
+    bar.innerHTML = _storyItems.map((_, i) =>
+      `<div style="flex:1;height:100%;border-radius:2px;transition:background .3s;
+            background:${i <= _storyIdx ? '#a78bfa' : 'rgba(255,255,255,.2)'};"></div>`
+    ).join("");
+  }
+
+  function _storyTimeDelta(dtA, dtB) {
+    if (!dtA || !dtB) return "";
+    const a = new Date(dtA.length === 10 ? dtA + "T00:00" : dtA);
+    const b = new Date(dtB.length === 10 ? dtB + "T00:00" : dtB);
+    if (isNaN(a) || isNaN(b)) return "";
+    let diff = Math.abs(b - a) / 1000;
+    if (diff < 60) return t('ef_story_simultaneous','zeitgleich');
+    if (diff < 3600) return Math.round(diff / 60) + " " + t('ef_story_min','Min');
+    if (diff < 86400) {
+      const h = Math.floor(diff / 3600);
+      const m = Math.round((diff % 3600) / 60);
+      return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    }
+    const days = Math.round(diff / 86400);
+    if (days === 1) return t('ef_story_one_day','1 Tag');
+    if (days < 30) return days + " " + t('ef_story_days','Tage');
+    const months = Math.round(days / 30);
+    return months === 1 ? t('ef_story_one_month','1 Monat') : months + " " + t('ef_story_months','Mon.');
+  }
+
+  // Haversine-Distanz in km zwischen zwei Geo-Objekten {lat,lon}
+  function _storyGeoDistKm(a, b) {
+    if (!a || !b) return null;
+    const R = 6371;
+    const dLat = (b.lat - a.lat) * Math.PI / 180;
+    const dLon = (b.lon - a.lon) * Math.PI / 180;
+    const sinLat = Math.sin(dLat / 2);
+    const sinLon = Math.sin(dLon / 2);
+    const h = sinLat * sinLat +
+      Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * sinLon * sinLon;
+    return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+  }
+
+  function _storyFormatDist(km) {
+    if (km === null || km === undefined) return "";
+    if (km < 1) return t('ef_story_less_1km','< 1km entfernt');
+    if (km < 1000) return km + t('ef_story_km','km entfernt');
+    return (km / 1000).toFixed(1).replace(/\.0$/, "") + " " + t('ef_story_tkm','Tsd.km entfernt');
+  }
+
+  // Primären Geo-Punkt eines Events ermitteln (erster Ort)
+  function _storyEventGeo(ev) {
+    const locs = _parseLocations(ev.location);
+    if (!locs.length) return null;
+    return _geoCache[locs[0].trim().toLowerCase()] || null;
+  }
+
+  const _storyTileLayers = {
+    "Voyager":    { url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", maxZoom: 18 },
+    "Dark":       { url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", maxZoom: 18 },
+    "Satellit":   { url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", maxZoom: 19 },
+    "Topo":       { url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", maxZoom: 17 },
+    "OSM":        { url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", maxZoom: 19 },
+  };
+  let _storyActiveLayer = "Voyager";
+  let _storyTileInstances = [];  // aktive L.tileLayer pro Map
+
+  function _storySetTileLayer(name) {
+    if (!_storyTileLayers[name]) return;
+    _storyActiveLayer = name;
+    const cfg = _storyTileLayers[name];
+    _storyMaps.forEach((map, i) => {
+      if (_storyTileInstances[i]) map.removeLayer(_storyTileInstances[i]);
+      _storyTileInstances[i] = L.tileLayer(cfg.url, { maxZoom: cfg.maxZoom }).addTo(map);
+    });
+    // Button-Highlight aktualisieren
+    document.querySelectorAll("#story-layer-switcher button").forEach(btn => {
+      btn.style.background = btn.dataset.layer === name
+        ? "rgba(167,139,250,.5)" : "rgba(0,0,0,.4)";
+    });
+  }
+
+  function _storyDestroyMaps() {
+    _storyMaps.forEach(m => m.remove());
+    _storyMaps = [];
+    _storyTileInstances = [];
+    document.getElementById("story-maps").innerHTML = "";
+  }
+
+  function _storyCreateMaps(locations) {
+    _storyDestroyMaps();
+    const container = document.getElementById("story-maps");
+    const locs = locations.length ? locations : [""];
+    const cfg = _storyTileLayers[_storyActiveLayer];
+    locs.forEach((loc, i) => {
+      const div = document.createElement("div");
+      div.style.cssText = "flex:1;min-width:0;height:100%;position:relative;";
+      if (locs.length > 1 && i < locs.length - 1) {
+        div.style.borderRight = "1px solid rgba(255,255,255,.15)";
+      }
+      container.appendChild(div);
+
+      // Orts-Label oben in der Karte
+      if (locs.length > 1 && loc) {
+        const label = document.createElement("div");
+        label.textContent = loc;
+        label.style.cssText = "position:absolute;bottom:210px;left:50%;transform:translateX(-50%);" +
+          "z-index:500;color:#fff;font-size:13px;font-weight:600;padding:4px 14px;" +
+          "background:rgba(20,20,30,.65);border-radius:12px;backdrop-filter:blur(6px);" +
+          "white-space:nowrap;pointer-events:none;letter-spacing:.02em;";
+        div.appendChild(label);
+      }
+
+      const mapEl = document.createElement("div");
+      mapEl.style.cssText = "width:100%;height:100%;";
+      div.appendChild(mapEl);
+
+      const map = L.map(mapEl, {
+        zoomControl: false,
+        attributionControl: false,
+      }).setView([30, 20], 3);
+      const tile = L.tileLayer(cfg.url, { maxZoom: cfg.maxZoom }).addTo(map);
+      _storyMaps.push(map);
+      _storyTileInstances.push(tile);
+
+      // Satellitenvergleich-Button pro Karte
+      if (_hasCopernicus) {
+        const satBtn = document.createElement("button");
+        satBtn.className = "story-sat-btn btn btn-primary btn-sm";
+        satBtn.textContent = t('ef_satellite_compare','Satellitenvergleich');
+        satBtn.style.cssText = "position:absolute;top:52px;left:50%;transform:translateX(-50%);" +
+          "z-index:500;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4);";
+        const mapIdx = _storyMaps.length - 1;
+        satBtn.addEventListener("click", () => _storyLoadSatellite(mapIdx));
+        div.appendChild(satBtn);
+      }
+    });
+    // Button-Highlight synchronisieren
+    document.querySelectorAll("#story-layer-switcher button").forEach(btn => {
+      btn.style.background = btn.dataset.layer === _storyActiveLayer
+        ? "rgba(167,139,250,.5)" : "rgba(0,0,0,.4)";
+    });
+    return locs;
+  }
+
+  async function _storyShow(idx) {
+    if (idx < 0 || idx >= _storyItems.length) return;
+    _storyIdx = idx;
+    const ev = _storyItems[idx];
+
+    // Counter
+    document.getElementById("story-counter").textContent =
+      `${idx + 1} / ${_storyItems.length}`;
+    _storyBuildProgress();
+
+    // Nav-Buttons + Zeitabstand
+    const prevBtn = document.getElementById("story-prev");
+    const nextBtn = document.getElementById("story-next");
+    prevBtn.style.opacity = idx === 0 ? ".25" : "1";
+    prevBtn.style.pointerEvents = idx === 0 ? "none" : "auto";
+    nextBtn.style.opacity = idx === _storyItems.length - 1 ? ".25" : "1";
+    nextBtn.style.pointerEvents = idx === _storyItems.length - 1 ? "none" : "auto";
+    const _prevD = idx > 0 ? _storyTimeDelta(_storyItems[idx - 1].dt, ev.dt) : "";
+    const _nextD = idx < _storyItems.length - 1 ? _storyTimeDelta(ev.dt, _storyItems[idx + 1].dt) : "";
+    const _sim = t('ef_story_simultaneous','zeitgleich');
+    document.getElementById("story-prev-delta").textContent =
+      _prevD ? (_prevD === _sim ? _prevD : t('ef_story_before','vor') + " " + _prevD) : "";
+    document.getElementById("story-next-delta").textContent =
+      _nextD ? (_nextD === _sim ? _nextD : t('ef_story_after','in') + " " + _nextD) : "";
+
+    // Distanz zum Nachbar-Event
+    const curGeo = _storyEventGeo(ev);
+    const prevGeo = idx > 0 ? _storyEventGeo(_storyItems[idx - 1]) : null;
+    const nextGeo = idx < _storyItems.length - 1 ? _storyEventGeo(_storyItems[idx + 1]) : null;
+    const prevKm = _storyGeoDistKm(curGeo, prevGeo);
+    const nextKm = _storyGeoDistKm(curGeo, nextGeo);
+    document.getElementById("story-prev-dist").textContent =
+      prevKm !== null && prevKm > 0 ? _storyFormatDist(prevKm) : "";
+    document.getElementById("story-next-dist").textContent =
+      nextKm !== null && nextKm > 0 ? _storyFormatDist(nextKm) : "";
+
+    // Datum formatieren
+    let dateStr = "";
+    if (ev.dt) {
+      dateStr = window.fmtDateOnly ? window.fmtDateOnly(ev.dt.split("T")[0] + "T00:00") : ev.dt.split("T")[0];
+      if (ev.dt.includes("T")) {
+        const _timePart = window.fmtTimeOnly ? window.fmtTimeOnly(ev.dt) : ev.dt.split("T")[1].replace(/:\d{2}$/, "");
+        dateStr += ` · ${_timePart}`;
+      }
+      if (ev.tz) dateStr += ` ${ev.tz}`;
+    }
+    document.getElementById("story-date").textContent = dateStr;
+    document.getElementById("story-title").textContent = ev.title || "–";
+    document.getElementById("story-desc").textContent = ev.description || "";
+    const sources = Array.isArray(ev.sources) ? ev.sources : [];
+    const domainList = sources.map(s => typeof s === 'string' ? s : (s.domain || ''));
+    document.getElementById("story-sources").textContent =
+      domainList.length ? `${t('ef_story_sources_label','Quellen:')} ${domainList.join(', ')}` : "";
+    document.getElementById("story-location").textContent =
+      ev.location ? `${t('ef_story_location_label','Ort:')} ${ev.location}` : "";
+
+    // Karten für dieses Event erstellen (eine pro Ort, mit Sat-Button wenn Copernicus)
+    const locations = _parseLocations(ev.location);
+    const mapLocs = _storyCreateMaps(locations);
+
+    // Kurz warten bis DOM gerendert
+    await new Promise(r => setTimeout(r, 80));
+    _storyMaps.forEach(m => m.invalidateSize());
+
+    // Geocoden und Marker setzen
+    for (let i = 0; i < mapLocs.length; i++) {
+      const loc = mapLocs[i];
+      const map = _storyMaps[i];
+      if (!map || !loc) continue;
+      const geo = await _geocode(loc);
+      if (geo) {
+        const latlng = [geo.lat, geo.lon];
+        L.circleMarker(latlng, {
+          radius: 10, color: "#a78bfa", fillColor: "#a78bfa",
+          fillOpacity: .7, weight: 2
+        }).addTo(map);
+        map.flyTo(latlng, 6, { duration: 1.2 });
+      }
+    }
+  }
+
+  async function _storyLoadSatellite(mapIdx) {
+    const ev = _storyItems[_storyIdx];
+    if (!ev) return;
+    const map = _storyMaps[mapIdx];
+    if (!map) return;
+
+    // Button deaktivieren während des Ladens
+    const btns = document.querySelectorAll(".story-sat-btn");
+    const btn = btns[mapIdx];
+    if (btn) { btn.disabled = true; btn.textContent = t('ef_loading_sat','Lade …'); }
+
+    // bbox aus dem Kartenausschnitt dieser Map
+    const b = map.getBounds();
+    const bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+
+    // Zeitraum: 30 Tage vor und nach dem Event-Datum
+    const evDate = ev.dt ? new Date(ev.dt) : new Date();
+    const before_to = new Date(evDate); before_to.setDate(before_to.getDate() - 1);
+    const before_from = new Date(before_to); before_from.setDate(before_from.getDate() - 30);
+    const after_from = new Date(evDate); after_from.setDate(after_from.getDate() + 1);
+    const after_to = new Date(after_from); after_to.setDate(after_to.getDate() + 30);
+
+    const fmt = d => d.toISOString().slice(0, 10);
+
+    const fetchImg = async (from, to) => {
+      const r = await fetch(`/api/sentinel/image?bbox=${bbox.join(",")}&from=${fmt(from)}&to=${fmt(to)}&width=512&height=512`);
+      if (!r.ok) {
+        let msg = r.status;
+        try { const j = await r.json(); msg = j.error || msg; } catch(_){}
+        throw new Error(msg);
+      }
+      return URL.createObjectURL(await r.blob());
+    };
+
+    try {
+      const [beforeUrl, afterUrl] = await Promise.all([
+        fetchImg(before_from, before_to),
+        fetchImg(after_from, after_to),
+      ]);
+      _openSatCompareWithUrls(beforeUrl, afterUrl,
+        `${fmt(before_from)} – ${fmt(before_to)}`,
+        `${fmt(after_from)} – ${fmt(after_to)}`, bbox);
+      if (btn) { btn.disabled = false; btn.textContent = t('ef_satellite_compare','Satellitenvergleich'); }
+    } catch (e) {
+      console.error("Satellite compare error:", e);
+      const errMsg = String(e.message || e).slice(0, 80);
+      if (btn) { btn.disabled = false; btn.textContent = t('ef_error','Fehler:') + " " + errMsg; }
+    }
+  }
+
+  let _satCmpMode = "slider";
+  let _satDiffComputed = false;
+  let _satCmpBbox = null;      // [lonMin, latMin, lonMax, latMax]
+  let _satOsmMap = null;
+  let _satOsmActive = false;
+
+  function _openSatCompareWithUrls(beforeUrl, afterUrl, beforeLabel, afterLabel, bbox) {
+    const cmp = document.getElementById("sat-compare");
+    const container = document.getElementById("sat-cmp-container");
+    document.getElementById("sat-cmp-before").src = beforeUrl;
+    document.getElementById("sat-cmp-after").src = afterUrl;
+    const lblBefore = document.getElementById("sat-cmp-lbl-before");
+    const lblAfter = document.getElementById("sat-cmp-lbl-after");
+    if (lblBefore) lblBefore.textContent = beforeLabel || "Vorher";
+    if (lblAfter) lblAfter.textContent = afterLabel || "Nachher";
+    const beforeImg = document.getElementById("sat-cmp-before");
+    beforeImg.style.width = "";
+    _satDiffComputed = false;
+    _satCmpBbox = bbox || null;
+    _satDestroyOsm();
+    _satSetMode("slider");
+    cmp.style.display = "flex";
+    requestAnimationFrame(() => {
+      const rect = container.getBoundingClientRect();
+      beforeImg.style.width = rect.width + "px";
+      _satCmpUpdateSlider(rect.width / 2, rect);
+    });
+  }
+
+  function closeSatCompare() {
+    _satDestroyOsm();
+    document.getElementById("sat-compare").style.display = "none";
+  }
+
+  function _satToggleOsm() {
+    _satOsmActive = !_satOsmActive;
+    document.getElementById("sat-mode-osm").style.background =
+      _satOsmActive ? "rgba(59,130,246,.5)" : "rgba(0,0,0,.6)";
+    const overlay = document.getElementById("sat-cmp-osm-overlay");
+    if (_satOsmActive) {
+      overlay.style.display = "";
+      if (!_satOsmMap && _satCmpBbox) _satCreateOsm();
+    } else {
+      overlay.style.display = "none";
+    }
+  }
+
+  function _satCreateOsm() {
+    const el = document.getElementById("sat-cmp-osm-overlay");
+    el.style.pointerEvents = "none";
+    const bbox = _satCmpBbox; // [lonMin, latMin, lonMax, latMax]
+    const sw = L.latLng(bbox[1], bbox[0]);
+    const ne = L.latLng(bbox[3], bbox[2]);
+    const bounds = L.latLngBounds(sw, ne);
+
+    _satOsmMap = L.map(el, {
+      zoomControl: false,
+      attributionControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      touchZoom: false,
+      keyboard: false,
+      boxZoom: false,
+    });
+    _satOsmMap.fitBounds(bounds);
+
+    // Labels-only Layer (Straßen, Orte, Gebäude — ohne Hintergrund)
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19,
+      opacity: 0.85,
+    }).addTo(_satOsmMap);
+
+    // Leaflet-Hintergrund transparent machen
+    el.querySelector(".leaflet-container") ||
+      (el.style.background = "transparent");
+    const tilePane = _satOsmMap.getPane("tilePane");
+    if (tilePane) tilePane.style.opacity = "0.85";
+    // Map-Container selbst transparent
+    el.style.background = "transparent";
+    _satOsmMap.getContainer().style.background = "transparent";
+  }
+
+  function _satDestroyOsm() {
+    if (_satOsmMap) { _satOsmMap.remove(); _satOsmMap = null; }
+    _satOsmActive = false;
+    const el = document.getElementById("sat-cmp-osm-overlay");
+    if (el) { el.style.display = "none"; el.innerHTML = ""; }
+    const btn = document.getElementById("sat-mode-osm");
+    if (btn) btn.style.background = "rgba(0,0,0,.6)";
+  }
+
+  function _satSetMode(mode) {
+    _satCmpMode = mode;
+    document.getElementById("sat-cmp-slider-mode").style.display = mode === "slider" ? "" : "none";
+    document.getElementById("sat-cmp-diff-mode").style.display = mode === "diff" ? "" : "none";
+    document.getElementById("sat-mode-slider").style.background =
+      mode === "slider" ? "rgba(167,139,250,.5)" : "rgba(0,0,0,.6)";
+    document.getElementById("sat-mode-diff").style.background =
+      mode === "diff" ? "rgba(239,68,68,.5)" : "rgba(0,0,0,.6)";
+    if (mode === "diff" && !_satDiffComputed) _computeSatDiff();
+  }
+
+  function _computeSatDiff() {
+    const beforeImg = document.getElementById("sat-cmp-before");
+    const afterImg = document.getElementById("sat-cmp-after");
+    const canvas = document.getElementById("sat-cmp-diff-canvas");
+    const container = document.getElementById("sat-cmp-container");
+    const rect = container.getBoundingClientRect();
+    const w = Math.round(rect.width);
+    const h = Math.round(rect.height);
+    canvas.width = w;
+    canvas.height = h;
+
+    // Draw both images to offscreen canvases
+    const cA = document.createElement("canvas");
+    const cB = document.createElement("canvas");
+    cA.width = cB.width = w;
+    cA.height = cB.height = h;
+    const ctxA = cA.getContext("2d");
+    const ctxB = cB.getContext("2d");
+    ctxA.drawImage(beforeImg, 0, 0, w, h);
+    ctxB.drawImage(afterImg, 0, 0, w, h);
+
+    const pixA = ctxA.getImageData(0, 0, w, h);
+    const pixB = ctxB.getImageData(0, 0, w, h);
+    const out = canvas.getContext("2d").createImageData(w, h);
+    const dA = pixA.data, dB = pixB.data, dO = out.data;
+    const threshold = 30;  // Empfindlichkeit (0-255)
+
+    for (let i = 0; i < dA.length; i += 4) {
+      const dr = Math.abs(dA[i] - dB[i]);
+      const dg = Math.abs(dA[i+1] - dB[i+1]);
+      const db = Math.abs(dA[i+2] - dB[i+2]);
+      const diff = (dr + dg + db) / 3;
+
+      if (diff > threshold) {
+        // Nachher-Bild als Basis, Unterschied rot überlagern
+        const intensity = Math.min(1, diff / 80);
+        dO[i]   = Math.round(dB[i]   * (1 - intensity) + 239 * intensity); // R
+        dO[i+1] = Math.round(dB[i+1] * (1 - intensity) +  68 * intensity); // G
+        dO[i+2] = Math.round(dB[i+2] * (1 - intensity) +  68 * intensity); // B
+      } else {
+        // Keine Änderung → Nachher-Bild leicht abgedunkelt
+        dO[i]   = Math.round(dB[i]   * 0.4);
+        dO[i+1] = Math.round(dB[i+1] * 0.4);
+        dO[i+2] = Math.round(dB[i+2] * 0.4);
+      }
+      dO[i+3] = 255;
+    }
+
+    canvas.getContext("2d").putImageData(out, 0, 0);
+    _satDiffComputed = true;
+  }
+
+  function _satCmpUpdateSlider(x, rect) {
+    const pct = Math.max(0, Math.min(1, x / rect.width)) * 100;
+    document.getElementById("sat-cmp-clip").style.width = pct + "%";
+    document.getElementById("sat-cmp-slider").style.left = pct + "%";
+  }
+
+  (function() {
+    const slider = document.getElementById("sat-cmp-slider");
+    const container = document.getElementById("sat-cmp-container");
+    let dragging = false;
+
+    function onMove(clientX) {
+      const rect = container.getBoundingClientRect();
+      _satCmpUpdateSlider(clientX - rect.left, rect);
+    }
+
+    slider.addEventListener("mousedown", e => { dragging = true; e.preventDefault(); });
+    document.addEventListener("mousemove", e => { if (dragging) onMove(e.clientX); });
+    document.addEventListener("mouseup", () => { dragging = false; });
+
+    slider.addEventListener("touchstart", e => { dragging = true; e.preventDefault(); }, {passive:false});
+    document.addEventListener("touchmove", e => { if (dragging) onMove(e.touches[0].clientX); });
+    document.addEventListener("touchend", () => { dragging = false; });
+
+    container.addEventListener("click", e => {
+      if (_satCmpMode !== "slider") return;
+      if (e.target.closest("#sat-cmp-slider")) return;
+      const rect = container.getBoundingClientRect();
+      _satCmpUpdateSlider(e.clientX - rect.left, rect);
+    });
+  })();
+
+  function _storyOpen() {
+    _storyItems = _briefingTimeline || [];
+    if (!_storyItems.length) return;
+    _storyIdx = 0;
+
+    const overlay = document.getElementById("story-overlay");
+    overlay.style.display = "block";
+    var _bm = document.getElementById("briefing-modal"); if (_bm) _bm.style.display = "none";
+    document.body.style.overflow = "hidden";
+
+    // Alle Orte vorab geocoden, dann erstes Event zeigen
+    const allLocs = [];
+    _storyItems.forEach(ev => {
+      _parseLocations(ev.location).forEach(l => { if (!allLocs.includes(l)) allLocs.push(l); });
+    });
+    Promise.all(allLocs.map(l => _geocode(l))).then(() => _storyShow(0));
+  }
+
+  function _storyClose() {
+    _storyDestroyMaps();
+    document.getElementById("story-overlay").style.display = "none";
+    var _bm2 = document.getElementById("briefing-modal"); if (_bm2) _bm2.style.display = "flex";
+    document.body.style.overflow = "";
+  }
+
+  async function _storyExport(format) {
+    const payload = {
+      briefing: _briefingRawMd || "",
+      timeline: _briefingTimeline || [],
+    };
+    try {
+      const resp = await fetch(`/api/story-export/${format}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) throw new Error(resp.status);
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Meldungsbriefing.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(t('ef_export_failed','Export fehlgeschlagen:') + " " + e.message);
+    }
+  }
+
+  document.getElementById("btn-tl-story").addEventListener("click", _storyOpen);
+  document.getElementById("story-close").addEventListener("click", _storyClose);
+  document.getElementById("story-prev").addEventListener("click", () => _storyShow(_storyIdx - 1));
+  document.getElementById("story-next").addEventListener("click", () => _storyShow(_storyIdx + 1));
+
+  // Tastatur-Navigation
+  document.addEventListener("keydown", (e) => {
+    if (document.getElementById("story-overlay").style.display !== "block") return;
+    if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); _storyShow(_storyIdx + 1); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); _storyShow(_storyIdx - 1); }
+    else if (e.key === "Escape") {
+      if (document.getElementById("sat-compare").style.display === "flex") closeSatCompare();
+      else _storyClose();
+    }
+  });
+
+  // ── Kopieren ────────────────────────────────────────────────────────────
+  document.getElementById("btn-brief-copy").onclick = () => {
+    const text = _briefingRawMd || document.getElementById("find-ai-text").innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById("btn-brief-copy");
+      btn.textContent = t('ef_copied','Kopiert ✓');
+      setTimeout(() => { btn.textContent = t('ef_copy','Kopieren'); }, 2000);
+    });
+  };
+
+  // ── PDF-Export (serverseitig via weasyprint) ──────────────────────────
+  document.getElementById("btn-brief-pdf").onclick = async () => {
+    const btn = document.getElementById("btn-brief-pdf");
+    if (!_briefingRawMd) return;
+    btn.disabled = true;
+    btn.textContent = t('ef_exporting','Exportiere…');
+    try {
+      const resp = await fetch("/api/aipa-export/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ report: _briefingRawMd, chat: _briefingChatHistory }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const searchQ = document.getElementById("find-q").value.trim() || "Briefing";
+      a.href = url;
+      a.download = `Meldungs-Briefing_${searchQ.slice(0,40).replace(/[^a-zA-Z0-9äöüÄÖÜß_\- ]/g,"_")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(t('ef_pdf_export_failed','PDF-Export fehlgeschlagen:') + " " + e.message);
+    } finally {
+      btn.innerHTML = "&#8595; PDF";
+      btn.disabled = false;
+    }
+  };
+
+  // ── DOCX-Export (serverseitig via python-docx) ────────────────────────
+  document.getElementById("btn-brief-docx").onclick = async () => {
+    const btn = document.getElementById("btn-brief-docx");
+    if (!_briefingRawMd) return;
+    btn.disabled = true;
+    btn.textContent = t('ef_exporting','Exportiere…');
+    try {
+      const resp = await fetch("/api/aipa-export/docx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ report: _briefingRawMd, chat: _briefingChatHistory }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const searchQ = document.getElementById("find-q").value.trim() || "Briefing";
+      a.href = url;
+      a.download = `Meldungs-Briefing_${searchQ.slice(0,40).replace(/[^a-zA-Z0-9äöüÄÖÜß_\- ]/g,"_")}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(t('ef_docx_export_failed','DOCX-Export fehlgeschlagen:') + " " + e.message);
+    } finally {
+      btn.innerHTML = "&#8595; DOCX";
+      btn.disabled = false;
+    }
+  };
+
+  // ── Slide-Button mit Projekt-Picker ───────────────────────────────────
+  document.getElementById("btn-brief-slide").onclick = async () => {
+    const picker = document.getElementById("brief-slide-picker");
+    const sel    = document.getElementById("brief-slide-project-sel");
+    picker.style.display = picker.style.display === "block" ? "none" : "block";
+    if (picker.style.display === "block") {
+      sel.innerHTML = `<option disabled selected>${t('ef_slide_picker_loading','Lädt…')}</option>`;
+      try {
+        const resp = await fetch("/api/projects");
+        const projects = await resp.json();
+        if (!projects.length) {
+          sel.innerHTML = `<option disabled selected>${t('ef_slide_picker_no_projects','Keine Projekte vorhanden')}</option>`;
+        } else {
+          const curPid = getSelectedProjectId();
+          sel.innerHTML = projects
+            .map(p => `<option value="${p.id}"${String(p.id)===curPid?' selected':''}>${esc(p.name)}</option>`)
+            .join("");
+        }
+      } catch { sel.innerHTML = `<option disabled selected>${t('ef_slide_picker_error','Fehler beim Laden')}</option>`; }
+    }
+  };
+
+  document.getElementById("btn-brief-slide-ok").onclick = async () => {
+    const sel = document.getElementById("brief-slide-project-sel");
+    const pid = parseInt(sel.value, 10);
+    if (!pid) return;
+    const okBtn = document.getElementById("btn-brief-slide-ok");
+    okBtn.textContent = "…";
+    okBtn.disabled = true;
+    try {
+      const searchQ = document.getElementById("find-q").value.trim();
+      const resp = await fetch("/api/slides", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id:  pid,
+          slide_type:  "textbild",
+          title:       `Meldungs-Briefing: ${searchQ}`,
+          description: _briefingRawMd || document.getElementById("find-ai-text").innerText,
+          content:     "{}",
+        }),
+      });
+      if (resp.ok) {
+        document.getElementById("brief-slide-picker").style.display = "none";
+        const slideBtn = document.getElementById("btn-brief-slide");
+        slideBtn.textContent = t('ef_slide_created','✓ Slide erstellt');
+        setTimeout(() => { slideBtn.innerHTML = "&#128196; In Projekt-Slide"; }, 2500);
+      } else {
+        alert(t('ef_slide_error','Fehler beim Erstellen des Slides.'));
+      }
+    } catch { alert(t('ef_network_error','Netzwerkfehler.')); }
+    finally {
+      okBtn.textContent = t('ef_create_slide','Slide erstellen');
+      okBtn.disabled = false;
+    }
+  };
+
+  // ── Folgefragen / Chat ────────────────────────────────────────────────
+  // Provide _mdToHtml for _aiChatRender (reuse formatBriefing)
+  if (typeof _mdToHtml === 'undefined') { window._mdToHtml = formatBriefing; }
+
+  function _briefingSendChat() {
+    aiChatSend({
+      inputId:     "brief-chat-input",
+      historyId:   "brief-chat-history",
+      sendBtnId:   "brief-chat-send",
+      history:     _briefingChatHistory,
+      analysisCtx: _briefingRawMd,
+      projectId:   getSelectedProjectId() || null,
+    });
+  }
+
+  // ── Suche / Filter ──────────────────────────────────────────────────────
+  document.getElementById("evt-search").addEventListener("input", function() {
+    const q = this.value.trim().toLowerCase();
+    document.querySelectorAll("#evt-body tr[data-evt-id]").forEach(row => {
+      row.style.display = q === "" || row.textContent.toLowerCase().includes(q) ? "" : "none";
+    });
+  });
+
+</script>
+{% endblock %}

@@ -1,0 +1,219 @@
+{
+  "US": { "flag": "🇺🇸", "name": "USA", "cats": {
+    "mil":  ["defense.gov","dod.gov","army.mil","navy.mil","af.mil","marines.mil","uscg.mil","pentagon.gov","jcs.mil","socom.mil","northcom.mil","stratcom.mil","centcom.mil","eucom.mil","indopacom.mil","southcom.mil","africom.mil","spacecom.mil","cybercom.mil","transcom.mil","dla.mil","disa.mil","darpa.mil","dia.mil","nga.mil","nro.gov","nationalguard.mil","forscom.army.mil","tradoc.army.mil","navsea.navy.mil","navair.navy.mil","amc.af.mil","acc.af.mil","aetc.af.mil","dcsa.mil","militaryonesource.mil","space.af.mil","ussocom.mil","arnorthcom.army.mil","usarpac.army.mil"],
+    "pol":  ["whitehouse.gov","congress.gov","senate.gov","house.gov","state.gov","doj.gov","dhs.gov","treasury.gov","commerce.gov","labor.gov","interior.gov","energy.gov","usda.gov","ed.gov","transportation.gov","epa.gov","cia.gov","fbi.gov","dni.gov","nsa.gov","omb.gov","gao.gov","cbo.gov","ftc.gov","sec.gov","federalreserve.gov","supremecourt.gov","usa.gov","archives.gov","loc.gov","regulations.gov","federalregister.gov","cbp.gov","ice.gov","atf.gov","dea.gov","tsa.gov","usmarshals.gov","usembassy.gov","state.gov"],
+    "news": ["apnews.com","reuters.com","nytimes.com","washingtonpost.com","cnn.com","foxnews.com","nbcnews.com","abcnews.go.com","npr.org","politico.com","thehill.com","axios.com","bloomberg.com","wsj.com","usatoday.com","latimes.com","cbsnews.com","msnbc.com","pbs.org","vox.com","theatlantic.com","newsweek.com","time.com","slate.com","propublica.org","theintercept.com","foreignpolicy.com","foreignaffairs.com","defenseone.com","militarytimes.com","stripes.com","c-span.org","rollcall.com","nationalreview.com","thedailybeast.com","huffpost.com","motherjones.com","chicagotribune.com","bostonglobe.com","nypost.com"],
+    "dis":  ["fema.gov","ready.gov","disasterassistance.gov","usfa.fema.gov","training.fema.gov","floodsmart.gov","nws.noaa.gov","weather.gov","nhc.noaa.gov","spc.noaa.gov","tsunami.gov","airnow.gov","usgs.gov","earthquakehazards.usgs.gov","volcanoes.usgs.gov","usaid.gov","redcross.org","nvoad.org","ncvoad.org","samaritanspurse.org","salvationarmyusa.org","directrelief.org","worldcentralkitchen.org","feedingamerica.org","unitedway.org","teamrubiconusa.org","americares.org","globalgiving.org","habitat.org","mercycorps.org","care.org","pdc.org","caloes.ca.gov","floridadisaster.org","emd.wa.gov","txdps.state.tx.us","dhses.ny.gov","iema.illinois.gov","pema.pa.gov","vem.virginia.gov"],
+    "med":  ["cdc.gov","nih.gov","fda.gov","hhs.gov","cms.gov","hrsa.gov","samhsa.gov","ahrq.gov","ihs.gov","va.gov","tricare.mil","medlineplus.gov","pubmed.ncbi.nlm.nih.gov","nlm.nih.gov","cancer.gov","nhlbi.nih.gov","niaid.nih.gov","nimh.nih.gov","niddk.nih.gov","ama-assn.org","aap.org","acep.org","acc.org","asco.org","idsa.org","acog.org","psychiatry.org","facs.org","mayoclinic.org","clevelandclinic.org","hopkinsmedicine.org","massgeneral.org","mountsinai.org","ucsf.edu","upmc.com","nyp.org","statnews.com","medscape.com","webmd.com","healthline.com"]
+  }},
+  "DE": { "flag": "🇩🇪", "name": "Germany", "cats": {
+    "mil":  ["bundeswehr.de","bmvg.de","dbwv.de","heer.bundeswehr.de","marine.bundeswehr.de","luftwaffe.bundeswehr.de","streitkraeftebasis.bundeswehr.de","sanitaetsdienst.bundeswehr.de","cyberundinformationsdomaene.bundeswehr.de","kommando.bundeswehr.de","baain.bundeswehr.de","bwi.de","planungsamt.bundeswehr.de","baks.bund.de","fueakbw.bundeswehr.de","uni-bw.de","hsu-hh.de","reservisten.de","bundeswehr-karriere.de","swp-berlin.org","dgap.org","ifsh.de","bicc.de","iiss.org","sipri.org","kas.de","fes.de","boell.de","hss.de","freiheit.org","nato.int","bundeswehr-journal.de","esut.de","augengeradeaus.de","hartpunkt.de"],
+    "pol":  ["bundestag.de","bundesregierung.de","bundesrat.de","bundespraesident.de","bundeskanzler.de","auswaertiges-amt.de","bmi.bund.de","bmj.bund.de","bmf.bund.de","bmwk.bund.de","bmas.bund.de","bmbf.bund.de","bmz.bund.de","bmuv.bund.de","bmdv.bund.de","bka.bund.de","bnd.de","verfassungsschutz.de","bamf.de","bundesnetzagentur.de","bundesrechnungshof.de","bundeswahlleiter.de","bundesanzeiger.de","gesetze-im-internet.de","bpb.de","giz.de","abgeordnetenwatch.de","cdu.de","spd.de","fdp.de","gruene.de","afd.de","linke.de","bsw.de","fragdenstaat.de","lobbycontrol.de","transparency.de","dgap.org","europa.eu","europarl.europa.eu"],
+    "news": ["tagesschau.de","spiegel.de","zeit.de","faz.net","sueddeutsche.de","welt.de","dw.com","rnd.de","t-online.de","stern.de","bild.de","focus.de","zdf.de","ard.de","ntv.de","br.de","mdr.de","ndr.de","wdr.de","swr.de","phoenix.de","deutschlandfunk.de","tagesspiegel.de","handelsblatt.com","wirtschaftswoche.de","fr.de","taz.de","cicero.de","merkur.de","rp-online.de","haz.de","correctiv.org","heise.de","golem.de","netzpolitik.org","augsburger-allgemeine.de","manager-magazin.de","neues-deutschland.de","junge-welt.de","nd-aktuell.de"],
+    "dis":  ["bbk.bund.de","thw.de","drk.de","warnung.bund.de","nina.bund.de","dfv.de","dlrg.de","johanniter.de","malteser.de","asb.de","dwd.de","bafg.bund.de","bgr.bund.de","pegelonline.wsv.de","lhp.bafg.de","hochwasserzentralen.de","unwetterzentrale.de","seismologie.bgr.de","bfs.de","katwarn.de","bfr.bund.de","copernicus.eu","aerzte-ohne-grenzen.de","uno-fluechtlingshilfe.de","unicef.de","diakonie.de","caritas.de","awo.org","agbf.de","reliefweb.int"],
+    "med":  ["rki.de","bundesgesundheitsministerium.de","pei.de","bfarm.de","aerzteblatt.de","charite.de","kbv.de","gkv-spitzenverband.de","iqwig.de","iqtig.de","awmf.org","aok.de","tk.de","barmer.de","dak.de","lmu-klinikum.de","uke.de","mhh.de","uniklinik-frankfurt.de","uniklinik-freiburg.de","uniklinik-koeln.de","uniklinikum-dresden.de","klinikum-stuttgart.de","thieme.de","aerztezeitung.de","gbe-bund.de","drks.de","infektionsschutz.de","impfen-info.de","dgk.org","destatis.de","medizin.de","dge.de","bzga.de","nak-online.de","kkvd.de","vdek.de","dkfz.de","ggsd.de","uniklinikum-muenster.de"]
+  }},
+  "RU": { "flag": "🇷🇺", "name": "Russia", "cats": {
+    "mil":  ["mil.ru","redstar.ru","function.mil.ru","ens.mil.ru","svr.gov.ru","fsb.ru","fso.gov.ru","rosgvardia.ru","mvd.ru","rostec.ru","rosoboronexport.ru","almaz-antey.ru","uac.ru","uvz.ru","tactical-missiles.ru","roscosmos.ru","dosaaf.ru","vpk.name","nvo.ng.ru","cast.ru","riss.ru","army-news.ru","armstrade.org","defence.ru"],
+    "pol":  ["kremlin.ru","government.ru","duma.gov.ru","council.gov.ru","mid.ru","minfin.gov.ru","economy.gov.ru","minpromtorg.gov.ru","mintrans.gov.ru","minenergo.gov.ru","minobrnauki.gov.ru","minjust.gov.ru","genproc.gov.ru","rkn.gov.ru","fas.gov.ru","rosstat.gov.ru","nalog.gov.ru","sfr.gov.ru","cbr.ru","cikrf.ru","ach.gov.ru","pravo.gov.ru","sozd.duma.gov.ru","gosuslugi.ru","consultant.ru","er.ru","kprf.ru","ldpr.ru","spravedlivo.ru","mcx.gov.ru","rpn.gov.ru","rostrud.gov.ru","valdaiclub.com","globalaffairs.ru","riac.ru"],
+    "news": ["rt.com","ria.ru","tass.ru","interfax.ru","lenta.ru","rbc.ru","meduza.io","kommersant.ru","vedomosti.ru","gazeta.ru","izvestia.ru","rg.ru","ng.ru","mk.ru","aif.ru","kp.ru","1tv.ru","russia.tv","ntv.ru","ren.tv","tvrain.tv","vesti.ru","vgtrk.com","fontanka.ru","rosbalt.ru","regnum.ru","inosmi.ru","novayagazeta.eu","republic.ru","snob.ru","znak.com","ura.news","currenttime.tv","rferl.org","ngs.ru","e1.ru","74.ru","primamedia.ru","sibreal.org","sib.fm"],
+    "dis":  ["mchs.gov.ru","emercom.gov.ru","mchsmedia.ru","rospotrebnadzor.ru","meteoinfo.ru","roshydromet.ru","pogoda.ru","gs.ras.ru","rosatom.ru","fmba.gov.ru","redcross.ru","mnr.gov.ru","rpn.gov.ru","gosuslugi.ru","reliefweb.int","unocha.org","unhcr.org","nrcerm.ru","obzh.ru","mchs.ru"],
+    "med":  ["minzdrav.gov.ru","roszdravnadzor.gov.ru","rospotrebnadzor.ru","ffoms.gov.ru","fmba.gov.ru","grls.rosminzdrav.ru","sechenov.ru","spbgmu.ru","pirogov-university.ru","rzgmu.ru","rmj.ru","consilium.medica.ru","medvestnik.ru","remedium.ru","medline.ru","niioz.ru","mgnc.ru","nczd.ru","gnicpm.ru","ccardio.ru","who.int"]
+  }},
+  "CN": { "flag": "🇨🇳", "name": "China", "cats": {
+    "mil":  ["mod.gov.cn","chinamil.com.cn","81.cn"],
+    "pol":  ["gov.cn","npc.gov.cn","cppcc.gov.cn","mfa.gov.cn","scio.gov.cn"],
+    "news": ["xinhuanet.com","chinadaily.com.cn","people.com.cn","globaltimes.cn","cgtn.com","caixin.com","thepaper.cn"],
+    "dis":  ["mee.gov.cn","cea.gov.cn","cma.gov.cn","ndrcc.org.cn"],
+    "med":  ["nhc.gov.cn","chinacdc.cn","nmpa.gov.cn"]
+  }},
+  "GB": { "flag": "🇬🇧", "name": "UK", "cats": {
+    "mil":  ["mod.uk","army.mod.uk","royalnavy.mod.uk","raf.mod.uk"],
+    "pol":  ["parliament.uk","gov.uk","number10.gov.uk","fcdo.gov.uk","homeoffice.gov.uk","mi5.gov.uk"],
+    "news": ["bbc.co.uk","theguardian.com","thetimes.co.uk","telegraph.co.uk","independent.co.uk","ft.com","sky.com","mirror.co.uk"],
+    "dis":  ["gov.uk","redcross.org.uk","environment-agency.gov.uk","metoffice.gov.uk"],
+    "med":  ["nhs.uk","nice.org.uk","mhra.gov.uk","bmj.com","thelancet.com"]
+  }},
+  "FR": { "flag": "🇫🇷", "name": "France", "cats": {
+    "mil":  ["defense.gouv.fr","armees.fr","ema.defense.gouv.fr"],
+    "pol":  ["elysee.fr","gouvernement.fr","assemblee-nationale.fr","senat.fr","diplomatie.gouv.fr"],
+    "news": ["lemonde.fr","lefigaro.fr","liberation.fr","france24.com","rfi.fr","bfmtv.com","leparisien.fr","lexpress.fr"],
+    "dis":  ["securite-civile.interieur.gouv.fr","croix-rouge.fr","meteo.fr","prevention-risques.gouv.fr"],
+    "med":  ["sante.gouv.fr","inserm.fr","has-sante.fr","ansm.sante.fr"]
+  }},
+  "UA": { "flag": "🇺🇦", "name": "Ukraine", "cats": {
+    "mil":  ["mil.gov.ua","army.gov.ua","af.mil.gov.ua","navy.mil.gov.ua","sof.mil.gov.ua","ssu.gov.ua","gur.gov.ua","dpsu.gov.ua","ngu.gov.ua","dstszi.gov.ua","ukroboronprom.com","armyinform.com.ua","defense-ua.com","mil.in.ua","ukrmilitary.com","jfo.gov.ua","antonov.com","motor-sich.com","ukrinform.ua","united24.me"],
+    "pol":  ["president.gov.ua","kmu.gov.ua","rada.gov.ua","mfa.gov.ua","mvs.gov.ua","minjust.gov.ua","mof.gov.ua","me.gov.ua","mon.gov.ua","mtu.gov.ua","mev.gov.ua","minagro.gov.ua","minculture.gov.ua","ssu.gov.ua","gp.gov.ua","cec.gov.ua","nbu.gov.ua","nazk.gov.ua","nabu.gov.ua","arma.gov.ua","zakon.rada.gov.ua","ukrstat.gov.ua","snriu.gov.ua","dpsu.gov.ua","mnr.gov.ua","ukraine.ua","minreconn.gov.ua","ombudsman.gov.ua","vru.gov.ua","court.gov.ua"],
+    "news": ["ukrinform.ua","kyivpost.com","pravda.com.ua","unian.ua","suspilne.media","hromadske.ua","ukr.net","rbc.ua","nv.ua","lb.ua","gordonua.com","liga.net","zn.ua","interfax.com.ua","radiosvoboda.org","24tv.ua","tsn.ua","obozrevatel.com","espreso.tv","apostrophe.ua","censor.net","glavcom.ua","kyivindependent.com","uawire.org","euromaidanpress.com","armyinform.com.ua","hromadske.radio","channel24.com.ua","detector.media","texty.org.ua","babel.ua","ukr.life","focus.ua","unn.com.ua","dw.com","bbc.com","reuters.com","apnews.com","mil.in.ua","radioera.com.ua"],
+    "dis":  ["dsns.gov.ua","ukrhydromet.gov.ua","pogoda.ua","seismo.com.ua","urc.org.ua","mvs.gov.ua","united24.me","halo-trust.org","unhcr.org","icrc.org","msf.org","reliefweb.int","ukraine.un.org","wfp.org","unicef.org","iom.int","nrc.no","rescue.org","savethechildren.org","care.org","drc.ngo","ifrc.org","acted.org","oxfam.org","dpsu.gov.ua"],
+    "med":  ["moz.gov.ua","phc.org.ua","nhsu.gov.ua","amnu.gov.ua","dec.gov.ua","nmu.edu.ua","meduniv.lviv.ua","bsmu.edu.ua","ifnmu.edu.ua","vnmu.edu.ua","zsmu.edu.ua","tdmu.edu.ua","likar.info","health-ua.com","umj.com.ua","who.int","unicef.org","msf.org","icrc.org","wfp.org","urc.org.ua","medinfo.ua","liky.ua","clinicaltrial.gov.ua","nfzcu.org.ua"]
+  }},
+  "IL": { "flag": "🇮🇱", "name": "Israel", "cats": {
+    "mil":  ["idf.il","mod.gov.il"],
+    "pol":  ["gov.il","knesset.gov.il","mfa.gov.il","pmo.gov.il"],
+    "news": ["haaretz.com","timesofisrael.com","jpost.com","ynetnews.com","i24news.tv","arutzsheva.co.il"],
+    "dis":  ["oref.org.il","magen-david-adom.org.il","ifrc.org"],
+    "med":  ["health.gov.il","clalit.co.il","maccabi4u.co.il","sheba.co.il"]
+  }},
+  "PS": { "flag": "🇵🇸", "name": "Palestine", "cats": {
+    "mil":  [],
+    "pol":  ["palestineun.org","pna.ps","mfa.ps","pcbs.gov.ps"],
+    "news": ["maannews.com","wafa.ps","palinfo.com","mondoweiss.net"],
+    "dis":  ["unrwa.org","icrc.org","msf.org","reliefweb.int"],
+    "med":  ["moh.gov.ps","pmrs.ps","who.int"]
+  }},
+  "IR": { "flag": "🇮🇷", "name": "Iran", "cats": {
+    "mil":  ["mod.gov.ir","army.ir","irgc.ir","basij.ir","iriaf.ir","irin.ir","iriadf.ir","nezaja.ir","aja.ir","dio.ir","isio.ir","police.ir","etelaat.gov.ir","defapress.ir","ajapress.ir","iscanews.ir","rostec.ir","tasnimnews.com","farsnews.ir","mashreghnews.ir","nournews.ir"],
+    "pol":  ["leader.ir","khamenei.ir","president.ir","dolat.ir","majlis.ir","mfa.gov.ir","moi.gov.ir","judiciary.ir","shorayenagahban.ir","expediency.ir","majlesekhobregan.ir","etelaat.gov.ir","ict.gov.ir","mefa.gov.ir","cbi.ir","irib.ir","irna.ir","presstv.ir","moe.gov.ir","mcls.gov.ir","maskan.gov.ir","doe.ir","tehran.ir","isna.ir"],
+    "news": ["irna.ir","farsnews.ir","mehrnews.com","tasnimnews.com","isna.ir","radiofarda.com","presstv.ir","iribnews.ir","khabaronline.ir","tabnak.ir","mashreghnews.ir","jamnews.ir","alef.ir","entekhab.ir","yjc.ir","iranintl.com","kayhan.ir","etemadonline.com","sharghonline.ir","hammihan.ir","iran-newspaper.com","mardomsalari.ir","donya-e-eqtesad.com","ilna.ir","nournews.ir","mizanonline.ir","resalat-news.com","manoto.com","jomhourieslami.ir","shana.ir","fararu.com","aftabnews.ir","asriran.com","alalam.ir","khabar24.com","salamatnews.com","iranwire.com","zamaaneh.com","voanews.com","bbc.com"],
+    "dis":  ["ircs.org","sema.gov.ir","irimo.ir","isc.ir","iiees.ac.ir","doe.ir","water.gov.ir","pmo.ir","bhrc.ac.ir","reliefweb.int","ifrc.org","icrc.org","unhcr.org","unocha.org","msf.org","ndmo.ir","moe.gov.ir","ncc.gov.ir"],
+    "med":  ["behdasht.gov.ir","fda.gov.ir","iums.ac.ir","drugs.ir","tums.ac.ir","mums.ac.ir","sums.ac.ir","tbzmed.ac.ir","pasteur.ac.ir","irimc.org","kums.ac.ir","ajums.ac.ir","zaums.ac.ir","hums.ac.ir","arums.ac.ir","semums.ac.ir","bpums.ac.ir","muq.ac.ir","razi.ac.ir","salamat.gov.ir","salamatnews.com","pezeshk.com","hbi.ir","who.int","ircs.org"]
+  }},
+  "SA": { "flag": "🇸🇦", "name": "Saudi Arabia", "cats": {
+    "mil":  ["mod.gov.sa"],
+    "pol":  ["spa.gov.sa","mfa.gov.sa","gov.sa","shoura.gov.sa"],
+    "news": ["saudigazette.com.sa","arabnews.com","alarabiya.net","asharqalawsat.com","sabq.org"],
+    "dis":  ["ncm.gov.sa","saudirc.org"],
+    "med":  ["moh.gov.sa","sfda.gov.sa"]
+  }},
+  "TR": { "flag": "🇹🇷", "name": "Turkey", "cats": {
+    "mil":  ["msb.gov.tr","tsk.tr"],
+    "pol":  ["cumhurbaskanligi.gov.tr","tbmm.gov.tr","mfa.gov.tr","icisleri.gov.tr"],
+    "news": ["hurriyet.com.tr","sabah.com.tr","cumhuriyet.com.tr","trthaber.com","aa.com.tr","sozcu.com.tr","milliyet.com.tr"],
+    "dis":  ["afad.gov.tr","kizilay.org.tr","mgm.gov.tr"],
+    "med":  ["saglik.gov.tr","thsk.gov.tr","titck.gov.tr"]
+  }},
+  "IN": { "flag": "🇮🇳", "name": "India", "cats": {
+    "mil":  ["mod.gov.in","indianarmy.nic.in","indiannavy.nic.in","indianairforce.nic.in","drdo.gov.in"],
+    "pol":  ["india.gov.in","parliament.nic.in","mea.gov.in","pib.gov.in","mha.gov.in"],
+    "news": ["thehindu.com","hindustantimes.com","timesofindia.indiatimes.com","ndtv.com","thewire.in","scroll.in","theprint.in","livemint.com"],
+    "dis":  ["ndma.gov.in","nidm.gov.in","imd.gov.in","ndrf.gov.in","redcross.in"],
+    "med":  ["mohfw.gov.in","icmr.gov.in","nhm.gov.in","aiims.edu"]
+  }},
+  "PK": { "flag": "🇵🇰", "name": "Pakistan", "cats": {
+    "mil":  ["ispr.gov.pk","mod.gov.pk","paknavy.gov.pk","paf.gov.pk"],
+    "pol":  ["pakistan.gov.pk","na.gov.pk","senate.gov.pk","mofa.gov.pk","interior.gov.pk"],
+    "news": ["dawn.com","geo.tv","thenews.com.pk","arynews.tv","expressnews.tv","dunyanews.tv","samaa.tv"],
+    "dis":  ["ndma.gov.pk","prcs.org.pk","pmd.gov.pk"],
+    "med":  ["nhsrc.gov.pk","nih.org.pk","agakhan.org"]
+  }},
+  "JP": { "flag": "🇯🇵", "name": "Japan", "cats": {
+    "mil":  ["mod.go.jp","jgsdf.go.jp","jmsdf.go.jp","jasdf.go.jp"],
+    "pol":  ["kantei.go.jp","shugiin.go.jp","sangiin.go.jp","mofa.go.jp","cao.go.jp"],
+    "news": ["nhk.or.jp","asahi.com","yomiuri.co.jp","mainichi.jp","japantimes.co.jp","nikkei.com","kyodonews.net"],
+    "dis":  ["bousai.go.jp","fdma.go.jp","jrc.or.jp","jma.go.jp"],
+    "med":  ["mhlw.go.jp","niid.go.jp","pmda.go.jp","med.or.jp","ncgm.go.jp"]
+  }},
+  "KR": { "flag": "🇰🇷", "name": "South Korea", "cats": {
+    "mil":  ["mnd.go.kr","army.mil.kr","navy.mil.kr","airforce.mil.kr","jcs.mil.kr"],
+    "pol":  ["president.go.kr","assembly.go.kr","mofa.go.kr","korea.go.kr"],
+    "news": ["koreaherald.com","koreatimes.co.kr","chosun.com","yonhapnewsagency.com","hani.co.kr","ohmynews.com"],
+    "dis":  ["safekorea.go.kr","kma.go.kr","redcross.or.kr","mois.go.kr"],
+    "med":  ["mohw.go.kr","kdca.go.kr","nhis.or.kr","hira.or.kr"]
+  }},
+  "KP": { "flag": "🇰🇵", "name": "North Korea", "cats": {
+    "mil":  [],
+    "pol":  ["kcna.kp","naenara.com.kp","rodong.rep.kp"],
+    "news": ["kcna.kp","rodong.rep.kp"],
+    "dis":  ["reliefweb.int","wfp.org","unicef.org"],
+    "med":  ["who.int","unicef.org"]
+  }},
+  "BR": { "flag": "🇧🇷", "name": "Brazil", "cats": {
+    "mil":  ["defesa.gov.br","exercito.gov.br","marinha.mil.br","fab.mil.br"],
+    "pol":  ["planalto.gov.br","camara.leg.br","senado.leg.br","mre.gov.br","gov.br"],
+    "news": ["folha.uol.com.br","globo.com","agenciabrasil.ebc.com.br","g1.globo.com","estadao.com.br","uol.com.br","terra.com.br"],
+    "dis":  ["mi.gov.br","cemaden.gov.br","inmet.gov.br","cruzvermelha.org.br"],
+    "med":  ["saude.gov.br","anvisa.gov.br","fiocruz.br","inca.gov.br","cfm.org.br"]
+  }},
+  "MX": { "flag": "🇲🇽", "name": "Mexico", "cats": {
+    "mil":  ["gob.mx","semar.gob.mx"],
+    "pol":  ["gob.mx","diputados.gob.mx","senado.gob.mx","sre.gob.mx","segob.gob.mx"],
+    "news": ["jornada.com.mx","excelsior.com.mx","milenio.com","eluniversal.com.mx","proceso.com.mx","aristeguinoticias.com","sinembargo.mx"],
+    "dis":  ["cenapred.unam.mx","cruzrojamexicana.org.mx","conagua.gob.mx"],
+    "med":  ["gob.mx","imss.gob.mx","cofepris.gob.mx","insp.mx"]
+  }},
+  "AR": { "flag": "🇦🇷", "name": "Argentina", "cats": {
+    "mil":  ["mindef.gob.ar","ejercito.mil.ar","armada.mil.ar","faa.mil.ar"],
+    "pol":  ["argentina.gob.ar","senado.gob.ar","hcdn.gob.ar","cancilleria.gob.ar"],
+    "news": ["lanacion.com.ar","infobae.com","clarin.com","pagina12.com.ar","ambito.com","tn.com.ar"],
+    "dis":  ["argentina.gob.ar","cruzroja.org.ar","smn.gob.ar"],
+    "med":  ["argentina.gob.ar","anmat.gob.ar","conicet.gov.ar"]
+  }},
+  "SY": { "flag": "🇸🇾", "name": "Syria", "cats": {
+    "mil":  ["mod.gov.sy"],
+    "pol":  ["president.gov.sy","mfa.gov.sy","parliament.gov.sy"],
+    "news": ["sana.sy","thesyrianobserver.com","syriahr.com"],
+    "dis":  ["sarc.org.sy","msf.org","rescue.org","reliefweb.int","icrc.org"],
+    "med":  ["moh.gov.sy","who.int","sams-usa.net","uossm.org"]
+  }},
+  "IQ": { "flag": "🇮🇶", "name": "Iraq", "cats": {
+    "mil":  ["mod.mil.iq"],
+    "pol":  ["parliament.iq","mofa.gov.iq","pmo.iq"],
+    "news": ["iraqinews.com","rudaw.net","alsumaria.tv","shafaq.com","almada.com"],
+    "dis":  ["iraqredcrescent.org","unhcr.org","reliefweb.int","ocha.unocha.org"],
+    "med":  ["moh.gov.iq","who.int","imciraq.com"]
+  }},
+  "LB": { "flag": "🇱🇧", "name": "Lebanon", "cats": {
+    "mil":  ["lebarmy.gov.lb"],
+    "pol":  ["presidency.gov.lb","pcm.gov.lb","mfa.gov.lb","parliament.gov.lb"],
+    "news": ["naharnet.com","lorientlejour.com","annahar.com","lbci.com","961.com"],
+    "dis":  ["lebaneserc.org","unhcr.org","reliefweb.int","msf.org"],
+    "med":  ["moph.gov.lb","who.int","sfh-med.org"]
+  }},
+  "NG": { "flag": "🇳🇬", "name": "Nigeria", "cats": {
+    "mil":  ["mod.gov.ng","army.mil.ng","navy.mil.ng","airforce.mil.ng"],
+    "pol":  ["statehouse.gov.ng","nass.gov.ng","mfa.gov.ng"],
+    "news": ["channelstv.com","punchng.com","vanguardngr.com","premiumtimesng.com","guardian.ng","dailytrust.com"],
+    "dis":  ["nema.gov.ng","redcrossnigeria.org","nimet.gov.ng"],
+    "med":  ["health.gov.ng","ncdc.gov.ng","nafdac.gov.ng","nimr.org.ng"]
+  }},
+  "ZA": { "flag": "🇿🇦", "name": "South Africa", "cats": {
+    "mil":  ["dod.mil.za","army.mil.za","navy.mil.za","airforce.mil.za"],
+    "pol":  ["gov.za","parliament.gov.za","dirco.gov.za","thepresidency.gov.za"],
+    "news": ["news24.com","dailymaverick.co.za","iol.co.za","timeslive.co.za","mail-guardian.co.za","sowetanlive.co.za"],
+    "dis":  ["cogta.gov.za","ndmc.gov.za","redcross.org.za","saws.ac.za"],
+    "med":  ["health.gov.za","nicd.ac.za","sahpra.org.za","hpcsa.co.za"]
+  }},
+  "EG": { "flag": "🇪🇬", "name": "Egypt", "cats": {
+    "mil":  ["mod.gov.eg"],
+    "pol":  ["presidency.eg","parlamento.eg","mfa.gov.eg","cabinet.gov.eg"],
+    "news": ["ahram.org.eg","almasryalyoum.com","egypt-today.com","youm7.com","shorouk.com"],
+    "dis":  ["egyptianrc.org","reliefweb.int"],
+    "med":  ["mohp.gov.eg","ema.gov.eg"]
+  }},
+  "DZ": { "flag": "🇩🇿", "name": "Algeria", "cats": {
+    "mil":  ["mdn.dz"],
+    "pol":  ["el-mouradia.dz","mae.gov.dz","gouvernement.dz","aps.dz"],
+    "news": ["aps.dz","ennaharonline.com","elwatan.com","liberte-algerie.com","elmoudjahid.com"],
+    "dis":  ["dgpc.gov.dz","croissant-rouge.dz"],
+    "med":  ["sante.gov.dz","ands.dz"]
+  }},
+  "PL": { "flag": "🇵🇱", "name": "Polen", "cats": {
+    "mil":  ["mon.gov.pl","wojsko-polskie.pl","army.mil.pl","mw.mil.pl","sp.mil.pl"],
+    "pol":  ["sejm.gov.pl","senat.gov.pl","prezydent.pl","gov.pl","msz.gov.pl"],
+    "news": ["gazetawyborcza.pl","onet.pl","tvn24.pl","polsatnews.pl","rp.pl","wp.pl"],
+    "dis":  ["rcb.gov.pl","pck.pl","imgw.pl"],
+    "med":  ["mz.gov.pl","gis.gov.pl","pzh.gov.pl","nfz.gov.pl"]
+  }},
+  "RS": { "flag": "🇷🇸", "name": "Serbia", "cats": {
+    "mil":  ["mod.gov.rs","vojska.rs"],
+    "pol":  ["predsednik.rs","parlament.rs","mfa.gov.rs","srbija.gov.rs"],
+    "news": ["b92.net","blic.rs","politika.rs","n1info.com","rts.rs","telegraf.rs"],
+    "dis":  ["mup.gov.rs","ck.org.rs","sepa.gov.rs"],
+    "med":  ["zdravlje.gov.rs","batut.gov.rs","rfzo.rs"]
+  }},
+  "AU": { "flag": "🇦🇺", "name": "Australia", "cats": {
+    "mil":  ["defence.gov.au","army.gov.au","navy.gov.au","airforce.gov.au"],
+    "pol":  ["aph.gov.au","pm.gov.au","dfat.gov.au","australia.gov.au","homeaffairs.gov.au"],
+    "news": ["abc.net.au","smh.com.au","theaustralian.com.au","theguardian.com","9news.com.au","skynews.com.au"],
+    "dis":  ["ema.gov.au","ses.nsw.gov.au","redcross.org.au","bom.gov.au"],
+    "med":  ["health.gov.au","tga.gov.au","aihw.gov.au","nhmrc.gov.au","healthdirect.gov.au"]
+  }},
+  "WW": { "flag": "🌐", "name": "International", "cats": {
+    "mil":  ["nato.int","osce.org","sipri.org","un.org","icrc.org"],
+    "pol":  ["un.org","europa.eu","osce.org","nato.int","g20.org","au.int","oas.org"],
+    "news": ["reuters.com","apnews.com","aljazeera.com","bbc.com","dw.com","france24.com","voanews.com","rferl.org"],
+    "dis":  ["ifrc.org","reliefweb.int","ocha.unocha.org","unhcr.org","wfp.org","unicef.org","undrr.org"],
+    "med":  ["who.int","paho.org","msf.org","gavi.org","theglobalfund.org","cepi.net","unaids.org"]
+  }}
+}

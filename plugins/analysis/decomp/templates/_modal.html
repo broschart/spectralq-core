@@ -1,0 +1,530 @@
+<!-- ═══════════════════════════════════════════════════════════
+     Decomposition Modal
+═══════════════════════════════════════════════════════════ -->
+<style>
+#dc-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82);
+  display: none; align-items: center; justify-content: center;
+  z-index: 9500; padding: 16px; box-sizing: border-box;
+}
+#dc-dialog {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; width: 96vw; max-width: 1400px;
+  height: 90vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#dc-chart-wrap {
+  flex: 1; min-height: 0;
+  padding: 10px 14px 0; background: #111; overflow: auto;
+}
+</style>
+
+<div id="dc-overlay">
+  <div id="dc-dialog">
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:16px 20px;
+                border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <h2 style="margin:0 0 3px;font-size:16px;font-weight:600;" data-i18n="analysis_decomp_label">Zeitreihen-Zerlegung</h2>
+        <div id="dc-subtitle" style="font-size:12px;color:var(--muted);
+             overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+      </div>
+      {% if 'trend_analysis' in ai_plugins_enabled %}
+      <button id="btn-dc-ai"
+              style="cursor:pointer;background:none;border:1px solid rgba(139,92,246,.5);
+                     border-radius:6px;color:#a78bfa;font-size:12px;
+                     padding:3px 8px;flex-shrink:0;"
+              data-tip="KI-Analyse starten"><svg viewBox="0 0 20 16" width="16" height="13" fill="currentColor" style="vertical-align:middle;margin-right:4px;"><text x="1" y="13" font-family="system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="0.5">AI</text></svg> <span data-i18n="an_dc_ai_btn">KI-Analyse</span></button>
+      {% endif %}
+      <button id="btn-dc-snap"
+              style="cursor:pointer;background:none;border:1px solid var(--border);
+                     border-radius:6px;color:var(--muted);font-size:14px;
+                     padding:3px 8px;flex-shrink:0;display:flex;align-items:center;gap:4px;"
+              data-tip="Als Snapshot speichern"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,12.5 5,7.5 8,9.5 11.5,4.5 14.5,6.5"/></svg></button>
+      <button id="btn-dc-close"
+              style="cursor:pointer;background:none;border:none;color:var(--muted);
+                     font-size:22px;line-height:1;padding:0 6px;flex-shrink:0;"
+              data-tip="Schließen">×</button>
+    </div>
+    <!-- Controls -->
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+                padding:10px 20px;border-bottom:1px solid var(--border);
+                flex-shrink:0;background:var(--surface2);">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        <span data-i18n="an_dc_model_label">Modell:</span>
+        <select id="dc-model"
+                style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);
+                       background:var(--surface);color:var(--text);font-size:12px;">
+          <option value="additive" data-i18n="an_dc_model_add">Additiv (Y = T + S + R)</option>
+          <option value="multiplicative" data-i18n="an_dc_model_mul">Multiplikativ (Y = T × S × R)</option>
+        </select>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        <span data-i18n="an_dc_trendwin_label">Trend-Fenster:</span>
+        <input id="dc-trendwin" type="range" min="3" max="90" step="1" value="7"
+               style="width:90px;accent-color:var(--accent);">
+        <strong id="dc-trendwin-val" style="min-width:26px;">7</strong>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        <span data-i18n="an_dc_period_label">Saison-Periode:</span>
+        <select id="dc-period"
+                style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);
+                       background:var(--surface);color:var(--text);font-size:12px;">
+          <option value="7" data-i18n="an_dc_period_7">7 – wöchentlich</option>
+          <option value="14" data-i18n="an_dc_period_14">14 – zweiwöchentlich</option>
+          <option value="30" selected data-i18n="an_dc_period_30">30 – monatlich</option>
+          <option value="91" data-i18n="an_dc_period_91">91 – quartalsweise</option>
+          <option value="365" data-i18n="an_dc_period_365">365 – jährlich</option>
+        </select>
+      </label>
+    </div>
+    <!-- Charts (4 gestapelte Panels) -->
+    <div id="dc-chart-wrap">
+      <div id="dc-canvas-box" style="position:relative;display:inline-block;vertical-align:top;max-width:100%;">
+        <canvas id="dc-canvas" style="display:none;"></canvas>
+        <div id="dc-xhair" style="position:absolute;width:1px;background:rgba(255,255,255,0.38);
+                                   pointer-events:none;display:none;"></div>
+        <div id="dc-tip"   style="position:absolute;pointer-events:none;display:none;
+                                   background:var(--surface);border:1px solid var(--border);
+                                   border-radius:8px;padding:10px 16px;font-size:15px;line-height:1.6;
+                                   box-shadow:0 2px 16px rgba(0,0,0,.6);white-space:nowrap;z-index:10;
+                                   color:var(--text);"></div>
+      </div>
+    </div>
+    <!-- Status -->
+    <div id="dc-status"
+         style="padding:7px 20px;font-size:11px;color:var(--muted);
+                border-top:1px solid var(--border);flex-shrink:0;
+                background:var(--surface2);"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const GPROP_L = { '':'Web', news:'News', images:'Bilder', youtube:'YouTube', froogle:'Shopping' };
+
+  function fmtAx(iso) {
+    if (!iso) return '';
+    const s = String(iso).slice(0, 10).split('-');
+    return s.length === 3 ? `${s[2]}.${s[1]}.${s[0].slice(2)}` : iso;
+  }
+  function fmtAxFull(iso) {
+    if (!iso) return '';
+    const str = String(iso);
+    const date = fmtAx(str);
+    const t = str.length >= 16 ? str.slice(11, 16) : null;
+    return t ? `${date} ${t}` : date;
+  }
+
+  // ── Daten zusammenführen ──────────────────────────────────────
+  let _kwId = null;
+
+  function getMergedData() {
+    const kw = _kwId != null
+      ? allKeywords.find(k => k.id === _kwId)
+      : allKeywords.find(k => selectedIds.has(k.id));
+    if (!kw) return null;
+    const kwRunEntry    = kwRunData.find(r => r.kw.id === kw.id);
+    const activeRunTags = kwRunEntry
+      ? kwRunEntry.runs.map(r => r.run_tag).filter(rt => (selectedRunTagByKw.get(kw.id) || new Set()).has(rt))
+      : [];
+    if (!activeRunTags.length) activeRunTags.push([...(selectedRunTagByKw.get(kw.id) || new Set())][0] ?? '');
+    const accum = {};
+    let anyEntry = null;
+    for (const rt of activeRunTags) {
+      const entry = rawData[`${kw.id}@@${rt}`];
+      if (!entry) continue;
+      anyEntry = entry;
+      entry.data.forEach(p => {
+        if (p.value !== null) {
+          if (!accum[p.date]) accum[p.date] = { sum: 0, cnt: 0 };
+          accum[p.date].sum += p.value;
+          accum[p.date].cnt++;
+        }
+      });
+    }
+    if (!anyEntry) return null;
+    const labels = [...allLabels];
+    const values = labels.map(d => {
+      const a = accum[d];
+      return a && a.cnt > 0 ? a.sum / a.cnt : null;
+    });
+    const runLabel = activeRunTags.length === 1
+      ? (activeRunTags[0] || 'Standard')
+      : `${activeRunTags.length} ${window.t('an_ssim_runs_avg','Reihen (gemittelt)')}`;
+    return { values, labels, kwId: kw.id, keyword: anyEntry.keyword || kw.keyword,
+             geo: anyEntry.geo || kw.geo || 'DE', gprop: kw.gprop || '', runLabel };
+  }
+
+  // ── Zerlegung ─────────────────────────────────────────────────
+  function computeTrend(values, halfW) {
+    const n = values.length;
+    const T = new Array(n).fill(null);
+    for (let i = halfW; i < n - halfW; i++) {
+      let sum = 0, cnt = 0;
+      for (let d = -halfW; d <= halfW; d++) {
+        if (values[i + d] !== null) { sum += values[i + d]; cnt++; }
+      }
+      if (cnt > 0) T[i] = sum / cnt;
+    }
+    return T;
+  }
+
+  function computeSeasonalAdd(detrended, period) {
+    const buckets = Array.from({ length: period }, () => []);
+    detrended.forEach((v, i) => { if (v !== null) buckets[i % period].push(v); });
+    const means = buckets.map(b =>
+      b.length ? b.reduce((a, c) => a + c, 0) / b.length : 0
+    );
+    const center = means.reduce((a, b) => a + b, 0) / period;
+    const norm   = means.map(m => m - center);
+    return detrended.map((_, i) => norm[i % period]);
+  }
+
+  function computeSeasonalMult(detrended, period) {
+    const buckets = Array.from({ length: period }, () => []);
+    detrended.forEach((v, i) => { if (v !== null) buckets[i % period].push(v); });
+    const means = buckets.map(b =>
+      b.length ? b.reduce((a, c) => a + c, 0) / b.length : 1
+    );
+    const avg = means.reduce((a, b) => a + b, 0) / period;
+    const norm = means.map(m => avg > 0 ? m / avg : 1);
+    return detrended.map((_, i) => norm[i % period]);
+  }
+
+  function decompose(values, period, halfW, model) {
+    const T = computeTrend(values, halfW);
+    if (model === 'multiplicative') {
+      const det = values.map((v, i) =>
+        v !== null && T[i] !== null && T[i] > 0 ? v / T[i] : null
+      );
+      const S = computeSeasonalMult(det, period);
+      const R = values.map((v, i) => {
+        if (v === null || T[i] === null || T[i] === 0 || S[i] === 0) return null;
+        return v / (T[i] * S[i]);
+      });
+      return { observed: values, trend: T, seasonal: S, residual: R };
+    } else {
+      const det = values.map((v, i) =>
+        v !== null && T[i] !== null ? v - T[i] : null
+      );
+      const S = computeSeasonalAdd(det, period);
+      const R = values.map((v, i) => {
+        if (v === null || T[i] === null) return null;
+        return v - T[i] - S[i];
+      });
+      return { observed: values, trend: T, seasonal: S, residual: R };
+    }
+  }
+
+  // ── Canvas: 4 gestapelte Panels ───────────────────────────────
+  const PANELS = [
+    { key: 'observed', label: window.t('an_dc_panel_observed','Original (beobachtet)'), color: '#4f8ef7' },
+    { key: 'trend',    label: window.t('an_dc_panel_trend','Trend'),                    color: '#f7d44f' },
+    { key: 'seasonal', label: window.t('an_dc_panel_seasonal','Saisonalität'),           color: '#4ff79e' },
+    { key: 'residual', label: window.t('an_dc_panel_residual','Rauschen (Residuum)'),    color: '#c44ff7' },
+  ];
+  const ML = 58, MR = 10, MT = 8, MB = 62, GAP = 8;
+
+  function renderDecompChart(result, labels) {
+    const canvas = document.getElementById('dc-canvas');
+    const wrap   = document.getElementById('dc-chart-wrap');
+    const W   = wrap.clientWidth  - 2;
+    const avH = Math.max(wrap.clientHeight - 14, 400);
+    const PH  = Math.floor((avH - MT - MB - (PANELS.length - 1) * GAP) / PANELS.length);
+    const H = MT + PANELS.length * PH + (PANELS.length - 1) * GAP + MB;
+    canvas.width = W; canvas.height = H;
+    const PW = W - ML - MR;
+    const n  = labels.length;
+    const xOf = j => ML + (n > 1 ? j / (n - 1) : 0.5) * PW;
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H);
+
+    PANELS.forEach((panel, pi) => {
+      const data     = result[panel.key];
+      const panelTop = MT + pi * (PH + GAP);
+      const valid    = data.filter(v => v !== null);
+      if (!valid.length) return;
+
+      let dmin = Math.min(...valid), dmax = Math.max(...valid);
+      if (dmin === dmax) { dmin -= 1; dmax += 1; }
+      const range = dmax - dmin;
+      const yOf = v => panelTop + PH - ((v - dmin) / range) * PH;
+
+      // Panel background
+      ctx.fillStyle = '#161616';
+      ctx.fillRect(ML, panelTop, PW, PH);
+
+      // Zero / center line for seasonal & residual
+      if (dmin < 0 && dmax > 0) {
+        const y0 = yOf(0);
+        ctx.strokeStyle = '#2e2e2e'; ctx.lineWidth = 1; ctx.setLineDash([3, 2]);
+        ctx.beginPath(); ctx.moveTo(ML, y0); ctx.lineTo(ML + PW, y0); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      if (dmin < 1 && dmax > 1 && panel.key === 'seasonal') { // multiplicative mid-line at 1
+        const y1 = yOf(1);
+        if (y1 >= panelTop && y1 <= panelTop + PH) {
+          ctx.strokeStyle = '#2e2e2e'; ctx.lineWidth = 1; ctx.setLineDash([3, 2]);
+          ctx.beginPath(); ctx.moveTo(ML, y1); ctx.lineTo(ML + PW, y1); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+
+      // Y-Ticks (3 Werte: min, mitte, max)
+      ctx.fillStyle = '#555'; ctx.font = '11px monospace';
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      [[dmin, panelTop + PH - 2], [(dmin + dmax) / 2, panelTop + PH / 2], [dmax, panelTop + 2]]
+        .forEach(([val, ty]) => {
+          const label = Math.abs(val) >= 10 ? val.toFixed(1) : val.toFixed(2);
+          ctx.fillText(label, ML - 3, ty);
+        });
+
+      // Panel-Label (oben links, farbig)
+      ctx.fillStyle = panel.color;
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText(panel.label.toUpperCase(), ML + 5, panelTop + 3);
+
+      // Datenlinie
+      ctx.strokeStyle = panel.color; ctx.lineWidth = 1.5;
+      ctx.beginPath(); let started = false;
+      for (let j = 0; j < n; j++) {
+        if (data[j] === null) { started = false; continue; }
+        const x = xOf(j), y = yOf(data[j]);
+        if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Rahmen
+      ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1;
+      ctx.strokeRect(ML, panelTop, PW, PH);
+    });
+
+    // X-Achse (nur unten, gedreht, Deutsch)
+    const xStep = Math.max(1, Math.floor(n / 9));
+    ctx.fillStyle = '#777'; ctx.font = '11px monospace';
+    for (let j = 0; j < n; j += xStep) {
+      ctx.save();
+      ctx.translate(xOf(j), H - MB + 3);
+      ctx.rotate(-Math.PI / 4);
+      ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+      ctx.fillText(fmtAx(labels[j]), 0, 0);
+      ctx.restore();
+    }
+
+    // Hover-State speichern
+    _dcRender = { n, labels, result, PH, PW, W, H };
+    setupDcHover();
+  }
+
+  // ── Hover-Crosshair ────────────────────────────────────────────
+  let _dcRender     = null;
+  let _dcHoverReady = false;
+
+  function setupDcHover() {
+    if (_dcHoverReady) return;
+    _dcHoverReady = true;
+    const canvas = document.getElementById('dc-canvas');
+    canvas.style.cursor = 'crosshair';
+
+    canvas.addEventListener('mousemove', e => {
+      if (!_dcRender) return;
+      const { n, labels, result, PH, PW, W, H } = _dcRender;
+      if (n < 2) return;
+      const x = e.offsetX;
+      if (x < ML || x > ML + PW) { _hideDcXhair(); return; }
+      const j   = Math.max(0, Math.min(Math.round((x - ML) / PW * (n - 1)), n - 1));
+      const xPx = ML + j / (n - 1) * PW;
+
+      const xhair = document.getElementById('dc-xhair');
+      const tip   = document.getElementById('dc-tip');
+
+      xhair.style.left    = xPx + 'px';
+      xhair.style.top     = MT + 'px';
+      xhair.style.height  = (H - MT - MB) + 'px';
+      xhair.style.display = 'block';
+
+      const label = fmtAxFull(labels[j]);
+      let html = `<div style="color:var(--muted);font-size:13px;margin-bottom:5px;">${label}</div>`;
+      PANELS.forEach(panel => {
+        const v = result[panel.key][j];
+        const s = v != null ? v.toFixed(2) : '–';
+        html += `<div style="margin-top:2px;"><span style="color:${panel.color};">▪</span>&nbsp;${panel.label}:&nbsp;<strong>${s}</strong></div>`;
+      });
+      tip.innerHTML = html;
+
+      if (xPx > W / 2) {
+        tip.style.left  = 'auto';
+        tip.style.right = (W - xPx + 8) + 'px';
+      } else {
+        tip.style.right = 'auto';
+        tip.style.left  = (xPx + 8) + 'px';
+      }
+      tip.style.top     = (MT + 4) + 'px';
+      tip.style.display = 'block';
+    });
+
+    canvas.addEventListener('mouseleave', _hideDcXhair);
+  }
+
+  function _hideDcXhair() {
+    const xhair = document.getElementById('dc-xhair');
+    const tip   = document.getElementById('dc-tip');
+    if (xhair) xhair.style.display = 'none';
+    if (tip)   tip.style.display   = 'none';
+  }
+
+  // ── Hauptfunktion ─────────────────────────────────────────────
+  let _timer = null;
+
+  function runDecomp() {
+    const info     = getMergedData();
+    const statusEl = document.getElementById('dc-status');
+    if (!info) { statusEl.textContent = window.t('an_dc_no_data','Keine Daten verfügbar.'); return; }
+
+    const model    = document.getElementById('dc-model').value;
+    const halfW    = Math.floor(parseInt(document.getElementById('dc-trendwin').value, 10) / 2);
+    const period   = parseInt(document.getElementById('dc-period').value, 10);
+    const nonNull  = info.values.filter(v => v !== null).length;
+
+    if (nonNull < period * 2) {
+      statusEl.textContent =
+        window.t('an_dc_too_few','Zu wenige Datenpunkte (${n}) für Periode ${p}. Bitte kleinere Periode wählen.').replace('${n}',nonNull).replace('${p}',period);
+      document.getElementById('dc-canvas').style.display = 'none';
+      return;
+    }
+
+    const result = decompose(info.values, period, halfW, model);
+    window._lastDcData = { result, labels: info.labels, kwId: info.kwId, keyword: info.keyword, period, model };
+    document.getElementById('dc-canvas').style.display = 'block';
+    renderDecompChart(result, info.labels);
+
+    const trendNull = result.trend.filter(v => v === null).length;
+    statusEl.textContent =
+      window.t('an_dc_status','${n} Datenpunkte · Trend-Fenster: ${tw} · Saison-Periode: ${p} · Randverlust: ${loss} Punkte')
+        .replace('${n}',nonNull).replace('${tw}',halfW*2+1).replace('${p}',period).replace('${loss}',trendNull);
+  }
+
+  // ── Modal öffnen / schließen ──────────────────────────────────
+  function openDecomp(kwId) {
+    _kwId = kwId != null ? kwId : null;
+    const info = getMergedData();
+    if (info) {
+      const svc = GPROP_L[info.gprop] || info.gprop || 'Web';
+      document.getElementById('dc-subtitle').textContent =
+        `${info.keyword} · ${info.geo} · ${svc} · ${info.runLabel}`;
+    } else {
+      document.getElementById('dc-subtitle').textContent = 'Kein Keyword ausgewählt';
+    }
+    document.getElementById('dc-model').value          = 'additive';
+    document.getElementById('dc-trendwin').value       = '7';
+    document.getElementById('dc-trendwin-val').textContent = '7';
+    document.getElementById('dc-period').value         = '30';
+    document.getElementById('dc-canvas').style.display = 'none';
+    document.getElementById('dc-status').textContent   = '';
+    document.getElementById('dc-overlay').style.display = 'flex';
+    runDecomp();
+  }
+
+  function closeDecomp() {
+    document.getElementById('dc-overlay').style.display = 'none';
+  }
+
+  window.openDecompForKw = openDecomp;
+  window._decompose = decompose;
+
+  // ── Event-Listener ────────────────────────────────────────────
+  document.getElementById('btn-dc-close').addEventListener('click', closeDecomp);
+  document.getElementById('dc-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('dc-overlay')) closeDecomp();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' &&
+        document.getElementById('dc-overlay').style.display === 'flex') closeDecomp();
+  });
+
+  document.getElementById('dc-model').addEventListener('change', () => {
+    clearTimeout(_timer); _timer = setTimeout(runDecomp, 50);
+  });
+  document.getElementById('dc-trendwin').addEventListener('input', e => {
+    document.getElementById('dc-trendwin-val').textContent = e.target.value;
+    clearTimeout(_timer); _timer = setTimeout(runDecomp, 300);
+  });
+  document.getElementById('dc-period').addEventListener('change', () => {
+    clearTimeout(_timer); _timer = setTimeout(runDecomp, 50);
+  });
+
+  // ── Snapshot-Button ───────────────────────────────────────────
+  document.getElementById('btn-dc-snap').addEventListener('click', () => {
+    const canvas = document.getElementById('dc-canvas');
+    if (!canvas || canvas.style.display === 'none') return;
+    const subtitle = document.getElementById('dc-subtitle').textContent;
+    const model    = document.getElementById('dc-model').value;
+    const trendwin = document.getElementById('dc-trendwin').value;
+    const period   = document.getElementById('dc-period').value;
+    if (window.openAnalysisSnap) {
+      window.openAnalysisSnap('decomp', canvas, subtitle,
+        { model, trendwin: Number(trendwin), period: Number(period) });
+    }
+  });
+
+})();
+
+// ── Plugin-Registrierung: KI-Analyse-Brücke ──────────────────
+(function() {
+  function summarizeDc(data) {
+    var result = data.result, labels = data.labels;
+    var trend = result.trend, seasonal = result.seasonal, residual = result.residual;
+    var validTrend = trend.map(function(v, i) { return v !== null ? { v: v, d: labels[i] } : null; }).filter(Boolean);
+    if (!validTrend.length) return {};
+    var tStart = validTrend[0], tEnd = validTrend[validTrend.length - 1];
+    var tMin = validTrend.reduce(function(a, b) { return a.v < b.v ? a : b; });
+    var tMax = validTrend.reduce(function(a, b) { return a.v > b.v ? a : b; });
+    var dir = tEnd.v > tStart.v * 1.05 ? 'steigend' : tEnd.v < tStart.v * 0.95 ? 'fallend' : 'stabil';
+    var validSeas = seasonal.filter(function(v) { return v !== null; });
+    var seasAmp = validSeas.length ? +(Math.max.apply(null, validSeas) - Math.min.apply(null, validSeas)).toFixed(2) : 0;
+    var topRes = residual
+      .map(function(v, i) { return v !== null ? { date: labels[i], value: +v.toFixed(2) } : null; })
+      .filter(Boolean)
+      .sort(function(a, b) { return Math.abs(b.value) - Math.abs(a.value); })
+      .slice(0, 10);
+    return {
+      trend: {
+        start: { date: tStart.d, value: +tStart.v.toFixed(1) },
+        end:   { date: tEnd.d,   value: +tEnd.v.toFixed(1) },
+        min:   { date: tMin.d,   value: +tMin.v.toFixed(1) },
+        max:   { date: tMax.d,   value: +tMax.v.toFixed(1) },
+        direction: dir,
+      },
+      seasonal_amplitude: seasAmp,
+      top_residuals: topRes,
+    };
+  }
+
+  if (window._registerAnalysisPlugin) {
+    window._registerAnalysisPlugin('dc', {
+      aiBtnId: 'btn-dc-ai',
+      onAi: function() {
+        var data = window._lastDcData;
+        if (!data) return;
+        var series = window._collectSeries ? window._collectSeries(data.kwId) : [];
+        if (!series.length) { alert(window.t('an_cpd_no_data','Keine aktiven Datenpunkte.')); return; }
+        var model = document.getElementById('dc-model').value;
+        var period = document.getElementById('dc-period').value;
+        var trendwin = document.getElementById('dc-trendwin').value;
+        var modelLabel = model === 'additive' ? window.t('an_dc_model_add','Additiv (T+S+R)') : window.t('an_dc_model_mul','Multiplikativ (T×S×R)');
+        var context = window.t('an_dc_model_label','Modell:') + ' ' + modelLabel + ', ' + window.t('an_dc_period_label','Saison-Periode:') + ' ' + period + ', ' + window.t('an_dc_trendwin_label','Trend-Fenster:') + ' ' + trendwin;
+        var extras = { dc: summarizeDc(data) };
+        window._openAiWithContext(series, context, window.t('an_dc_ai_context','Zeitreihen-Zerlegung · KI-Analyse'), 'dc', extras);
+      },
+      summarize: function() { return window._lastDcData ? { dc: summarizeDc(window._lastDcData) } : null; },
+    });
+  }
+})();
+</script>
+

@@ -1,0 +1,26 @@
+{
+  "de": {
+    "analysis_auto_corr_label": "Auto Correlate",
+    "analysis_auto_corr_desc": "Automatische Erkennung der am stärksten korrelierten Keywords.",
+    "an_ac_searching": "Suche korrelierte Keywords…",
+    "an_ac_none": "Keine korrelierten Keywords gefunden."
+  },
+  "en": {
+    "analysis_auto_corr_label": "Auto Correlate",
+    "analysis_auto_corr_desc": "Automatic detection of the most correlated keywords.",
+    "an_ac_searching": "Searching for correlated keywords…",
+    "an_ac_none": "No correlated keywords found."
+  },
+  "fr": {
+    "analysis_auto_corr_label": "Auto-corrélation",
+    "analysis_auto_corr_desc": "Détection automatique des mots-clés les plus corrélés.",
+    "an_ac_searching": "Recherche de keywords corrélés…",
+    "an_ac_none": "Aucun keyword corrélé trouvé."
+  },
+  "es": {
+    "analysis_auto_corr_label": "Auto-correlación",
+    "analysis_auto_corr_desc": "Detección automática de las palabras clave más correlacionadas.",
+    "an_ac_searching": "Buscando keywords correlacionadas…",
+    "an_ac_none": "No se encontraron keywords correlacionadas."
+  }
+}

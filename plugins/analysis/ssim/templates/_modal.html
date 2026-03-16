@@ -1,0 +1,475 @@
+<!-- ═══════════════════════════════════════════════════════════
+     Self-Similarity Modal
+═══════════════════════════════════════════════════════════ -->
+<style>
+#ssim-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82);
+  display: none; align-items: center; justify-content: center;
+  z-index: 9300; padding: 16px; box-sizing: border-box;
+}
+#ssim-dialog {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; width: 96vw; max-width: 1400px;
+  height: 90vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#ssim-canvas-wrap {
+  flex: 1; min-height: 0;
+  padding: 16px 20px; overflow: auto; background: #111;
+  display: flex; align-items: center; justify-content: center;
+}
+#ssim-canvas { display: block; }
+</style>
+
+<div id="ssim-overlay">
+  <div id="ssim-dialog">
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:16px 20px;
+                border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <h2 style="margin:0 0 3px;font-size:16px;font-weight:600;" data-i18n="analysis_ssim_label">Self-Similarity Matrix</h2>
+        <div id="ssim-subtitle" style="font-size:12px;color:var(--muted);
+             overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+      </div>
+      {% if 'trend_analysis' in ai_plugins_enabled %}
+      <button id="btn-ssim-ai"
+              style="cursor:pointer;background:none;border:1px solid rgba(139,92,246,.5);
+                     border-radius:6px;color:#a78bfa;font-size:12px;
+                     padding:3px 8px;flex-shrink:0;"
+              data-tip="KI-Analyse starten"><svg viewBox="0 0 20 16" width="16" height="13" fill="currentColor" style="vertical-align:middle;margin-right:4px;"><text x="1" y="13" font-family="system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="0.5">AI</text></svg> <span data-i18n="an_ssim_ai_btn">KI-Analyse</span></button>
+      {% endif %}
+      <button id="btn-ssim-snap"
+              style="cursor:pointer;background:none;border:1px solid var(--border);
+                     border-radius:6px;color:var(--muted);font-size:14px;
+                     padding:3px 8px;flex-shrink:0;display:flex;align-items:center;gap:4px;"
+              data-tip="Als Snapshot speichern"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,12.5 5,7.5 8,9.5 11.5,4.5 14.5,6.5"/></svg></button>
+      <button id="btn-ssim-close"
+              style="cursor:pointer;background:none;border:none;color:var(--muted);
+                     font-size:22px;line-height:1;padding:0 6px;flex-shrink:0;"
+              data-tip="Schließen">×</button>
+    </div>
+    <!-- Controls -->
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+                padding:10px 20px;border-bottom:1px solid var(--border);
+                flex-shrink:0;background:var(--surface2);">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        <span data-i18n="an_ssim_metric_label">Metrik:</span>
+        <select id="ssim-metric"
+                style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);
+                       background:var(--surface);color:var(--text);font-size:12px;">
+          <option value="diff" data-i18n="an_ssim_diff">Wertdifferenz</option>
+          <option value="corr" data-i18n="an_ssim_corr">Fensterkorrelation (Pearson)</option>
+        </select>
+      </label>
+      <label id="ssim-win-wrap"
+             style="display:none;align-items:center;gap:8px;font-size:12px;">
+        <span data-i18n="an_ssim_winsize_label">Fenstergröße:</span>
+        <input id="ssim-winsize" type="range" min="3" max="60" value="7"
+               style="width:110px;accent-color:var(--accent);">
+        <strong id="ssim-winsize-val" style="min-width:22px;text-align:right;">7</strong>
+      </label>
+    </div>
+    <!-- Canvas -->
+    <div id="ssim-canvas-wrap">
+      <canvas id="ssim-canvas"></canvas>
+    </div>
+    <!-- Status bar -->
+    <div id="ssim-status"
+         style="padding:8px 20px;font-size:11px;color:var(--muted);
+                border-top:1px solid var(--border);flex-shrink:0;
+                background:var(--surface2);"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Viridis-ähnliche Farbskala ───────────────────────────────
+  const C_STOPS = [
+    [68,  1,  84],   // 0.00 – dunkelviolett
+    [59, 82, 139],   // 0.25 – blau
+    [33,145,140],    // 0.50 – türkis
+    [94,201, 98],    // 0.75 – grün
+    [253,231, 37],   // 1.00 – gelb
+  ];
+  function simToRGB(sim) {
+    if (sim === null || sim === undefined || isNaN(sim)) return [25, 25, 25];
+    const t   = Math.max(0, Math.min(1, sim));
+    const pos = t * 4;
+    const lo  = Math.min(Math.floor(pos), 3);
+    const f   = pos - lo;
+    const a   = C_STOPS[lo], b = C_STOPS[lo + 1];
+    return [
+      Math.round(a[0] + f * (b[0] - a[0])),
+      Math.round(a[1] + f * (b[1] - a[1])),
+      Math.round(a[2] + f * (b[2] - a[2])),
+    ];
+  }
+
+  // ── Pearson-Korrelation zweier Fenster ───────────────────────
+  function pearsonWindow(vals, ci, cj, halfW) {
+    const n = vals.length;
+    let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, cnt = 0;
+    for (let d = -halfW; d <= halfW; d++) {
+      const ii = ci + d, jj = cj + d;
+      if (ii < 0 || ii >= n || jj < 0 || jj >= n) continue;
+      const x = vals[ii], y = vals[jj];
+      if (x === null || y === null) continue;
+      sx += x; sy += y; sxx += x*x; syy += y*y; sxy += x*y; cnt++;
+    }
+    if (cnt < 3) return null;
+    const mx = sx/cnt, my = sy/cnt;
+    const num = sxy/cnt - mx*my;
+    const dx  = Math.sqrt(Math.max(0, sxx/cnt - mx*mx));
+    const dy  = Math.sqrt(Math.max(0, syy/cnt - my*my));
+    if (dx < 1e-9 && dy < 1e-9) return 1;
+    if (dx < 1e-9 || dy < 1e-9) return 0;
+    return Math.max(-1, Math.min(1, num / (dx * dy)));
+  }
+
+  // ── Matrix berechnen ─────────────────────────────────────────
+  function computeMatrix(values, halfW, metric) {
+    const n   = values.length;
+    const mat = new Float32Array(n * n);
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j <= i; j++) {
+        let sim;
+        if (metric === 'corr') {
+          const c = pearsonWindow(values, i, j, halfW);
+          sim = c === null ? NaN : (c + 1) / 2;
+        } else {
+          const vi = values[i], vj = values[j];
+          sim = (vi === null || vj === null) ? NaN
+              : 1 - Math.abs(vi - vj) / 100;
+        }
+        mat[i * n + j] = mat[j * n + i] = sim;
+      }
+    }
+    return mat;
+  }
+
+  // ── Datumsformat für Achsen (ISO → DD.MM.YY) ─────────────────
+  function fmtAx(iso) {
+    if (!iso) return '';
+    const s = String(iso).slice(0, 10).split('-');
+    return s.length === 3 ? `${s[2]}.${s[1]}.${s[0].slice(2)}` : iso;
+  }
+
+  // ── Canvas zeichnen ──────────────────────────────────────────
+  // Orientierung: Y-Achse oben = ältestes Datum, unten = neuestes (Matrixkonvention)
+  //               X-Achse links = ältestes Datum, rechts = neuestes
+  //               Hauptdiagonale läuft von oben-links nach unten-rechts (Selbstähnlichkeit = 1)
+  const ML = 60, MB = 58, MT = 10, MR = 8; // Margins px
+
+  function renderCanvas(matrix, labels, n) {
+    const canvas = document.getElementById('ssim-canvas');
+    const wrap   = document.getElementById('ssim-canvas-wrap');
+    const size   = Math.min(Math.max(Math.min(wrap.clientWidth, wrap.clientHeight) - 32, 300), 1200);
+    const heatW  = size - ML - MR;
+    const heatH  = size - MT - MB;
+    canvas.width  = size;
+    canvas.height = size;
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, size, size);
+
+    // Heatmap via ImageData
+    const iw  = Math.ceil(heatW), ih = Math.ceil(heatH);
+    const img = ctx.createImageData(iw, ih);
+    const cw  = heatW / n, ch = heatH / n;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        const sim = matrix[i * n + j];
+        const [r, g, b] = simToRGB(isNaN(sim) ? null : sim);
+        const x0 = Math.round(j * cw), x1 = Math.round((j+1) * cw);
+        const y0 = Math.round(i * ch), y1 = Math.round((i+1) * ch);
+        for (let py = y0; py < y1 && py < ih; py++) {
+          for (let px = x0; px < x1 && px < iw; px++) {
+            const idx = (py * iw + px) * 4;
+            img.data[idx]   = r;
+            img.data[idx+1] = g;
+            img.data[idx+2] = b;
+            img.data[idx+3] = 255;
+          }
+        }
+      }
+    }
+    ctx.putImageData(img, ML, MT);
+
+    // Achsenbeschriftungen
+    ctx.fillStyle = '#999';
+    ctx.font = '9px monospace';
+    const step = Math.max(1, Math.floor(n / 7));
+
+    // Y-Achse (links) – oben = ältestes, unten = neuestes
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let i = 0; i < n; i += step) {
+      const y = MT + (i + 0.5) * ch;
+      ctx.fillText(fmtAx(labels[i]), ML - 4, y);
+    }
+    // Richtungshinweis Y
+    ctx.fillStyle = '#555';
+    ctx.font = '8px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.save();
+    ctx.translate(9, MT + heatH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(window.t('an_ssim_older_newer_y','älter ↑  ↓ neuer'), 0, 0);
+    ctx.restore();
+
+    // X-Achse (unten, gedreht) – links = ältestes, rechts = neuestes
+    ctx.fillStyle = '#999';
+    ctx.font = '9px monospace';
+    for (let j = 0; j < n; j += step) {
+      const x = ML + (j + 0.5) * cw;
+      ctx.save();
+      ctx.translate(x, MT + heatH + 4);
+      ctx.rotate(-Math.PI / 3);
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(fmtAx(labels[j]), 0, 0);
+      ctx.restore();
+    }
+    // Richtungshinweis X
+    ctx.fillStyle = '#555';
+    ctx.font = '8px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText(window.t('an_ssim_older_newer_x','← älter  neuer →'), ML + heatW / 2, size - 1);
+
+    // Rahmen
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+    ctx.strokeRect(ML, MT, heatW, heatH);
+
+    // Legende
+    const legX = ML, legY = size - 13, legW = heatW, legH = 6;
+    const legImg = ctx.createImageData(Math.ceil(legW), legH);
+    for (let px = 0; px < Math.ceil(legW); px++) {
+      const [r,g,b] = simToRGB(px / Math.ceil(legW));
+      for (let py = 0; py < legH; py++) {
+        const idx = (py * Math.ceil(legW) + px) * 4;
+        legImg.data[idx]=r; legImg.data[idx+1]=g;
+        legImg.data[idx+2]=b; legImg.data[idx+3]=255;
+      }
+    }
+    ctx.putImageData(legImg, legX, legY);
+    ctx.strokeRect(legX, legY, legW, legH);
+    ctx.font = '9px sans-serif';
+    ctx.textBaseline = 'bottom';
+    ctx.textAlign = 'left';  ctx.fillText(window.t('an_ssim_dissimilar','unähnlich'), legX, legY - 1);
+    ctx.textAlign = 'right'; ctx.fillText(window.t('an_ssim_identical','identisch'), legX + legW, legY - 1);
+  }
+
+  // ── Aktive Daten ermitteln ───────────────────────────────────
+  let _ssimKwId = null; // von openSsimForKw gesetzt
+
+  function getActiveData() {
+    const kw = _ssimKwId != null
+      ? allKeywords.find(k => k.id === _ssimKwId)
+      : allKeywords.find(k => selectedIds.has(k.id));
+    if (!kw) return null;
+
+    // Alle aktiven Run-Tags dieses Keywords ermitteln
+    const kwRunEntry   = kwRunData.find(r => r.kw.id === kw.id);
+    const activeRunTags = kwRunEntry
+      ? kwRunEntry.runs.map(r => r.run_tag).filter(rt => (selectedRunTagByKw.get(kw.id) || new Set()).has(rt))
+      : [];
+    if (!activeRunTags.length) activeRunTags.push([...(selectedRunTagByKw.get(kw.id) || new Set())][0] ?? '');
+
+    // Daten über alle aktiven Reihen zusammenführen (Durchschnitt je Datum)
+    const accum = {}; // date → { sum, cnt }
+    let anyEntry = null;
+    for (const rt of activeRunTags) {
+      const entry = rawData[`${kw.id}@@${rt}`];
+      if (!entry) continue;
+      anyEntry = entry;
+      entry.data.forEach(p => {
+        if (p.value !== null) {
+          if (!accum[p.date]) accum[p.date] = { sum: 0, cnt: 0 };
+          accum[p.date].sum += p.value;
+          accum[p.date].cnt++;
+        }
+      });
+    }
+    if (!anyEntry) return null;
+
+    let labels = [...allLabels];
+    let values = labels.map(d => {
+      const a = accum[d];
+      return a && a.cnt > 0 ? a.sum / a.cnt : null;
+    });
+
+    // Subsampling bei zu vielen Punkten (>500)
+    let subsampled = false;
+    if (values.length > 500) {
+      const step = Math.ceil(values.length / 500);
+      values = values.filter((_, i) => i % step === 0);
+      labels = labels.filter((_, i) => i % step === 0);
+      subsampled = true;
+    }
+    const runLabel = activeRunTags.length === 1
+      ? (activeRunTags[0] || 'Standard')
+      : `${activeRunTags.length} ${window.t('an_ssim_runs_avg','Reihen (gemittelt)')}`;
+    return {
+      values, labels,
+      kwId:       kw.id,
+      keyword:    anyEntry.keyword || kw.keyword,
+      geo:        anyEntry.geo     || kw.geo || 'DE',
+      gprop:      kw.gprop || '',
+      runLabel,
+      subsampled,
+    };
+  }
+
+  // ── Berechnung & Rendering anstoßen ─────────────────────────
+  let timer = null;
+
+  function runCompute() {
+    const statusEl = document.getElementById('ssim-status');
+    const info = getActiveData();
+    if (!info) {
+      statusEl.textContent = window.t('an_ssim_no_data','Keine Daten verfügbar – bitte zuerst ein Keyword auswählen.');
+      document.getElementById('ssim-canvas').style.display = 'none';
+      return;
+    }
+    const metric  = document.getElementById('ssim-metric').value;
+    const winSize = parseInt(document.getElementById('ssim-winsize').value, 10);
+    const halfW   = Math.floor(winSize / 2);
+    const nonNull = info.values.filter(v => v !== null).length;
+
+    statusEl.textContent = `${window.t('an_ssim_computing','Berechne…')} (${info.values.length} ${window.t('an_ssim_pts','Punkte')})`;
+    document.getElementById('ssim-canvas').style.display = 'none';
+
+    // Micro-Task damit das UI kurz atmen kann
+    setTimeout(() => {
+      const mat = computeMatrix(info.values, halfW, metric);
+      window._lastSsimData = { mat, labels: info.labels, n: info.values.length, metric, kwId: info.kwId };
+      document.getElementById('ssim-canvas').style.display = 'block';
+      renderCanvas(mat, info.labels, info.values.length);
+      let msg = `${info.values.length} ${window.t('an_ssim_pts','Punkte')} · ${nonNull} ${window.t('an_ssim_pts_with_val','mit Wert')}`;
+      if (metric === 'corr') msg += ` · ${window.t('an_ssim_window','Fenster:')} ${winSize} ${window.t('an_ssim_pts','Punkte')}`;
+      if (info.subsampled) msg += ` · ${window.t('an_ssim_reduced','(auf 500 Punkte reduziert)')}`;
+      statusEl.textContent = msg;
+    }, 20);
+  }
+
+  // ── Modal öffnen / schließen ─────────────────────────────────
+  const GPROP_L = { '':'Web', news:'News', images:window.t('an_gprop_images','Bilder'), youtube:'YouTube', froogle:window.t('an_gprop_shopping','Shopping') };
+
+  function openSsim(kwId) {
+    _ssimKwId = kwId != null ? kwId : null;
+    const info = getActiveData();
+    if (info) {
+      const svc = GPROP_L[info.gprop] || info.gprop || 'Web';
+      document.getElementById('ssim-subtitle').textContent =
+        `${info.keyword} · ${info.geo} · ${svc} · ${window.t('an_ssim_series_label','Reihe:')} ${info.runLabel}`;
+    } else {
+      document.getElementById('ssim-subtitle').textContent = window.t('an_ssim_no_kw','Kein Keyword ausgewählt');
+    }
+
+    // Controls zurücksetzen
+    const metricEl = document.getElementById('ssim-metric');
+    metricEl.value = 'diff';
+    document.getElementById('ssim-winsize').value   = '7';
+    document.getElementById('ssim-winsize-val').textContent = '7';
+    document.getElementById('ssim-win-wrap').style.display  = 'none';
+    document.getElementById('ssim-canvas').style.display    = 'none';
+    document.getElementById('ssim-status').textContent      = '';
+
+    document.getElementById('ssim-overlay').style.display = 'flex';
+    runCompute();
+  }
+
+  function closeSsim() {
+    document.getElementById('ssim-overlay').style.display = 'none';
+  }
+
+  // ── Globaler Einstiegspunkt für Keyword-Popup ────────────────
+  window.openSsimForKw = openSsim;
+
+  // ── Event-Listener ───────────────────────────────────────────
+  document.getElementById('btn-ssim-close').addEventListener('click', closeSsim);
+  document.getElementById('ssim-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('ssim-overlay')) closeSsim();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' &&
+        document.getElementById('ssim-overlay').style.display === 'flex') closeSsim();
+  });
+
+  document.getElementById('ssim-metric').addEventListener('change', e => {
+    const isCorr = e.target.value === 'corr';
+    document.getElementById('ssim-win-wrap').style.display = isCorr ? 'flex' : 'none';
+    clearTimeout(timer); timer = setTimeout(runCompute, 50);
+  });
+  document.getElementById('ssim-winsize').addEventListener('input', e => {
+    document.getElementById('ssim-winsize-val').textContent = e.target.value;
+    clearTimeout(timer); timer = setTimeout(runCompute, 350);
+  });
+
+  document.getElementById('btn-ssim-snap').addEventListener('click', () => {
+    const canvas = document.getElementById('ssim-canvas');
+    if (!canvas) return;
+    const subtitle = document.getElementById('ssim-subtitle').textContent;
+    const metric   = document.getElementById('ssim-metric').value;
+    const winsize  = document.getElementById('ssim-winsize').value;
+    if (window.openAnalysisSnap) {
+      window.openAnalysisSnap('ssim', canvas, subtitle,
+        { metric, winsize: Number(winsize) });
+    }
+  });
+
+})();
+
+// ── Plugin-Registrierung: KI-Analyse-Brücke ──────────────────
+(function() {
+  function summarizeSsim(data) {
+    const { mat, labels, n, metric } = data;
+    const profile = [];
+    for (let i = 0; i < n; i++) {
+      let sum = 0, cnt = 0;
+      for (let j = 0; j < n; j++) {
+        if (i === j) continue;
+        const v = mat[i * n + j];
+        if (!isNaN(v)) { sum += v; cnt++; }
+      }
+      profile.push(cnt > 0 ? sum / cnt : null);
+    }
+    const valid = profile.filter(v => v !== null);
+    const meanSim = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
+    const step = Math.max(1, Math.floor(n / 60));
+    const sampledProfile = [];
+    for (let i = 0; i < n; i += step) {
+      if (profile[i] !== null) sampledProfile.push({ date: labels[i], sim: +profile[i].toFixed(3) });
+    }
+    const breaks = profile
+      .map((v, i) => ({ date: labels[i], sim: v }))
+      .filter(x => x.sim !== null)
+      .sort((a, b) => a.sim - b.sim)
+      .slice(0, 6)
+      .map(x => ({ date: x.date, sim: +x.sim.toFixed(3) }));
+    return { mean_sim: +meanSim.toFixed(3), metric, profile: sampledProfile, breaks };
+  }
+
+  if (window._registerAnalysisPlugin) {
+    window._registerAnalysisPlugin('ssim', {
+      aiBtnId: 'btn-ssim-ai',
+      onAi: function() {
+        var data = window._lastSsimData;
+        if (!data) return;
+        var series = window._collectSeries ? window._collectSeries(data.kwId) : [];
+        if (!series.length) { alert(window.t('an_ssim_no_pts','Keine aktiven Datenpunkte.')); return; }
+        var metric = document.getElementById('ssim-metric').value;
+        var metricLabel = metric === 'corr' ? window.t('an_ssim_corr','Fensterkorrelation (Pearson)') : window.t('an_ssim_diff','Wertdifferenz');
+        var context = window.t('an_ssim_metric_label','Metrik:') + ' ' + metricLabel;
+        var extras = { ssim: summarizeSsim(data) };
+        window._openAiWithContext(series, context, window.t('an_ssim_ai_context','Self-Similarity · KI-Analyse'), 'ssim', extras);
+      },
+      summarize: function() { return window._lastSsimData ? { ssim: summarizeSsim(window._lastSsimData) } : null; },
+    });
+  }
+})();
+_applyI18n();
+</script>
+

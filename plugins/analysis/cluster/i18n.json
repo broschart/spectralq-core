@@ -1,0 +1,58 @@
+{
+  "de": {
+    "analysis_cluster_label": "RQ Cluster Analyse",
+    "analysis_cluster_desc": "Thematische Clusteranalyse verwandter Suchanfragen.",
+    "an_cl_loading": "KI analysiert verwandte Suchanfragen…",
+    "an_cl_no_data": "Keine verwandten Suchanfragen vorhanden. Zuerst einen Datenabruf durchführen.",
+    "an_cl_error": "Fehler bei der Analyse.",
+    "an_cl_error_prefix": "Fehler:",
+    "an_cl_no_answer": "Keine Antwort.",
+    "an_cl_followup": "Folgefragen",
+    "an_cl_chat_placeholder": "Frage zu den Clustern …",
+    "an_cl_chat_send": "Senden",
+    "an_cl_chat_you": "Du:",
+    "an_cl_chat_ai": "KI:"
+  },
+  "en": {
+    "analysis_cluster_label": "RQ Cluster Analysis",
+    "analysis_cluster_desc": "Thematic cluster analysis of related queries.",
+    "an_cl_loading": "AI is analysing related queries…",
+    "an_cl_no_data": "No related queries available. Run a data fetch first.",
+    "an_cl_error": "Analysis failed.",
+    "an_cl_error_prefix": "Error:",
+    "an_cl_no_answer": "No response.",
+    "an_cl_followup": "Follow-up questions",
+    "an_cl_chat_placeholder": "Ask about the clusters …",
+    "an_cl_chat_send": "Send",
+    "an_cl_chat_you": "You:",
+    "an_cl_chat_ai": "AI:"
+  },
+  "fr": {
+    "analysis_cluster_label": "Analyse de clusters RQ",
+    "analysis_cluster_desc": "Analyse thématique de clusters de requêtes associées.",
+    "an_cl_loading": "L'IA analyse les requêtes associées…",
+    "an_cl_no_data": "Aucune requête associée disponible. Lancez d'abord une collecte de données.",
+    "an_cl_error": "Erreur lors de l'analyse.",
+    "an_cl_error_prefix": "Erreur :",
+    "an_cl_no_answer": "Pas de réponse.",
+    "an_cl_followup": "Questions de suivi",
+    "an_cl_chat_placeholder": "Question sur les clusters …",
+    "an_cl_chat_send": "Envoyer",
+    "an_cl_chat_you": "Vous :",
+    "an_cl_chat_ai": "IA :"
+  },
+  "es": {
+    "analysis_cluster_label": "Análisis de clusters RQ",
+    "analysis_cluster_desc": "Análisis temático de clusters de consultas relacionadas.",
+    "an_cl_loading": "La IA está analizando las consultas relacionadas…",
+    "an_cl_no_data": "No hay consultas relacionadas disponibles. Primero ejecute una recopilación de datos.",
+    "an_cl_error": "Error en el análisis.",
+    "an_cl_error_prefix": "Error:",
+    "an_cl_no_answer": "Sin respuesta.",
+    "an_cl_followup": "Preguntas de seguimiento",
+    "an_cl_chat_placeholder": "Pregunta sobre los clusters …",
+    "an_cl_chat_send": "Enviar",
+    "an_cl_chat_you": "Tú:",
+    "an_cl_chat_ai": "IA:"
+  }
+}

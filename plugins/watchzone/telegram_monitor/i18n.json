@@ -1,0 +1,52 @@
+{
+  "de": {
+    "wz_sidebar_telegram_monitor": "Telegram",
+    "wz_tgm_title": "Telegram Keyword-Monitor",
+    "wz_tgm_source": "Quelle: Telegram Public Channels (Telethon)",
+    "wz_tgm_desc": "Ueberwacht die Erwaehnung von Begriffen in oeffentlichen Telegram-Kanaelen. Zeigt Nachrichtenvolumen ueber Zeit — nuetzlich zur Erkennung von Desinformationskampagnen, Mobilisierung und Narrativ-Tracking.",
+    "wz_tgm_hint": "Keywords eingeben und Zone erstellen. Erwaehungen in oeffentlichen Telegram-Kanaelen werden automatisch gezaehlt.",
+    "wz_tgm_keywords": "Keywords",
+    "wz_tgm_total": "Gesamt",
+    "wz_tgm_days": "Tage",
+    "wz_tgm_trend": "Trend",
+    "wz_tgm_daily_avg": "⌀/Tag",
+    "wz_tgm_peak": "Peak",
+    "wz_tgm_empty": "Keine Ergebnisse fuer diese Keywords.",
+    "wz_tgm_no_session": "Telegram-Session nicht aktiv. Bitte im Admin-Bereich authentifizieren.",
+    "wz_tgm_header": "Erwaehungen (90 Tage)"
+  },
+  "en": {
+    "wz_sidebar_telegram_monitor": "Telegram",
+    "wz_tgm_title": "Telegram Keyword Monitor",
+    "wz_tgm_source": "Source: Telegram Public Channels (Telethon)",
+    "wz_tgm_desc": "Monitors keyword mentions in public Telegram channels. Shows message volume over time — useful for detecting disinformation campaigns, mobilization and narrative tracking.",
+    "wz_tgm_hint": "Enter keywords and create a zone. Mentions in public Telegram channels will be counted automatically.",
+    "wz_tgm_keywords": "Keywords",
+    "wz_tgm_total": "Total",
+    "wz_tgm_days": "days",
+    "wz_tgm_trend": "Trend",
+    "wz_tgm_daily_avg": "⌀/day",
+    "wz_tgm_peak": "Peak",
+    "wz_tgm_empty": "No results for these keywords.",
+    "wz_tgm_no_session": "Telegram session not active. Please authenticate in admin settings.",
+    "wz_tgm_header": "Mentions (90 days)"
+  },
+  "fr": {
+    "wz_sidebar_telegram_monitor": "Telegram",
+    "wz_tgm_title": "Moniteur Telegram",
+    "wz_tgm_source": "Source : Telegram (Telethon)",
+    "wz_tgm_desc": "Surveille les mentions de mots-cles dans les canaux Telegram publics.",
+    "wz_tgm_hint": "Entrez des mots-cles et creez une zone.",
+    "wz_tgm_empty": "Aucun resultat.",
+    "wz_tgm_no_session": "Session Telegram inactive."
+  },
+  "es": {
+    "wz_sidebar_telegram_monitor": "Telegram",
+    "wz_tgm_title": "Monitor Telegram",
+    "wz_tgm_source": "Fuente: Telegram (Telethon)",
+    "wz_tgm_desc": "Monitorea menciones de palabras clave en canales publicos de Telegram.",
+    "wz_tgm_hint": "Ingrese palabras clave y cree una zona.",
+    "wz_tgm_empty": "Sin resultados.",
+    "wz_tgm_no_session": "Sesion de Telegram inactiva."
+  }
+}

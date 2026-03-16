@@ -1,0 +1,43 @@
+<div id="panel-telegram_monitor" class="wz-panel" style="display:none;">
+  <div class="wz-main-header">
+    <h2 data-i18n="wz_tgm_title">Telegram Keyword Monitor</h2>
+    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_tgm_source">Source: Telegram Public Channels (Telethon)</span>
+    </button>
+    <p class="wz-panel-desc" data-i18n="wz_tgm_desc">Monitors keyword mentions in public Telegram channels. Shows message volume over time — useful for detecting disinformation campaigns, mobilization and narrative tracking.</p>
+  </div>
+  <div class="wz-main-body">
+    <div id="wz-map-telegram_monitor" class="wz-map-container" style="display:none;"></div>
+    <div class="wz-hint" id="wz-hint-telegram_monitor" data-i18n="wz_tgm_hint">
+      Enter keywords and create a zone. Mentions in public
+      Telegram channels will be counted automatically.
+    </div>
+    <div class="wz-zone-list" id="wz-zones-telegram_monitor"></div>
+  </div>
+</div>
+
+<script>
+// Telegram Monitor: Zone erstellen per Prompt (keine Karte nötig)
+function _tgmCreateZone() {
+  var keywords = prompt("Keywords eingeben (kommagetrennt):", "");
+  if (!keywords || !keywords.trim()) return;
+  var name = prompt("Name der Keyword-Gruppe:", keywords.split(",")[0].trim());
+  if (!name) return;
+
+  fetch("/api/watchzones", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: name,
+      zone_type: "telegram_monitor",
+      geometry: { type: "Point", coordinates: [0, 0] },
+      config: { keywords: keywords, days: 90 },
+    }),
+  }).then(r => r.json()).then(data => {
+    if (data.id) {
+      location.reload();
+    } else {
+      alert(data.error || "Fehler beim Erstellen");
+    }
+  });
+}
+</script>

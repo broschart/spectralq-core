@@ -1,0 +1,353 @@
+<!-- ═══════════════════════════════════════════════════════════
+     SPIKE-KOINZIDENZ-OVERLAY
+═══════════════════════════════════════════════════════════ -->
+<style>
+#sc-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82);
+  display: none; align-items: center; justify-content: center;
+  z-index: 9400; padding: 16px; box-sizing: border-box;
+}
+#sc-dialog {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; width: 96vw; max-width: 1400px;
+  height: 80vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#sc-chart-wrap {
+  flex: 1; min-height: 0;
+  padding: 12px 16px 0; background: #111; overflow: hidden;
+}
+#sc-list-wrap {
+  overflow-y: auto; max-height: 240px;
+  padding: 0 20px 12px;
+}
+</style>
+
+<div id="sc-overlay">
+  <div id="sc-dialog">
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <h2 style="margin:0 0 3px;font-size:16px;font-weight:600;">Spike-Koinzidenz</h2>
+        <div id="sc-subtitle" style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:700px;"></div>
+      </div>
+      {% if 'trend_analysis' in ai_plugins_enabled %}
+      <button id="btn-sc-ai" style="flex-shrink:0;padding:6px 14px;border-radius:6px;border:1px solid rgba(139,92,246,.5);background:none;color:#a78bfa;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">
+        <svg viewBox="0 0 20 16" width="14" height="11" fill="currentColor" style="vertical-align:middle;margin-right:3px;"><text x="1" y="13" font-family="system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="0.5">AI</text></svg> KI-Analyse
+      </button>
+      {% endif %}
+      <button id="btn-sc-snap" style="flex-shrink:0;width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,12.5 5,7.5 8,9.5 11.5,4.5 14.5,6.5"/></svg>
+      </button>
+      <button id="btn-sc-close" style="flex-shrink:0;width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;">×</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        Schwellenwert (σ):
+        <input id="sc-threshold" type="range" min="1" max="4" step="0.25" value="2">
+        <strong id="sc-threshold-val">2.0</strong>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        Min. gleichzeitige Keywords:
+        <input id="sc-minkw" type="range" min="2" max="7" step="1" value="2">
+        <strong id="sc-minkw-val">2</strong>
+      </label>
+    </div>
+
+    <div id="sc-chart-wrap">
+      <div style="position:relative;width:100%;height:100%;">
+        <canvas id="sc-canvas" style="display:none;width:100%;height:100%;"></canvas>
+      </div>
+    </div>
+
+    <div id="sc-status" style="padding:6px 20px;font-size:11px;color:var(--muted);flex-shrink:0;"></div>
+
+    <div id="sc-list-wrap">
+      <div id="sc-list" style="padding-top:8px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  let _scChart = null;
+  let _lastScData = null;
+
+  // ── Spike-Koinzidenz-Algorithmus ─────────────────────────────
+  function detectSpikeCoincidence(allSeries, labels, threshold, minKw) {
+    // allSeries: [{keyword, values, color}]
+    // Für jede Reihe Z-Scores berechnen
+    const zScores = allSeries.map(s => {
+      const nn = s.values.filter(v => v !== null);
+      if (nn.length < 3) return s.values.map(() => 0);
+      const mean = nn.reduce((a, b) => a + b, 0) / nn.length;
+      const std = Math.sqrt(nn.reduce((a, v) => a + (v - mean) ** 2, 0) / nn.length);
+      return s.values.map(v => v === null ? 0 : (std > 0 ? (v - mean) / std : 0));
+    });
+
+    // Koinzidenzen finden: Zeitpunkte, an denen >= minKw Reihen über threshold liegen
+    const coincidences = [];
+    for (let i = 0; i < labels.length; i++) {
+      const spiking = [];
+      for (let k = 0; k < allSeries.length; k++) {
+        if (Math.abs(zScores[k][i]) >= threshold) {
+          spiking.push({
+            keyword: allSeries[k].keyword,
+            color: allSeries[k].color,
+            value: allSeries[k].values[i],
+            zScore: zScores[k][i],
+            dir: zScores[k][i] > 0 ? 'hoch' : 'niedrig'
+          });
+        }
+      }
+      if (spiking.length >= minKw) {
+        coincidences.push({
+          idx: i,
+          date: labels[i],
+          keywords: spiking,
+          count: spiking.length,
+          avgZ: spiking.reduce((a, s) => a + Math.abs(s.zScore), 0) / spiking.length
+        });
+      }
+    }
+
+    // Nach durchschnittlicher Z-Score-Stärke sortieren
+    coincidences.sort((a, b) => b.avgZ - a.avgZ);
+
+    return { coincidences, zScores };
+  }
+
+  // ── Chart rendern ─────────────────────────────────────────────
+  function renderScChart(allSeries, labels, coincidences) {
+    const canvas = document.getElementById('sc-canvas');
+    canvas.style.display = 'block';
+    if (_scChart) { _scChart.destroy(); _scChart = null; }
+
+    const datasets = allSeries.map(s => ({
+      label: s.keyword,
+      data: s.values,
+      borderColor: s.color,
+      backgroundColor: s.color + '22',
+      borderWidth: 1.5,
+      tension: 0.35,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      fill: false,
+      spanGaps: true,
+    }));
+
+    // Koinzidenz-Markierungen als vertikale Annotationen
+    const annotations = {};
+    coincidences.forEach((c, i) => {
+      annotations['sc' + i] = {
+        type: 'line',
+        xMin: c.idx, xMax: c.idx,
+        borderColor: 'rgba(239,68,68,0.7)',
+        borderWidth: 2,
+        borderDash: [4, 3],
+        label: {
+          display: i < 20,
+          content: c.count + '×',
+          position: 'start',
+          backgroundColor: 'rgba(239,68,68,0.85)',
+          color: '#fff',
+          font: { size: 9, weight: 'bold' },
+          padding: { top: 2, bottom: 2, left: 4, right: 4 },
+          borderRadius: 3,
+        }
+      };
+    });
+
+    _scChart = new Chart(canvas, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: {
+            ticks: { color: '#888', maxRotation: 0, autoSkip: true, maxTicksLimit: 20, font: { size: 10 } },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+          },
+          y: {
+            ticks: { color: '#888', font: { size: 10 } },
+            grid: { color: 'rgba(255,255,255,0.06)' },
+          }
+        },
+        plugins: {
+          legend: { display: true, position: 'top', labels: { color: '#aaa', boxWidth: 12, font: { size: 11 } } },
+          annotation: { annotations },
+          tooltip: {
+            backgroundColor: 'rgba(26,29,39,0.95)',
+            titleColor: '#e2e4ea', bodyColor: '#ccc',
+            borderColor: '#2e3142', borderWidth: 1,
+            padding: 10,
+          }
+        }
+      }
+    });
+  }
+
+  // ── Erkennung ausführen ───────────────────────────────────────
+  function runSpikeDetect() {
+    const statusEl = document.getElementById('sc-status');
+    const listEl = document.getElementById('sc-list');
+
+    // Daten aller aktiven Keywords sammeln
+    const mainChart = window._mainChart || (typeof chart !== 'undefined' ? chart : null);
+    if (!mainChart || !mainChart.data || !mainChart.data.datasets.length) {
+      statusEl.textContent = 'Keine Daten verfügbar.';
+      listEl.innerHTML = ''; return;
+    }
+
+    const labels = mainChart.data.labels;
+    const allSeries = mainChart.data.datasets
+      .filter(ds => !ds._isEvent && !ds._isBand && !ds._isSunArc)
+      .map(ds => ({
+        keyword: ds.label,
+        values: ds.data.slice(),
+        color: ds.borderColor,
+      }));
+
+    if (allSeries.length < 2) {
+      statusEl.textContent = 'Mindestens 2 Keywords erforderlich.';
+      listEl.innerHTML = ''; return;
+    }
+
+    const threshold = parseFloat(document.getElementById('sc-threshold').value);
+    const minKw = parseInt(document.getElementById('sc-minkw').value, 10);
+
+    // Max-MinKw anpassen
+    const minkwSlider = document.getElementById('sc-minkw');
+    minkwSlider.max = allSeries.length;
+    if (minKw > allSeries.length) {
+      minkwSlider.value = allSeries.length;
+      document.getElementById('sc-minkw-val').textContent = allSeries.length;
+    }
+
+    const { coincidences } = detectSpikeCoincidence(allSeries, labels, threshold, minKw);
+
+    _lastScData = {
+      coincidences,
+      labels,
+      keywords: allSeries.map(s => s.keyword),
+      threshold,
+      minKw
+    };
+
+    const subtitle = allSeries.map(s => s.keyword).join(' · ');
+    document.getElementById('sc-subtitle').textContent = subtitle;
+    statusEl.textContent =
+      `${allSeries.length} Keywords · ${labels.length} Datenpunkte · ${coincidences.length} Koinzidenzen (σ ≥ ${threshold.toFixed(1)}, min. ${minKw} Keywords)`;
+
+    renderScChart(allSeries, labels, coincidences);
+
+    if (!coincidences.length) {
+      listEl.innerHTML =
+        '<p style="color:var(--muted);font-size:12px;padding:8px 0 4px;">Keine Spike-Koinzidenzen bei diesen Parametern.</p>';
+      return;
+    }
+
+    // Ergebnis-Tabelle
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;">
+      <thead><tr style="color:var(--muted);font-size:11px;border-bottom:1px solid var(--border);">
+        <th style="text-align:left;padding:4px 8px;">Datum</th>
+        <th style="text-align:center;padding:4px 8px;">Anzahl</th>
+        <th style="text-align:left;padding:4px 8px;">Keywords</th>
+        <th style="text-align:right;padding:4px 8px;">Ø |Z|</th>
+      </tr></thead><tbody>`;
+    coincidences.slice(0, 50).forEach(c => {
+      const kwChips = c.keywords.map(k =>
+        `<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;margin:1px 2px;background:${k.color}22;color:${k.color};border:1px solid ${k.color}44;">${escHtml(k.keyword)} ${k.dir === 'hoch' ? '↑' : '↓'} ${Math.abs(k.zScore).toFixed(1)}σ</span>`
+      ).join('');
+      html += `<tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:5px 8px;white-space:nowrap;">${c.date}</td>
+        <td style="text-align:center;padding:5px 8px;"><strong style="color:#f87171;">${c.count}</strong></td>
+        <td style="padding:5px 8px;">${kwChips}</td>
+        <td style="text-align:right;padding:5px 8px;font-weight:600;">${c.avgZ.toFixed(2)}σ</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    listEl.innerHTML = html;
+  }
+
+  function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  // ── Modal öffnen / schließen ──────────────────────────────────
+  function openSpikeCoin() {
+    document.getElementById('sc-canvas').style.display = 'none';
+    document.getElementById('sc-status').textContent = '';
+    document.getElementById('sc-list').innerHTML = '';
+    document.getElementById('sc-overlay').style.display = 'flex';
+    runSpikeDetect();
+  }
+
+  function closeSpikeCoin() {
+    document.getElementById('sc-overlay').style.display = 'none';
+    if (_scChart) { _scChart.destroy(); _scChart = null; }
+  }
+
+  // ── Event-Listener ────────────────────────────────────────────
+  if (document.getElementById('btn-spike-coin')) document.getElementById('btn-spike-coin').addEventListener('click', openSpikeCoin);
+  document.getElementById('btn-sc-close').addEventListener('click', closeSpikeCoin);
+  document.getElementById('sc-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('sc-overlay')) closeSpikeCoin();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' &&
+        document.getElementById('sc-overlay').style.display === 'flex') closeSpikeCoin();
+  });
+
+  let _scTimer;
+  document.getElementById('sc-threshold').addEventListener('input', e => {
+    document.getElementById('sc-threshold-val').textContent = parseFloat(e.target.value).toFixed(1);
+    clearTimeout(_scTimer); _scTimer = setTimeout(runSpikeDetect, 200);
+  });
+  document.getElementById('sc-minkw').addEventListener('input', e => {
+    document.getElementById('sc-minkw-val').textContent = e.target.value;
+    clearTimeout(_scTimer); _scTimer = setTimeout(runSpikeDetect, 200);
+  });
+
+  // ── Snapshot ──────────────────────────────────────────────────
+  document.getElementById('btn-sc-snap').addEventListener('click', () => {
+    const canvas = document.getElementById('sc-canvas');
+    if (!canvas || canvas.style.display === 'none') return;
+    const subtitle = document.getElementById('sc-subtitle').textContent;
+    if (window.openAnalysisSnap) {
+      window.openAnalysisSnap('spike_coincidence', canvas, subtitle,
+        { threshold: parseFloat(document.getElementById('sc-threshold').value),
+          minKw: parseInt(document.getElementById('sc-minkw').value, 10) });
+    }
+  });
+
+  // ── KI-Analyse ────────────────────────────────────────────────
+  if (document.getElementById('btn-sc-ai')) document.getElementById('btn-sc-ai').addEventListener('click', () => {
+    if (!_lastScData || !_lastScData.coincidences.length) {
+      alert('Keine Koinzidenzen vorhanden.'); return;
+    }
+    const series = window._collectSeries ? window._collectSeries(null) : [];
+    if (!series.length) { alert('Keine aktiven Datenpunkte.'); return; }
+    const context = `Spike-Koinzidenz-Analyse: σ ≥ ${_lastScData.threshold}, min. ${_lastScData.minKw} Keywords gleichzeitig`;
+    const extras = {
+      spike_coincidence: {
+        coincidences: _lastScData.coincidences.slice(0, 20).map(c => ({
+          date: c.date,
+          count: c.count,
+          avgZ: c.avgZ.toFixed(2),
+          keywords: c.keywords.map(k => ({ keyword: k.keyword, zScore: k.zScore.toFixed(2), dir: k.dir }))
+        }))
+      }
+    };
+    if (window._openAiWithContext) {
+      window._openAiWithContext(series, context, 'Spike-Koinzidenz · KI-Analyse', 'spike_coin', extras);
+    }
+  });
+
+  // Referenz auf Main-Chart für Zugriff
+  window._getMainChart = () => typeof chart !== 'undefined' ? chart : null;
+})();
+</script>
+

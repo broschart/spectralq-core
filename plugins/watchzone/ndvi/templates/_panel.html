@@ -1,0 +1,16 @@
+<div id="panel-ndvi" class="wz-panel" style="display:none;">
+  <div class="wz-main-header">
+    <h2 data-i18n="wz_ndvi_title">NDVI / Vegetation</h2>
+    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_ndvi_source">Source: Copernicus Sentinel-2 NDVI</span>
+    </button>
+    <p class="wz-panel-desc" data-i18n="wz_ndvi_desc">Measures vegetation density via satellite (NDVI index). Decreases may indicate deforestation, drought or agricultural change. The time series appears in the analysis timeline under "Additional Sources".</p>
+  </div>
+  <div class="wz-main-body">
+    <div id="wz-map-ndvi" class="wz-map-container" style="height:500px;"></div>
+    <div class="wz-hint" id="wz-hint-ndvi" data-i18n="wz_ndvi_hint">
+      Draw observation areas on the map for which NDVI vegetation data
+      will be displayed in the analysis timeline (under "Additional Sources").
+    </div>
+    <div class="wz-zone-list" id="wz-zones-ndvi"></div>
+  </div>
+</div>

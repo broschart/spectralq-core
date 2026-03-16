@@ -1,0 +1,695 @@
+{% extends "base.html" %}
+{% block title %}Plugins – spectralQ{% endblock %}
+{% block head %}
+<style>
+  .plugins-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+  .plugins-page h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  .plugins-page .page-desc {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0 0 28px;
+  }
+  .plugin-type-section {
+    margin-bottom: 32px;
+  }
+  .plugin-type-section h2 {
+    font-size: 15px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    margin: 0 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .plugin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+  }
+  .plugin-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color .15s;
+  }
+  .plugin-card:hover {
+    border-color: var(--accent1);
+  }
+  .plugin-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .plugin-card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .plugin-card-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .plugin-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    flex: 1;
+  }
+  .plugin-card-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .plugin-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 8px;
+  }
+  .plugin-card-source {
+    font-size: 10px;
+    color: var(--muted);
+  }
+  /* Toggle switch */
+  .toggle-switch {
+    position: relative;
+    width: 38px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--surface2);
+    border-radius: 10px;
+    transition: background .2s;
+  }
+  .toggle-slider::before {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 2px;
+    bottom: 2px;
+    background: var(--bg);
+    border-radius: 50%;
+    transition: transform .2s;
+  }
+  .toggle-switch input:checked + .toggle-slider {
+    background: var(--accent1);
+  }
+  .toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(18px);
+  }
+  .toggle-switch input:disabled + .toggle-slider {
+    opacity: .35;
+    cursor: not-allowed;
+  }
+  .plugin-status-badge {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+  .plugin-status-badge.enabled {
+    background: rgba(34,197,94,.12);
+    color: #22c55e;
+  }
+  .plugin-status-badge.disabled {
+    background: rgba(156,163,175,.12);
+    color: var(--muted);
+  }
+  /* Credential section */
+  .plugin-creds {
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    margin-top: 4px;
+  }
+  .plugin-cred-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .plugin-cred-toggle:hover { color: var(--text); }
+  .cred-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .cred-dot.ok   { background: #22c55e; }
+  .cred-dot.partial { background: #f59e0b; }
+  .cred-dot.empty { background: #6b7280; }
+  .plugin-cred-panel {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .plugin-cred-row label {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .cred-input-wrap {
+    display: flex;
+    gap: 4px;
+  }
+  .cred-input-wrap input {
+    flex: 1;
+    font-size: 11px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    min-width: 0;
+  }
+  .cred-eye {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 6px;
+    flex-shrink: 0;
+  }
+  .cred-eye:hover { color: var(--text); }
+  .plugin-cred-save {
+    align-self: flex-end;
+    font-size: 11px;
+    padding: 4px 14px;
+    border: 1px solid var(--accent1);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--accent1);
+    cursor: pointer;
+    margin-top: 2px;
+  }
+  .plugin-cred-save:hover { background: var(--accent1); color: #fff; }
+  .cred-msg {
+    font-size: 10px;
+    margin-top: 2px;
+    min-height: 14px;
+  }
+  .plugin-cred-panel select {
+    font-size: 11px;
+    padding: 4px 6px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    width: 100%;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="plugins-page">
+  <h1 data-i18n="plugins_title">Plugins</h1>
+  <p class="page-desc" data-i18n="plugins_desc">Manage which plugins are active for your account. Disabled plugins will not appear in the sidebar, AI assistant, or analysis.</p>
+
+  <div id="plugins-container">
+    <div style="color:var(--muted);font-size:13px;padding:20px 0;">Loading…</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  const TYPE_LABELS = {
+    watchzone: {de:'Watch Zones',en:'Watch Zones',fr:'Watch Zones',es:'Watch Zones'},
+    ai: {de:'KI-Module',en:'AI Modules',fr:'Modules IA',es:'Módulos IA'},
+    analysis: {de:'Analyse-Methoden',en:'Analysis Methods',fr:'Méthodes d\'analyse',es:'Métodos de análisis'},
+  };
+
+  const SHOW_IN_LABELS = {
+    de: {lab:'Labor',popup:'Keyword-Popup',both:'Beide',none:'Nirgends'},
+    en: {lab:'Lab',popup:'Keyword Popup',both:'Both',none:'Nowhere'},
+    fr: {lab:'Labo',popup:'Popup mots-clés',both:'Les deux',none:'Nulle part'},
+    es: {lab:'Laboratorio',popup:'Popup palabras clave',both:'Ambos',none:'Ninguno'},
+  };
+
+  const STATUS_LABELS = {
+    de: {enabled:'Aktiv',disabled:'Inaktiv',show_in:'Anzeige:',needs_creds:'Zugangsdaten erforderlich',blocked:'Vom Administrator gesperrt'},
+    en: {enabled:'Enabled',disabled:'Disabled',show_in:'Show in:',needs_creds:'Credentials required',blocked:'Blocked by administrator'},
+    fr: {enabled:'Actif',disabled:'Inactif',show_in:'Afficher dans\u00a0:',needs_creds:'Identifiants requis',blocked:'Bloqu\u00e9 par l\u2019administrateur'},
+    es: {enabled:'Activo',disabled:'Inactivo',show_in:'Mostrar en:',needs_creds:'Credenciales requeridas',blocked:'Bloqueado por el administrador'},
+  };
+
+  const CRED_LABELS = {
+    de: {creds:'API-Zugangsdaten',save:'Speichern',saved:'Gespeichert',err:'Fehler beim Speichern',show:'Anzeigen',hide:'Verbergen',configured:'konfiguriert',
+         provider:'LLM-Anbieter',model:'Modell',apply_all:'Einstellungen auf alle KI-Module \u00fcbertragen?'},
+    en: {creds:'API Credentials',save:'Save',saved:'Saved',err:'Error saving',show:'Show',hide:'Hide',configured:'configured',
+         provider:'LLM Provider',model:'Model',apply_all:'Apply settings to all AI modules?'},
+    fr: {creds:'Identifiants API',save:'Enregistrer',saved:'Enregistr\u00e9',err:'Erreur',show:'Afficher',hide:'Masquer',configured:'configur\u00e9',
+         provider:'Fournisseur LLM',model:'Mod\u00e8le',apply_all:'Appliquer \u00e0 tous les modules IA\u00a0?'},
+    es: {creds:'Credenciales API',save:'Guardar',saved:'Guardado',err:'Error al guardar',show:'Mostrar',hide:'Ocultar',configured:'configurado',
+         provider:'Proveedor LLM',model:'Modelo',apply_all:'\u00bfAplicar a todos los m\u00f3dulos IA?'},
+  };
+
+  const AI_MODELS = {
+    anthropic: [
+      {value:'claude-haiku-4-5-20251001',label:'Claude Haiku 4.5 (schnell)'},
+      {value:'claude-sonnet-4-6',label:'Claude Sonnet 4.6'},
+      {value:'claude-opus-4-6',label:'Claude Opus 4.6 (leistungsstark)'},
+    ],
+    openai: [
+      {value:'gpt-4o-mini',label:'GPT-4o mini (schnell)'},
+      {value:'gpt-4o',label:'GPT-4o'},
+      {value:'gpt-4-turbo',label:'GPT-4 Turbo'},
+    ],
+    gemini: [
+      {value:'gemini-2.0-flash',label:'Gemini 2.0 Flash (schnell)'},
+      {value:'gemini-2.0-flash-lite',label:'Gemini 2.0 Flash Lite'},
+      {value:'gemini-1.5-flash',label:'Gemini 1.5 Flash'},
+    ],
+    mistral: [
+      {value:'mistral-small-latest',label:'Mistral Small (schnell)'},
+      {value:'mistral-medium-latest',label:'Mistral Medium'},
+      {value:'open-mistral-nemo',label:'Mistral Nemo (open)'},
+    ],
+  };
+
+  const AI_PROVIDERS = [
+    {value:'anthropic',label:'Anthropic (Claude)'},
+    {value:'openai',label:'OpenAI (ChatGPT)'},
+    {value:'gemini',label:'Google (Gemini)'},
+    {value:'mistral',label:'Mistral AI'},
+  ];
+
+  // plugins_* i18n Keys kommen über plugin_i18n_json aus base.html
+  if (window._applyI18n) window._applyI18n();
+
+  async function loadPlugins() {
+    const resp = await fetch('/api/plugins');
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const container = document.getElementById('plugins-container');
+    container.innerHTML = '';
+
+    for (const [ptype, plugins] of Object.entries(data)) {
+      if (!plugins.length) continue;
+      const section = document.createElement('div');
+      section.className = 'plugin-type-section';
+
+      const lang = (window._VT_LANG || 'en').substring(0, 2);
+      const typeLabel = (TYPE_LABELS[ptype] || {})[lang] || ptype;
+      section.innerHTML = '<h2>' + typeLabel + '</h2>';
+
+      const grid = document.createElement('div');
+      grid.className = 'plugin-grid';
+
+      for (const p of plugins) {
+        const card = document.createElement('div');
+        card.className = 'plugin-card';
+        card.id = 'plugin-card-' + p.plugin_type + '-' + p.plugin_id;
+
+        const meta = p.meta || {};
+        const iconColor = meta.color || '#888';
+        const iconSvg = meta.icon_svg || '';
+        // i18n: Label und Beschreibung aus meta.i18n[lang] per konkretem Key-Namen
+        const i18nDict = (meta.i18n || {})[lang] || (meta.i18n || {})['de'] || {};
+        const pid = p.plugin_id.replace(/-/g, '_');
+        const prefix = p.plugin_type === 'watchzone' ? 'wz_' : (p.plugin_type + '_');
+        // Label: ai_{pid}_label | wz_sidebar_{pid} | wz_{pid}_title | analysis_{pid}_label
+        const label = i18nDict[prefix + pid + '_label']
+                   || i18nDict['wz_sidebar_' + pid]
+                   || i18nDict[prefix + pid + '_title']
+                   || meta.label || p.plugin_id;
+        // Beschreibung: {prefix}{pid}_desc
+        const desc = i18nDict[prefix + pid + '_desc'] || meta.description || '';
+        const source = '';
+
+        const sL = STATUS_LABELS[lang] || STATUS_LABELS.en;
+        const isBlocked = p.blocked;
+        const needsCreds = !p.available && !p.enabled && !isBlocked;
+        const enabledLabel = isBlocked ? sL.blocked : (needsCreds ? sL.needs_creds : (p.enabled ? sL.enabled : sL.disabled));
+        const badgeClass = (isBlocked || needsCreds) ? 'disabled' : (p.enabled ? 'enabled' : 'disabled');
+
+        // show_in select für Analysis-Plugins
+        var showInHtml = '';
+        if (p.plugin_type === 'analysis') {
+          const lang = (window._VT_LANG || 'en').substring(0, 2);
+          const sLabels = SHOW_IN_LABELS[lang] || SHOW_IN_LABELS.en;
+          const curShowIn = p.show_in || [];
+          const curVal = curShowIn.length === 0 ? 'none'
+            : (curShowIn.length === 2 ? 'both'
+            : curShowIn[0]);
+          showInHtml =
+            '<div style="display:flex;align-items:center;gap:6px;margin-top:4px;">' +
+              '<span style="font-size:11px;color:var(--muted);white-space:nowrap;">' + (STATUS_LABELS[lang] || STATUS_LABELS.en).show_in + '</span>' +
+              '<select class="show-in-select" data-ptype="' + p.plugin_type + '" data-pid="' + p.plugin_id + '" ' +
+                'style="flex:1;font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);">' +
+                '<option value="both"' + (curVal==='both'?' selected':'') + '>' + sLabels.both + '</option>' +
+                '<option value="lab"' + (curVal==='lab'?' selected':'') + '>' + sLabels.lab + '</option>' +
+                '<option value="popup"' + (curVal==='popup'?' selected':'') + '>' + sLabels.popup + '</option>' +
+              '</select>' +
+            '</div>';
+        }
+
+        // Credential-Bereich
+        var credsHtml = '';
+        const credStatus = p.credential_status;
+        const credPolicy = p.credential_policy || {};
+        const isAi = p.plugin_type === 'ai';
+        const allAdmin = p.creds_admin;  // Alle Credentials kommen vom Admin
+        if ((credStatus && !allAdmin) || (isAi && !allAdmin)) {
+          const cL = CRED_LABELS[lang] || CRED_LABELS.en;
+          var llmHtml = '';
+          // LLM-Provider/Modell-Auswahl fuer AI-Plugins (nur wenn eigener Key)
+          if (isAi && !data._uses_own_llm === false) {
+            var aiS = data._ai_settings || {};
+            var curProv = aiS.ai_provider || 'anthropic';
+            var curMod = aiS.ai_model || 'claude-haiku-4-5-20251001';
+            var provOpts = '';
+            for (var pi = 0; pi < AI_PROVIDERS.length; pi++) {
+              provOpts += '<option value="' + AI_PROVIDERS[pi].value + '"' + (AI_PROVIDERS[pi].value === curProv ? ' selected' : '') + '>' + AI_PROVIDERS[pi].label + '</option>';
+            }
+            var modOpts = '';
+            var models = AI_MODELS[curProv] || [];
+            for (var mi = 0; mi < models.length; mi++) {
+              modOpts += '<option value="' + models[mi].value + '"' + (models[mi].value === curMod ? ' selected' : '') + '>' + models[mi].label + '</option>';
+            }
+            var selStyle = 'style="flex:1;font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);"';
+            llmHtml =
+              '<div class="plugin-cred-row">' +
+                '<label>' + cL.provider + '</label>' +
+                '<select class="ai-provider-select" ' + selStyle + '>' + provOpts + '</select>' +
+              '</div>' +
+              '<div class="plugin-cred-row">' +
+                '<label>' + cL.model + '</label>' +
+                '<select class="ai-model-select" ' + selStyle + '>' + modOpts + '</select>' +
+              '</div>';
+          }
+          var rowsHtml = '';
+          if (credStatus) {
+            var keys = Object.keys(credStatus);
+            for (var ci = 0; ci < keys.length; ci++) {
+              var ck = keys[ci];
+              // admin_key → kein Input zeigen
+              if (credPolicy[ck] === 'admin_key') continue;
+              var clabel = ck.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+              var ph = credStatus[ck] ? ('\u2022\u2022\u2022\u2022 ' + cL.configured) : '';
+              rowsHtml +=
+                '<div class="plugin-cred-row">' +
+                  '<label>' + clabel + '</label>' +
+                  '<div class="cred-input-wrap">' +
+                    '<input type="password" data-cred-key="' + ck + '" placeholder="' + ph + '">' +
+                    '<button type="button" class="cred-eye" title="' + cL.show + '">\u{1F441}</button>' +
+                  '</div>' +
+                '</div>';
+            }
+          }
+          // Nur anzeigen wenn es tatsaechlich Inputs gibt
+          if (llmHtml || rowsHtml) {
+            var ownKeys = credStatus ? Object.keys(credStatus).filter(function(k) { return credPolicy[k] !== 'admin_key'; }) : [];
+            var ownFilled = ownKeys.filter(function(k) { return credStatus[k]; }).length;
+            var dotClass = !ownKeys.length ? 'ok' : (ownFilled === ownKeys.length ? 'ok' : (ownFilled > 0 ? 'partial' : 'empty'));
+            credsHtml =
+              '<div class="plugin-creds" data-ptype="' + p.plugin_type + '" data-pid="' + p.plugin_id + '">' +
+                '<div class="plugin-cred-toggle">' +
+                  '<span class="cred-dot ' + dotClass + '"></span>' +
+                  '<span>' + cL.creds + (isAi ? ' & LLM' : '') + '</span>' +
+                  '<span class="cred-caret" style="font-size:9px;margin-left:auto;">\u25B8</span>' +
+                '</div>' +
+                '<div class="plugin-cred-panel" style="display:none;">' +
+                  llmHtml +
+                  rowsHtml +
+                  '<div style="display:flex;align-items:center;gap:8px;">' +
+                    '<button type="button" class="plugin-cred-save">' + cL.save + '</button>' +
+                    '<span class="cred-msg"></span>' +
+                  '</div>' +
+                '</div>' +
+              '</div>';
+          }
+        }
+
+        card.innerHTML =
+          '<div class="plugin-card-header">' +
+            '<div class="plugin-card-icon" style="background:' + iconColor + '22;color:' + iconColor + '">' + iconSvg + '</div>' +
+            '<span class="plugin-card-title">' + label + '</span>' +
+            '<label class="toggle-switch">' +
+              '<input type="checkbox"' + (p.enabled ? ' checked' : '') + (isBlocked || (needsCreds) ? ' disabled' : '') + ' data-ptype="' + p.plugin_type + '" data-pid="' + p.plugin_id + '">' +
+              '<span class="toggle-slider"></span>' +
+            '</label>' +
+          '</div>' +
+          '<div class="plugin-card-desc">' + desc + '</div>' +
+          showInHtml +
+          credsHtml +
+          '<div class="plugin-card-footer">' +
+            '<span class="plugin-status-badge ' + badgeClass + '">' + enabledLabel + '</span>' +
+          '</div>';
+
+        const toggle = card.querySelector('input[type="checkbox"]');
+        toggle.addEventListener('change', function() { togglePlugin(this); });
+
+        const showInSel = card.querySelector('.show-in-select');
+        if (showInSel) showInSel.addEventListener('change', function() { updateShowIn(this); });
+
+        // Credential-Toggle + Eye + Save Listener
+        const credToggle = card.querySelector('.plugin-cred-toggle');
+        if (credToggle) credToggle.addEventListener('click', function() {
+          var panel = this.parentElement.querySelector('.plugin-cred-panel');
+          var caret = this.querySelector('.cred-caret');
+          if (panel.style.display === 'none') {
+            panel.style.display = 'flex';
+            caret.textContent = '\u25BE';
+          } else {
+            panel.style.display = 'none';
+            caret.textContent = '\u25B8';
+          }
+        });
+        card.querySelectorAll('.cred-eye').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var inp = this.parentElement.querySelector('input');
+            inp.type = inp.type === 'password' ? 'text' : 'password';
+          });
+        });
+        // AI: Provider-Wechsel → Modell-Optionen aktualisieren
+        var provSel = card.querySelector('.ai-provider-select');
+        if (provSel) provSel.addEventListener('change', function() {
+          var modSel = this.closest('.plugin-cred-panel').querySelector('.ai-model-select');
+          var models = AI_MODELS[this.value] || [];
+          modSel.innerHTML = '';
+          for (var i = 0; i < models.length; i++) {
+            var opt = document.createElement('option');
+            opt.value = models[i].value;
+            opt.textContent = models[i].label;
+            modSel.appendChild(opt);
+          }
+        });
+        var saveBtn = card.querySelector('.plugin-cred-save');
+        if (saveBtn) saveBtn.addEventListener('click', function() { saveCredentials(this); });
+
+        grid.appendChild(card);
+      }
+
+      section.appendChild(grid);
+      container.appendChild(section);
+    }
+  }
+
+  async function togglePlugin(checkbox) {
+    const ptype = checkbox.dataset.ptype;
+    const pid = checkbox.dataset.pid;
+    const card = document.getElementById('plugin-card-' + ptype + '-' + pid);
+    const badge = card ? card.querySelector('.plugin-status-badge') : null;
+    const lang = (window._VT_LANG || 'en').substring(0, 2);
+    const sL = STATUS_LABELS[lang] || STATUS_LABELS.en;
+
+    try {
+      const resp = await fetch('/api/plugins/' + ptype + '/' + pid + '/toggle', {method: 'PUT'});
+      const result = await resp.json();
+      if (!resp.ok) {
+        checkbox.checked = false;
+        if (result.error === 'credentials_missing') {
+          // Credential-Panel oeffnen
+          var credToggle = card.querySelector('.plugin-cred-toggle');
+          if (credToggle) credToggle.click();
+          if (badge) { badge.textContent = sL.needs_creds; badge.className = 'plugin-status-badge disabled'; }
+        }
+        return;
+      }
+      checkbox.checked = result.enabled;
+      if (badge) {
+        badge.textContent = result.enabled ? sL.enabled : sL.disabled;
+        badge.className = 'plugin-status-badge ' + (result.enabled ? 'enabled' : 'disabled');
+      }
+    } catch (e) {
+      checkbox.checked = !checkbox.checked;
+    }
+  }
+
+  async function saveCredentials(btn) {
+    const wrap = btn.closest('.plugin-creds');
+    const ptype = wrap.dataset.ptype;
+    const pid = wrap.dataset.pid;
+    const msg = wrap.querySelector('.cred-msg');
+    const lang = (window._VT_LANG || 'en').substring(0, 2);
+    const cL = CRED_LABELS[lang] || CRED_LABELS.en;
+    const isAi = ptype === 'ai';
+    btn.disabled = true;
+
+    // AI-Settings (Provider/Modell) speichern
+    if (isAi) {
+      var provSel = wrap.querySelector('.ai-provider-select');
+      var modSel = wrap.querySelector('.ai-model-select');
+      if (provSel && modSel) {
+        try {
+          var aiResp = await fetch('/api/plugins/ai-settings', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ai_provider: provSel.value, ai_model: modSel.value}),
+          });
+          if (!aiResp.ok) throw new Error('AI settings save failed');
+        } catch (e) {
+          if (msg) { msg.style.color = '#ef4444'; msg.textContent = cL.err; }
+          btn.disabled = false;
+          return;
+        }
+      }
+    }
+
+    // Credentials speichern
+    const creds = {};
+    wrap.querySelectorAll('input[data-cred-key]').forEach(function(inp) {
+      var v = inp.value.trim();
+      if (v) creds[inp.dataset.credKey] = v;
+    });
+    if (Object.keys(creds).length) {
+      try {
+        const resp = await fetch('/api/plugins/' + ptype + '/' + pid + '/credentials', {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({credentials: creds}),
+        });
+        if (!resp.ok) throw new Error('Save failed');
+        const result = await resp.json();
+        var st = result.credential_status || {};
+        var keys = Object.keys(st);
+        var filled = keys.filter(function(k) { return st[k]; }).length;
+        var dot = wrap.querySelector('.cred-dot');
+        if (dot) dot.className = 'cred-dot ' + (filled === keys.length ? 'ok' : (filled > 0 ? 'partial' : 'empty'));
+        wrap.querySelectorAll('input[data-cred-key]').forEach(function(inp) {
+          inp.value = '';
+          inp.placeholder = st[inp.dataset.credKey] ? ('\u2022\u2022\u2022\u2022 ' + cL.configured) : '';
+        });
+      } catch (e) {
+        if (msg) { msg.style.color = '#ef4444'; msg.textContent = cL.err; }
+        btn.disabled = false;
+        return;
+      }
+    }
+
+    if (msg) { msg.style.color = '#22c55e'; msg.textContent = cL.saved; }
+    setTimeout(function() { if (msg) msg.textContent = ''; }, 2000);
+    btn.disabled = false;
+
+    // Toggle-Checkbox aktivieren falls Credentials jetzt vollstaendig
+    var card = document.getElementById('plugin-card-' + ptype + '-' + pid);
+    if (card) {
+      var cb = card.querySelector('input[type="checkbox"]');
+      var badge = card.querySelector('.plugin-status-badge');
+      if (cb && cb.disabled) {
+        cb.disabled = false;
+        if (badge) {
+          var sL2 = STATUS_LABELS[lang] || STATUS_LABELS.en;
+          badge.textContent = sL2.disabled;
+        }
+      }
+    }
+
+    // AI: Auf andere Module uebertragen?
+    if (isAi) {
+      var otherCards = document.querySelectorAll('.plugin-creds[data-ptype="ai"]');
+      var hasOthers = false;
+      otherCards.forEach(function(c) { if (c.dataset.pid !== pid) hasOthers = true; });
+      if (hasOthers && confirm(cL.apply_all)) {
+        var provVal = wrap.querySelector('.ai-provider-select');
+        var modVal = wrap.querySelector('.ai-model-select');
+        otherCards.forEach(function(other) {
+          if (other.dataset.pid === pid) return;
+          // Provider/Modell synchronisieren
+          var op = other.querySelector('.ai-provider-select');
+          var om = other.querySelector('.ai-model-select');
+          if (op && provVal) op.value = provVal.value;
+          if (om && modVal) {
+            // Modell-Optionen neu aufbauen
+            var models = AI_MODELS[provVal.value] || [];
+            om.innerHTML = '';
+            for (var i = 0; i < models.length; i++) {
+              var opt = document.createElement('option');
+              opt.value = models[i].value;
+              opt.textContent = models[i].label;
+              om.appendChild(opt);
+            }
+            om.value = modVal.value;
+          }
+          // Credentials uebertragen (Placeholders aktualisieren)
+          if (Object.keys(creds).length) {
+            other.querySelectorAll('input[data-cred-key]').forEach(function(inp) {
+              if (creds[inp.dataset.credKey]) {
+                inp.placeholder = '\u2022\u2022\u2022\u2022 ' + cL.configured;
+              }
+            });
+            var oDot = other.querySelector('.cred-dot');
+            if (oDot) oDot.className = 'cred-dot ok';
+          }
+        });
+      }
+    }
+  }
+
+  async function updateShowIn(select) {
+    const ptype = select.dataset.ptype;
+    const pid = select.dataset.pid;
+    const value = select.value;
+    try {
+      const resp = await fetch('/api/plugins/' + ptype + '/' + pid + '/show-in', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({show_in: value}),
+      });
+      if (!resp.ok) throw new Error('Update failed');
+    } catch (e) {
+      // Revert on error
+      loadPlugins();
+    }
+  }
+
+  loadPlugins();
+})();
+</script>
+{% endblock %}

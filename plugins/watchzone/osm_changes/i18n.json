@@ -1,0 +1,48 @@
+{
+  "de": {
+    "wz_sidebar_osm_changes": "OSM Änderungen",
+    "wz_osm_title": "OpenStreetMap-Änderungen",
+    "wz_osm_source": "Quelle: OpenStreetMap / Overpass API",
+    "wz_osm_desc": "Ueberwacht Kartenaenderungen in einer Region: neu eingezeichnete Strassen, Gebaeude, Militaerinfrastruktur, Flughaefen. Crowdsourced, aber forensisch relevant wenn Mapper vor Ort kartieren. Kein API-Key noetig.",
+    "wz_osm_hint": "Beobachtungsgebiete auf der Karte einzeichnen. OSM-Aenderungen der letzten 30 Tage werden automatisch abgerufen.",
+    "wz_osm_count": "Änderungen (30 Tage)",
+    "wz_osm_header": "Kürzliche OSM-Änderungen",
+    "wz_osm_empty": "Keine Änderungen in dieser Region.",
+    "wz_osm_new": "Neu erstellt",
+    "wz_osm_modified": "Bearbeitet",
+    "wz_osm_users": "Mapper",
+    "wz_osm_version": "Version",
+    "wz_osm_more": "weitere"
+  },
+  "en": {
+    "wz_sidebar_osm_changes": "OSM Changes",
+    "wz_osm_title": "OpenStreetMap Changes",
+    "wz_osm_source": "Source: OpenStreetMap / Overpass API",
+    "wz_osm_desc": "Monitors map edits in a region: newly drawn roads, buildings, military infrastructure, airports. Crowdsourced, but forensically relevant when mappers are on the ground. No API key required.",
+    "wz_osm_hint": "Draw observation areas on the map. OSM changes from the last 30 days will be fetched automatically.",
+    "wz_osm_count": "changes (30 days)",
+    "wz_osm_header": "Recent OSM changes",
+    "wz_osm_empty": "No changes in this region.",
+    "wz_osm_new": "Newly created",
+    "wz_osm_modified": "Modified",
+    "wz_osm_users": "Mappers",
+    "wz_osm_version": "Version",
+    "wz_osm_more": "more"
+  },
+  "fr": {
+    "wz_sidebar_osm_changes": "Modif. OSM",
+    "wz_osm_title": "Modifications OpenStreetMap",
+    "wz_osm_source": "Source : OpenStreetMap / Overpass API",
+    "wz_osm_desc": "Surveille les modifications de la carte dans une region.",
+    "wz_osm_hint": "Dessinez des zones d'observation sur la carte.",
+    "wz_osm_empty": "Aucune modification dans cette region."
+  },
+  "es": {
+    "wz_sidebar_osm_changes": "Cambios OSM",
+    "wz_osm_title": "Cambios en OpenStreetMap",
+    "wz_osm_source": "Fuente: OpenStreetMap / Overpass API",
+    "wz_osm_desc": "Monitorea cambios en el mapa en una region.",
+    "wz_osm_hint": "Dibuje areas de observacion en el mapa.",
+    "wz_osm_empty": "Sin cambios en esta region."
+  }
+}

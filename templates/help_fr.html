@@ -1,0 +1,1419 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+  .help-layout {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+
+  /* ── Sommaire ── */
+  .help-toc {
+    position: sticky;
+    top: 80px;
+    width: 210px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .help-toc h3 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .help-toc a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background .12s, color .12s;
+    line-height: 1.3;
+  }
+  .help-toc a:hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .help-toc a.active {
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .help-toc .toc-icon {
+    font-size: 14px;
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  /* ── Contenu principal ── */
+  .help-content {
+    flex: 1;
+    min-width: 0;
+  }
+  .help-content h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  .help-content .lead {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0 0 32px;
+    line-height: 1.6;
+  }
+
+  /* ── Cartes de section ── */
+  .help-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    scroll-margin-top: 80px;
+  }
+  .help-section h2 {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .help-section .section-url {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 9px;
+    font-family: monospace;
+    letter-spacing: .03em;
+  }
+  .help-section .section-desc {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 16px;
+    line-height: 1.6;
+  }
+  .help-section ul {
+    margin: 0;
+    padding: 0 0 0 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .help-section ul li {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+  .help-section ul li strong {
+    color: var(--text);
+  }
+  .help-section ul li .dim {
+    color: var(--muted);
+  }
+  .help-section h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin: 20px 0 8px;
+  }
+
+  /* ── Encadrés d'information ── */
+  .help-tip {
+    display: flex;
+    gap: 10px;
+    background: rgba(79, 142, 247, .08);
+    border: 1px solid rgba(79, 142, 247, .22);
+    border-radius: 7px;
+    padding: 10px 14px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .help-tip .tip-icon {
+    font-size: 15px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .help-warn {
+    background: rgba(239, 68, 68, .07);
+    border-color: rgba(239, 68, 68, .22);
+  }
+
+  /* ── Balises Kbd ── */
+  kbd {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 11.5px;
+    font-family: monospace;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  /* ── Étapes du workflow ── */
+  .help-flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 0;
+    align-items: center;
+  }
+  .help-flow-step {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .help-flow-arrow {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 800px) {
+    .help-toc { display: none; }
+    .help-layout { padding: 20px 16px 40px; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="help-layout">
+
+  <!-- ══════════════════════════════════
+       SOMMAIRE (Barre latérale)
+  ══════════════════════════════════ -->
+  <div class="help-toc" id="help-toc">
+    <h3>Sommaire</h3>
+    <a href="#workflow">Workflow d'analyse</a>
+    <a href="#intro">Aperçu</a>
+    <a href="#keywords">Keywords</a>
+    <a href="#analysis">Analyse</a>
+    <a href="#dashboard">Accueil</a>
+    <a href="#aipa">AI Project Assistance</a>
+    <a href="#events">Événements</a>
+    <a href="#watchzones">Watch Zones</a>
+    <a href="#projects">Projets</a>
+    <a href="#alerts">Alertes</a>
+    <a href="#statistik">Statistiques</a>
+    <a href="#labor">Analyses de laboratoire</a>
+    <a href="#plugins">Plugins</a>
+    <a href="#audit">Audit Trail</a>
+    <a href="#admin">Admin</a>
+    <a href="#dev">Développeur</a>
+  </div>
+
+  <!-- ══════════════════════════════════
+       CONTENU PRINCIPAL
+  ══════════════════════════════════ -->
+  <div class="help-content">
+
+    <h1>Guide d'utilisation</h1>
+    <p class="lead">SpectralQ.ai est une plateforme d'investigation numérique dédiée aux comportements de recherche, à la dynamique médiatique et aux signaux géospatiaux. La plateforme superpose jusqu'à douze couches de données indépendantes – de Google Trends au trafic maritime AIS en passant par les comparaisons d'images satellites – sur un axe temporel commun. Ce n'est que lorsque plusieurs sources présentent simultanément des pics qu'un indice devient un constat. Les analyses peuvent être réalisées de manière entièrement automatique via des agents IA ou entièrement manuellement – ou en combinant les deux approches.</p>
+
+    <!-- ── Workflow d'analyse pratique ── -->
+    <div class="help-section" id="workflow" style="border-left:3px solid var(--accent);">
+      <h2>Workflow d'analyse pratique</h2>
+      <p class="section-desc">
+        Séquence recommandée pour une analyse complète – de la mise en place à la présentation finale.
+      </p>
+
+      <h3>Étape 1 – Créer un projet</h3>
+      <ul>
+        <li>Sous <strong>Projets</strong>, créer un nouveau projet (nom, couleur).</li>
+        <li>Facultatif : ajouter un <strong>briefing de projet</strong> : thème, question de recherche, public cible. Ce texte est automatiquement envoyé comme contexte à chaque évaluation IA.</li>
+      </ul>
+
+      <h3>Étape 2 – Créer &amp; attribuer des keywords</h3>
+      <ul>
+        <li>Sous <strong>Keywords</strong>, créer des termes de recherche – avec géo, période et service (Web / News / YouTube …).</li>
+        <li>En mode projet (menu déroulant en haut), les keywords nouvellement créés sont automatiquement attribués au projet actif.</li>
+        <li>Attribuer des keywords existants ultérieurement : cocher les cases → <strong>Vers le projet…</strong>.</li>
+        <li>Les keywords peuvent être attribués à plusieurs projets simultanément.</li>
+      </ul>
+
+      <h3>Étape 3 – Récupérer les données</h3>
+      <ul>
+        <li><strong>Manuellement :</strong> Dans la liste des keywords, cliquer sur « Tout récupérer » ou lancer la récupération individuelle par keyword.</li>
+        <li><strong>Automatiquement :</strong> Sous Admin, configurer une récupération quotidienne (heure en temps serveur).</li>
+        <li>Le statut de la dernière récupération est consultable dans les <em>Logs de récupération</em> (Admin).</li>
+      </ul>
+
+      <h3>Étape 4 – Ouvrir l'analyse &amp; sélectionner le projet</h3>
+      <ul>
+        <li>Accéder à la page <strong>Analyse</strong>.</li>
+        <li>Dans l'en-tête à droite, sélectionner le projet souhaité – la liste des keywords se filtre automatiquement sur les keywords du projet.</li>
+        <li>En <em>mode libre</em> (aucun projet), tous les keywords sont disponibles.</li>
+      </ul>
+
+      <h3>Étape 5 – Configurer les keywords &amp; la période</h3>
+      <ul>
+        <li>Activer/désactiver les chips de keywords (jusqu'à 7 simultanément).</li>
+        <li>Éventuellement sélectionner une version de récupération (run tag) via le menu sous le graphique.</li>
+        <li>Restreindre la période visible via le <strong>navigateur</strong> (barre miniature) ou zoomer directement dans le graphique avec <kbd>Ctrl</kbd>+glisser.</li>
+      </ul>
+
+      <h3>Étape 6 – Analyser le graphique</h3>
+      <ul>
+        <li><strong>Réticule :</strong> Déplacer la souris sur le graphique → infobulle avec toutes les valeurs à la date correspondante.</li>
+        <li><strong>Corrélation :</strong> Matrice de corrélation en bas à gauche ; décaler le lag avec ‹ / ›, ouvrir le graphique CCF.</li>
+        <li><strong>Événements</strong> apparaissent sous forme de lignes/zones colorées et aident à contextualiser les pics de manière causale.</li>
+        <li><strong>Mode distance</strong> (<kbd>D</kbd>) : Définir un intervalle de temps → affiche les portées pour différents moyens de transport. <kbd>M</kbd> ouvre la carte de portée avec des anneaux concentriques.</li>
+        <li><strong>Décomposition :</strong> Avec un keyword actif, activer la décomposition en tendance, saisonnalité et bruit directement dans le graphique (additif ou multiplicatif).</li>
+        <li><strong>Plein écran :</strong> Deux modes disponibles – graphique seul en plein écran ou plein écran avec mise en page (contrôles + graphique côte à côte). Quitter avec <kbd>Esc</kbd>.</li>
+      </ul>
+
+      <h3>Étape 7 – Utiliser les panneaux d'analyse</h3>
+      <ul>
+        <li><strong>Self-Similarity</strong> – détecte les motifs récurrents dans l'évolution temporelle d'un keyword.</li>
+        <li><strong>Détection d'anomalies</strong> – signale les anomalies statistiques (Z-Score / IQR).</li>
+        <li><strong>Décomposition de séries temporelles</strong> – sépare tendance, saisonnalité et bruit.</li>
+        <li><strong>Requêtes associées</strong> &amp; <strong>Intérêt régional</strong> comme perspectives complémentaires.</li>
+      </ul>
+
+      <h3>Étape 7b – Analyses de laboratoire (menu éprouvette)</h3>
+      <ul>
+        <li><strong>Spike-Koinzidenz</strong> – détecte les pics simultanés sur plusieurs keywords.</li>
+        <li><strong>Change-Point Detection</strong> – trouve les ruptures structurelles dans les séries temporelles (algorithme PELT).</li>
+        <li><strong>Rolling Correlation</strong> – corrélation de Pearson glissante avec détection de phases.</li>
+        <li><strong>Causalité de Granger</strong> – teste les relations prédictives temporelles entre keywords.</li>
+        <li><strong>Forecasting</strong> – prévision via Prophet ou ARIMA (accessible via le menu contextuel du keyword).</li>
+        <li><strong>RQ Cluster Analyse</strong> – regroupement thématique des requêtes associées au fil du temps (accessible via le menu contextuel du keyword).</li>
+      </ul>
+
+      <h3>Étape 8 – Obtenir l'évaluation IA</h3>
+      <ul>
+        <li><strong>🤖 Analyse IA</strong> ouvre une évaluation des données visibles.</li>
+        <li>Si un projet est sélectionné et contient un briefing, celui-ci est automatiquement envoyé comme contexte.</li>
+        <li>Des boutons d'analyse IA séparés sont également disponibles pour Self-Similarity, anomalies, décomposition et toutes les analyses de laboratoire.</li>
+        <li>Chaque analyse de laboratoire transmet automatiquement ses résultats de calcul spécifiques (changepoints, phases de corrélation, résultats Granger, etc.) à l'IA.</li>
+      </ul>
+
+      <h3>Étape 9 – Enregistrer un snapshot</h3>
+      <ul>
+        <li><strong>📸 Snapshot</strong> sauvegarde la vue actuelle (keywords, période, zoom, corrélations, statistiques).</li>
+        <li>Attribuer au projet actif, donner un titre et un commentaire.</li>
+        <li>Les snapshots sont récupérables à tout moment et reproductibles dans l'analyse.</li>
+      </ul>
+
+      <h3>Étape 10 – Assembler &amp; exporter la présentation</h3>
+      <ul>
+        <li>Sous <strong>Projets</strong>, trier les snapshots par glisser-déposer.</li>
+        <li>Ajouter des diapositives texte (titre, section), des diapositives carte, des diapositives de briefing de projet ou d'autres types de diapositives via <strong>+ Page</strong>.</li>
+        <li>Diapositives carte : placer des marqueurs avec des anneaux de distance optionnels ; commentaire, horodatage et rayon sont modifiables après placement.</li>
+        <li><strong>Lancer la présentation</strong> – mode plein écran avec navigation au clavier.</li>
+        <li><strong>Exporter en PDF</strong> – génère toutes les diapositives et produit un fichier PDF téléchargeable.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Pour les analyses récurrentes, il suffit de reprendre à partir de l'étape 3 – le projet, les keywords et les paramètres sont conservés et n'ont pas besoin d'être recréés.</span>
+      </div>
+    </div>
+
+    <!-- ── Aperçu ── -->
+    <div class="help-section" id="intro">
+      <h2>Aperçu</h2>
+      <p class="section-desc">
+        SpectralQ.ai repose sur deux principes de travail parallèles : manuel-forensique ou entièrement automatisé via des agents IA. Les deux approches aboutissent à des résultats reproductibles et sécurisés par hash.
+      </p>
+      <div class="help-flow">
+        <span class="help-flow-step">1 · Créer des keywords</span>
+        <span class="help-flow-arrow">→</span>
+        <span class="help-flow-step">2 · Récupérer les données</span>
+        <span class="help-flow-arrow">→</span>
+        <span class="help-flow-step">3 · Triangulation &amp; Analyse</span>
+        <span class="help-flow-arrow">→</span>
+        <span class="help-flow-step">4 · Snapshots &amp; Rapport</span>
+        <span class="help-flow-arrow">→</span>
+        <span class="help-flow-step">5 · Alertes &amp; Monitoring</span>
+      </div>
+      <div class="help-flow" style="margin-top:8px;">
+        <span class="help-flow-step" style="border-color:var(--accent1);color:var(--accent1);">Alt. · Saisir un briefing</span>
+        <span class="help-flow-arrow">→</span>
+        <span class="help-flow-step" style="border-color:var(--accent1);color:var(--accent1);">Les agents IA enquêtent</span>
+        <span class="help-flow-arrow">→</span>
+        <span class="help-flow-step" style="border-color:var(--accent1);color:var(--accent1);">Rapport &amp; projet automatiques</span>
+      </div>
+      <h3>Backends de données</h3>
+      <ul>
+        <li><strong>Playwright</strong> – Pilote un vrai navigateur, éventuellement avec des cookies. Méthode la plus fiable.</li>
+        <li><strong>pytrends</strong> – Bibliothèque Python légère sans navigateur. Plus sensible aux limitations de débit.</li>
+        <li><strong>SerpAPI</strong> – API externe qui fournit les données Google Trends de manière fiable (100 requêtes gratuites/mois). Nécessite une clé API.</li>
+      </ul>
+      <p class="section-desc" style="margin-top:12px;">
+        Lors de la récupération, SpectralQ.ai essaie les backends séquentiellement (principe de repli). L'ordre
+        et l'activation sont configurés dans la section <a href="#admin" style="color:var(--accent);">Admin</a>.
+      </p>
+    </div>
+
+    <!-- ── Keywords ── -->
+    <div class="help-section" id="keywords">
+      <h2>Keywords <span class="section-url">/</span></h2>
+      <p class="section-desc">
+        La page d'accueil est le centre de gestion de tous les termes de recherche surveillés.
+        C'est ici que les keywords sont créés, configurés et que les données sont récupérées.
+      </p>
+
+      <h3>Créer un keyword</h3>
+      <ul>
+        <li><strong>Terme de recherche</strong> – Le terme tel qu'il serait saisi dans Google Trends.</li>
+        <li><strong>Géo</strong> – Code pays ou région (par ex. <kbd>DE</kbd>, <kbd>US-CA</kbd>). Laisser vide pour des données mondiales.</li>
+        <li><strong>Période</strong> – Fenêtres temporelles prédéfinies : dernière heure, 4 heures, 24 heures, 7 jours, etc. Détermine la granularité des données (horaire vs. quotidienne).</li>
+        <li><strong>Service</strong> – Catégorie de données : Recherche Web, Actualités, Images, YouTube ou Shopping.</li>
+        <li><strong>Note</strong> – Champ de texte libre interne optionnel.</li>
+        <li><strong>Actif/Inactif</strong> – Les keywords inactifs sont ignorés lors de la récupération automatique.</li>
+      </ul>
+
+      <h3>Traducteur</h3>
+      <ul>
+        <li>Le <strong>bouton Traducteur</strong> (🌐) traduit automatiquement un terme en EN, ES, FR, ZH et RU et propose les pays correspondants.</li>
+        <li>Un clic sur un chip de traduction applique directement le terme et le pays au formulaire.</li>
+      </ul>
+
+      <h3>Attribution de projet</h3>
+      <ul>
+        <li><strong>Mode projet :</strong> Sélectionner un projet dans le menu déroulant en haut – la liste se filtre sur les keywords attribués. Les keywords nouvellement créés sont automatiquement attribués à ce projet.</li>
+        <li><strong>Mode libre :</strong> Aucun projet sélectionné – tous les keywords sont visibles, pas d'attribution automatique.</li>
+        <li><strong>Vers le projet… :</strong> Cocher les cases → « Vers le projet… » – ouvre une fenêtre modale pour attribuer ou retirer de n'importe quel projet. Les keywords peuvent appartenir à plusieurs projets simultanément.</li>
+        <li>Les projets attribués sont affichés sous forme de badges colorés dans la ligne du keyword.</li>
+      </ul>
+
+      <h3>Tableau &amp; Actions</h3>
+      <ul>
+        <li><strong>Sélection multiple</strong> (jusqu'à 7 keywords) : Cocher les cases, puis « Ouvrir l'analyse » – lance la page d'analyse avec les keywords présélectionnés.</li>
+        <li><strong>Récupérer maintenant</strong> – déclenche immédiatement une récupération de données pour ce keyword uniquement.</li>
+        <li><strong>Requêtes associées</strong> – ouvre une fenêtre modale avec les termes de recherche associés en hausse et les plus utilisés (enregistrés lors de la dernière récupération).</li>
+        <li><strong>Intérêt régional</strong> – ouvre une fenêtre modale avec un diagramme en barres ; permutable entre niveau régional/état et niveau ville.</li>
+        <li><strong>Modifier</strong> – modifie tous les paramètres du keyword ultérieurement.</li>
+        <li><strong>Supprimer</strong> – supprime le keyword et toutes les données de tendance associées de manière irréversible.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Grâce à la recherche et au filtre « Actif / Inactif », même les longues listes de keywords peuvent être parcourues rapidement. La sélection de projet est synchronisée entre les pages avec l'analyse.</span>
+      </div>
+    </div>
+
+    <!-- ── Analyse ── -->
+    <div class="help-section" id="analysis">
+      <h2>Analyse <span class="section-url">/analysis</span></h2>
+      <p class="section-desc">
+        Cœur de l'application : visualisation interactive de séries temporelles avec comparaison,
+        analyse de corrélation, statistiques temporelles et évaluation régionale.
+      </p>
+
+      <h3>Sélection du projet &amp; des keywords</h3>
+      <ul>
+        <li>Dans l'<strong>en-tête à droite</strong>, un projet peut être sélectionné – la liste des keywords se filtre automatiquement sur les keywords attribués au projet.</li>
+        <li>En <strong>mode libre</strong> (aucun projet), tous les keywords sont disponibles.</li>
+        <li>La sélection de projet est synchronisée avec la page Keywords (<kbd>localStorage</kbd>).</li>
+        <li>La page sans keyword sélectionné affiche un <strong>champ de recherche</strong> et les keywords récemment utilisés sous forme de chips rapides.</li>
+        <li>Jusqu'à <strong>7 keywords</strong> sélectionnables simultanément. Chacun reçoit sa propre couleur.</li>
+        <li>Le paramètre URL <kbd>?kw=id1,id2</kbd> charge les keywords directement au chargement de la page.</li>
+      </ul>
+
+      <h3>Interaction avec le graphique</h3>
+      <ul>
+        <li><strong>Curseur réticule</strong> – En déplaçant la souris, une ligne verticale est affichée et toutes les valeurs à la date du curseur sont présentées dans une infobulle.</li>
+        <li><kbd>Shift</kbd> <strong>+ Glisser</strong> – Marque une période (bleue) comme événement de période.</li>
+        <li><kbd>Glisser</kbd> – Cadre de zoom pour un zoom direct dans une zone.</li>
+        <li><strong>Navigateur</strong> – Barre de vue d'ensemble étroite sous le graphique principal. La section visible peut être déplacée par glissement.</li>
+        <li><strong>Version de récupération</strong> – Plusieurs récupérations du même keyword (différents run tags) peuvent être affichées comme des courbes séparées.</li>
+      </ul>
+
+      <h3>Triangulation (superposition de données externes)</h3>
+      <p>Le bouton violet <strong>« Triangulation »</strong> (à droite de l'Analyse IA dans la barre d'outils du graphique) ouvre un panneau centré avec toutes les sources de données externes. Celles-ci sont affichées comme des courbes supplémentaires dans le graphe chronologique pour révéler les corrélations et anomalies. Pendant le chargement, un indicateur coloré pulsant au-dessus du graphique montre la progression.</p>
+      <p>Les sources sont organisées en trois groupes :</p>
+
+      <h4 style="color:#a78bfa;margin:14px 0 6px;">Texte &amp; Médias</h4>
+      <ul>
+        <li><strong>Wikipedia Pageviews/Edits</strong> – Nombre de consultations et de modifications quotidiennes des articles Wikipedia associés. Axe Y droit séparé (orange). Le titre de l'article est résolu automatiquement. Un clic sur le titre de l'article ouvre la <strong>vérification des auteurs et des modifications</strong> avec analyse des révisions et évaluation de la réputation.</li>
+        <li><strong>GDELT Rapports médiatiques</strong> – Nombre quotidien d'articles dans le monde depuis le projet GDELT. Axe Y séparé (bleu clair). Montre l'intensité médiatique d'un sujet.</li>
+        <li><strong>Bluesky Posts</strong> – Volume de publications sur Bluesky pour des keywords librement sélectionnables. Axe Y séparé (bleu). N'apparaît que si les identifiants Bluesky sont configurés dans Admin (Handle + mot de passe d'application).</li>
+        <li><strong>Messages Telegram</strong> – Volume de messages dans les canaux Telegram publics. Axe Y séparé (bleu sarcelle). N'apparaît que si les identifiants API Telegram sont configurés dans Admin et qu'une session est authentifiée.</li>
+      </ul>
+
+      <h4 style="color:#22d3ee;margin:14px 0 6px;">Marchés financiers</h4>
+      <ul>
+        <li><strong>Yahoo Finance</strong> – Cours boursiers et/ou volumes de transactions pour des symboles de ticker. Saisir un nom d'entreprise ou un symbole dans le champ de recherche – une <strong>recherche autocomplete</strong> propose des tickers correspondants (par ex. <kbd>TSLA</kbd>, <kbd>SAP.DE</kbd>, <kbd>BTC-USD</kbd>). Sélection par clic, suppression par bouton × ou Retour arrière. Jusqu'à 5 tickers simultanément. Sélection dans le menu déroulant : cours, volume ou les deux. Aucune clé API requise. Axes Y séparés pour le cours (vert) et le volume.</li>
+      </ul>
+
+      <h4 style="color:#4ade80;margin:14px 0 6px;">Sources géospatiales</h4>
+      <p>Les sources géospatiales sont basées sur des <strong>Watch Zones</strong> – des régions de surveillance géographique dessinées directement sur la carte sous forme de polygones ou de rectangles. Chaque Watch Zone possède un type (satellite, météo, sismique, lumières nocturnes, etc.) et une géométrie. Si aucune Watch Zone correspondante n'existe, la case est grisée et le message « Créer d'abord une Watch Zone » apparaît. Si des zones existent, la première est automatiquement présélectionnée.</p>
+      <ul>
+        <li><strong>Sentinel-2 NDVI</strong> – Indice de végétation issu des images satellites Sentinel-2. Détecte les changements terrestres (déforestation, construction, incendies). Nécessite des identifiants Copernicus dans Admin. Marquer la région via le sélecteur de carte.</li>
+        <li><strong>DWD / NOAA</strong> – Données météorologiques et de jaugeage. Quatre types de mesures sélectionnables : niveaux d'eau, précipitations, alertes météo, trajectoires de tempêtes. Diagramme en barres pour les précipitations/niveaux, ligne pour les alertes/tempêtes. Axe Y séparé (bleu). Nécessite une Watch Zone de type « weather ».</li>
+        <li><strong>Observation satellite</strong> – Marque les dates d'acquisition Sentinel-2 disponibles sous forme de lignes verticales dans le graphique. Un clic sur un marqueur ouvre l'image satellite avec comparaison avant/après et analyse NDVI. Nécessite une Watch Zone de type « satellite » et des identifiants Copernicus.</li>
+        <li><strong>Sismique (USGS)</strong> – Données sismiques de l'US Geological Survey. Affiche la magnitude maximale par créneau temporel sous forme de points rouges (taille proportionnelle à l'intensité). Axe Y séparé (rouge). Nécessite une Watch Zone de type « seismic ». Aucune clé API nécessaire.</li>
+        <li><strong>Nighttime Lights (NASA VIIRS)</strong> – Luminosité moyenne issue des images de lumières nocturnes NASA VIIRS. Détecte les changements d'éclairage et d'infrastructure (coupures de courant, activité de construction, zones de conflit). Axe Y séparé (jaune). Nécessite une Watch Zone de type « nightlights ». Aucune clé API nécessaire, utilise NASA GIBS WMS.</li>
+      </ul>
+
+      <h4 style="margin:14px 0 6px;">Remarques générales</h4>
+      <ul>
+        <li>Les sources texte/média sont affichées sous forme de lignes pointillées, les sources géospatiales sous forme de lignes continues avec leur propre axe Y.</li>
+        <li>Toutes les données sont mises en cache – l'activation/désactivation ne nécessite pas de nouvel appel API.</li>
+        <li>Wikipedia, GDELT, Yahoo Finance, Sismique et Nighttime Lights sont disponibles sans clé API. Bluesky, Telegram, NDVI et Satellite nécessitent des identifiants.</li>
+        <li>Le panneau de Triangulation se ferme en cliquant à l'extérieur, via le bouton × ou avec <kbd>Esc</kbd>.</li>
+      </ul>
+
+      <h3>Décomposition (décomposition de séries temporelles dans le graphique)</h3>
+      <ul>
+        <li>Avec <strong>exactement un keyword actif</strong>, une case à cocher <strong>Décomposition</strong> avec sélection d'algorithme apparaît à gauche de « Normaliser ».</li>
+        <li>Deux modèles disponibles : <strong>Additif</strong> (Y = T + S + R) et <strong>Multiplicatif</strong> (Y = T × S × R).</li>
+        <li>L'activation superpose trois lignes supplémentaires dans le graphique principal : <strong>Trend</strong> (jaune), <strong>Seasonal</strong> (vert) et <strong>Residual</strong> (violet).</li>
+        <li>La saisonnalité et le bruit sont représentés sur un axe Y droit séparé.</li>
+        <li>Les valeurs au survol sont arrondies à 2 décimales en mode décomposition.</li>
+        <li>Lorsque le mode décomposition est actif, les données de décomposition sont automatiquement transmises à l'<strong>Analyse IA</strong>.</li>
+        <li>Lorsqu'un second keyword est activé, la décomposition se désactive automatiquement.</li>
+      </ul>
+
+      <h3>Modes plein écran &amp; Loupe</h3>
+      <ul>
+        <li><strong>Graphique plein écran</strong> (icône d'agrandissement) – affiche uniquement le graphique en plein écran, y compris le navigateur. Optimisé pour les grands écrans et les présentations.</li>
+        <li><strong>Mise en page plein écran</strong> (icône colonnes) – affiche la zone de contrôle (recherche, keywords, séries de récupération, zone d'affichage) à gauche (25 %) et le graphique à droite (75 %) côte à côte en plein écran. Idéal pour le travail collaboratif et les présentations en équipe.</li>
+        <li><strong>Loupe</strong> – Agrandit précisément n'importe quelle zone du graphique : déplacer le curseur sur la zone et activer la loupe. Particulièrement utile pour l'analyse détaillée de fenêtres temporelles étroites ou lors des présentations en équipe sur grand écran.</li>
+        <li>Tous les modes se quittent avec <kbd>Esc</kbd> et sont mutuellement exclusifs.</li>
+      </ul>
+
+      <h3>Mode Index</h3>
+      <ul>
+        <li>Touche <kbd>I</kbd> – active le <strong>mode Index</strong>. Toutes les courbes sont normalisées sur la valeur à la date du curseur (= 100), rendant les variations relatives directement comparables.</li>
+        <li>Déplacer la souris déplace le point de référence en temps réel.</li>
+        <li>Touche <kbd>F</kbd> – <strong>fixe</strong> le point de référence actuel. La normalisation reste figée même lorsque la souris continue de se déplacer. Appuyer à nouveau sur <kbd>F</kbd> libère la fixation.</li>
+        <li>Un badge bleu « Mode Index · F = fixer » ou « Index fixé » apparaît en haut du graphique.</li>
+        <li>Appuyer à nouveau sur <kbd>I</kbd> ou <kbd>Escape</kbd> quitte le mode Index et restaure les valeurs originales.</li>
+      </ul>
+
+      <h3>Mode Distance</h3>
+      <ul>
+        <li>Touche <kbd>D</kbd> (la souris doit être au-dessus du graphique) – active le <strong>mode Distance</strong>. Un point de départ est défini ; en déplaçant la souris, un intervalle de temps est créé. Une flèche semi-transparente visualise la portée.</li>
+        <li>L'infobulle indique la distance parcourable dans ce laps de temps avec différents modes de transport (voiture, vélo, à pied).</li>
+        <li>Appuyer à nouveau sur <kbd>D</kbd> – fixe la flèche et les valeurs. Un autre <kbd>D</kbd> ou <kbd>Escape</kbd> quitte le mode Distance.</li>
+        <li>Touche <kbd>M</kbd> ou clic sur le graphique en mode Distance – ouvre le <strong>mode Carte</strong> (carte interactive avec anneaux concentriques pour chaque moyen de transport).</li>
+        <li>En mode Carte : la recherche d'adresse ou la géolocalisation 📍 définit le point d'origine. Un clic sur un bouton de moyen de transport dans la légende zoome sur l'anneau correspondant.</li>
+        <li><strong>Map Snapshot</strong> – enregistre la vue cartographique actuelle comme diapositive carte dans un projet (sélectionner le projet dans le menu déroulant à côté du bouton de sauvegarde).</li>
+      </ul>
+
+      <h3>Corrélations</h3>
+      <ul>
+        <li>Pour chaque paire de keywords, le <strong>coefficient de corrélation de Pearson r</strong> est calculé automatiquement.</li>
+        <li>Codage couleur : fortement négatif (rouge) → pas de corrélation (gris) → fortement positif (vert).</li>
+        <li><strong>Décalage temporel (Lag)</strong> : Avec ‹ / › (±1 pas) et « / » (±7 pas), la courbe B peut être décalée dans le temps par rapport à la courbe A. La corrélation se met à jour en direct ; la courbe décalée est affichée en pointillés.</li>
+        <li>La valeur au centre indique le décalage actuel en heures (h) ou en jours (j). Un ✕ réinitialise au lag 0.</li>
+        <li><strong>CCF (Cross-Correlation Function)</strong> : Le bouton CCF ouvre une couche avec un diagramme en barres de toutes les valeurs de corrélation pour les lags de −20 à +20. Un clic sur une barre applique directement ce lag au décalage manuel.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Un lag positif signifie : B est en retard par rapport à A. Un lag négatif signifie : B précède A. La courbe se décale dans le graphique en conséquence vers la gauche (−) ou vers la droite (+).</span>
+      </div>
+
+      <h3>Statistiques temporelles</h3>
+      <ul>
+        <li>Affiche les valeurs moyennes de tendance par <strong>jour de la semaine</strong> et <strong>heure de la journée</strong> (uniquement pour les données horaires).</li>
+        <li>Fournit des informations sur les schémas récurrents de l'intérêt de recherche (par ex. pics le lundi ou le soir).</li>
+      </ul>
+
+      <h3>Analyse IA</h3>
+      <ul>
+        <li><strong>🤖 Analyse IA</strong> – envoie les données de séries temporelles visibles au modèle de langage configuré et fournit une évaluation structurée.</li>
+        <li>Si un projet avec un <strong>briefing de projet</strong> est sélectionné dans l'en-tête, celui-ci est automatiquement envoyé comme contexte – l'IA peut ainsi mieux contextualiser le sujet.</li>
+        <li>Des boutons IA séparés sont également disponibles dans les panneaux Self-Similarity, Détection d'anomalies, Décomposition de séries temporelles et toutes les analyses de laboratoire.</li>
+        <li>Chaque analyse transmet ses données calculées (changepoints, phases de corrélation, résultats Granger, prévisions, etc.) automatiquement à l'IA.</li>
+        <li>Le fournisseur IA et le modèle sont configurés sous <a href="#admin" style="color:var(--accent);">Admin</a>.</li>
+        <li>Les utilisateurs non-admin utilisent automatiquement les clés API du super-administrateur, sauf si leur propre API a été autorisée.</li>
+      </ul>
+
+      <h3>Panneaux supplémentaires</h3>
+      <ul>
+        <li><strong>Requêtes associées</strong> – affiche les termes en hausse et les plus populaires liés au keyword sélectionné.</li>
+        <li><strong>Intérêt régional</strong> – diagramme en barres au niveau régional/état ou au niveau ville.</li>
+        <li><strong>Statistiques quotidiennes &amp; hebdomadaires</strong> – valeurs moyennes visualisées par unité de temps.</li>
+        <li><strong>Self-Similarity</strong> – détecte les fenêtres temporelles récurrentes dans l'évolution d'un keyword.</li>
+        <li><strong>Détection d'anomalies</strong> – signale les anomalies statistiques via la méthode Z-Score ou IQR.</li>
+        <li><strong>Décomposition de séries temporelles</strong> – sépare tendance, saisonnalité et bruit (additif ou multiplicatif). Alternativement utilisable directement dans le graphique principal via la case à cocher <em>Décomposition</em>.</li>
+      </ul>
+    </div>
+
+    <!-- ── Analyses de laboratoire ── -->
+    <div class="help-section" id="labor">
+      <h2>Analyses de laboratoire <span class="section-url">Menu éprouvette</span></h2>
+      <p class="section-desc">
+        Méthodes statistiques avancées, accessibles via le menu déroulant éprouvette dans la barre d'outils
+        ou via le menu contextuel des keywords individuels.
+      </p>
+
+      <h3>Spike-Koinzidenz</h3>
+      <ul>
+        <li>Détecte les <strong>pics simultanés</strong> sur plusieurs keywords actifs.</li>
+        <li>Les coïncidences sont mises en évidence sous forme de marqueurs verticaux dans le graphique.</li>
+        <li>Les résultats (points de données coïncidents, keywords impliqués) sont automatiquement transmis à l'IA.</li>
+      </ul>
+
+      <h3>Change-Point Detection</h3>
+      <ul>
+        <li>Trouve les <strong>ruptures structurelles</strong> dans les séries temporelles à l'aide de l'algorithme PELT (Pruned Exact Linear Time).</li>
+        <li>Le graphique montre les changepoints détectés sous forme de lignes verticales et de segments avec des arrière-plans alternés.</li>
+        <li>Les statistiques de segment (moyenne, écart-type, taux de variation) sont calculées et transmises à l'IA.</li>
+        <li>Accessible via le menu déroulant laboratoire ou le menu contextuel du keyword.</li>
+      </ul>
+
+      <h3>Rolling Correlation</h3>
+      <ul>
+        <li>Calcule la <strong>corrélation de Pearson glissante</strong> entre les paires de keywords sur une fenêtre temporelle configurable.</li>
+        <li>Le graphique montre l'évolution de la corrélation (axe Y de −1 à +1) avec des zones codées par couleur (positif/négatif/neutre).</li>
+        <li>La <strong>détection de phases</strong> identifie les périodes contiguës de direction de corrélation constante.</li>
+        <li>Toutes les paires ou une paire unique peuvent être sélectionnées.</li>
+        <li>Les phases et la corrélation moyenne sont transmises à l'IA.</li>
+      </ul>
+
+      <h3>Filtre de périodicité (FFT)</h3>
+      <ul>
+        <li>Détecte les <strong>cycles récurrents</strong> dans une série temporelle à l'aide de la transformée de Fourier rapide (FFT).</li>
+        <li>Affiche les fréquences dominantes et leurs longueurs de période (par ex. rythme de 7 jours, cycle de 30 jours).</li>
+        <li>Les résultats sont automatiquement transmis à l'IA pour interprétation.</li>
+      </ul>
+
+      <h3>Causalité de Granger</h3>
+      <ul>
+        <li>Teste les <strong>relations prédictives temporelles</strong> entre toutes les paires de keywords dans les deux directions.</li>
+        <li>Tableau de résultats avec direction, lag optimal, statistique F, valeur p et évaluation de significativité (★/★★/★★★).</li>
+        <li>Détails de lag dépliables montrant tous les lags testés par paire.</li>
+        <li>Résumé des hubs réseau : quel keyword cause au sens de Granger le plus grand nombre d'autres.</li>
+        <li>Important : causalité de Granger ≠ causalité réelle – elle mesure le pouvoir prédictif, pas les mécanismes causaux.</li>
+      </ul>
+
+      <h3>Forecasting (Prévision)</h3>
+      <ul>
+        <li>Calcule une <strong>prévision de série temporelle</strong> pour un keyword unique.</li>
+        <li>Deux modèles : <strong>Prophet</strong> (détection automatique de saisonnalité et de changepoints) ou <strong>ARIMA</strong> (ordre auto-configuré).</li>
+        <li>Horizon de prévision configurable (nombre de pas).</li>
+        <li>Le graphique montre les données historiques, la ligne de prévision (vert pointillé) et la bande de confiance.</li>
+        <li>Les résultats de prévision sont transmis à l'IA pour interprétation.</li>
+        <li>Accessible via le <strong>menu contextuel du keyword</strong> (pas dans le menu déroulant laboratoire).</li>
+      </ul>
+
+      <h3>RQ Cluster Analyse</h3>
+      <ul>
+        <li>Analyse les <strong>requêtes associées</strong> d'un keyword sur tous les points de récupération.</li>
+        <li>L'IA regroupe toutes les requêtes en <strong>clusters thématiques</strong> et évalue leur évolution temporelle.</li>
+        <li>Identifie les clusters émergents, stables et en déclin ainsi que les requêtes en forte hausse.</li>
+        <li>Inclut une fonction de chat pour les questions de suivi sur l'analyse des clusters.</li>
+        <li>Accessible via le <strong>menu contextuel du keyword</strong> (pas dans le menu déroulant laboratoire).</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Toutes les analyses de laboratoire transmettent automatiquement leurs données calculées à l'évaluation IA. L'IA reçoit à chaque fois un prompt spécialisé avec une mission d'explication et les résultats d'analyse concrets.</span>
+      </div>
+    </div>
+    <!-- ── Dashboard ── -->
+    <div class="help-section" id="dashboard">
+      <h2>Start <span class="section-url">/start</span></h2>
+      <p class="section-desc">
+        Page d'accueil avec accès rapide, surveillance des alertes et l'AI Project Assistance entièrement automatisée.
+      </p>
+
+      <h3>Premiers pas</h3>
+      <ul>
+        <li><strong>Tuiles Quickstart</strong> – Quatre cartes colorées menant directement aux domaines les plus importants : créer un mot-clé, récupérer des données, lancer une analyse, gérer les projets.</li>
+        <li>Sous les tuiles se trouve l'<strong>AI Project Assistance</strong> (voir la <a href="#aipa" style="color:var(--accent);">section dédiée</a>).</li>
+      </ul>
+
+      <h3>Surveillance des alertes</h3>
+      <ul>
+        <li><strong>Cartes de comptage</strong> en haut affichent les événements non vus et le total.</li>
+        <li><strong>Tableau des événements</strong> liste toutes les alertes déclenchées avec mot-clé, type, horodatage et texte détaillé.</li>
+        <li><strong>Filtre par type</strong> (Tous · Non lus · Apparition · Disparition · Pic · Vol. apparaît · Vol. disparaît) restreint la vue.</li>
+        <li><strong>Vérifier maintenant</strong> – déclenche immédiatement une évaluation manuelle de toutes les règles d'alerte actives.</li>
+        <li><strong>Tout marquer comme lu</strong> – remet le badge de navigation à 0.</li>
+        <li>Le <strong>badge rouge</strong> dans la navigation se met à jour automatiquement à chaque chargement de page.</li>
+      </ul>
+    </div>
+
+    <!-- ── AI Project Assistance ── -->
+    <div class="help-section" id="aipa">
+      <h2>AI Project Assistance <span class="section-url">/start</span></h2>
+      <p class="section-desc">
+        Analyse entièrement autonome avec une équipe de 4 agents : un terme de recherche ou un briefing suffit – l'IA
+        crée de manière autonome un projet, récupère les données, crée des snapshots et fournit un rapport forensiquement solide
+        avec analyse de confiance et contre-thèse.
+      </p>
+
+      <h3>Saisie</h3>
+      <ul>
+        <li><strong>Terme de recherche</strong> – Le mot-clé initial à partir duquel la recherche démarre. Vérifié automatiquement pour la langue et le contexte géographique approprié.</li>
+        <li><strong>Briefing</strong> – Champ de texte libre optionnel pour la question de recherche ou le contexte. Le briefing oriente significativement la stratégie de recherche, par ex. il peut influencer le focus géographique (question sur la Russie → recherche en RU avec des mots-clés russes).</li>
+        <li><strong>Intensité</strong> – Curseur (1–5). Des valeurs plus élevées entraînent plus d'itérations, plus de mots-clés et plus de snapshots intermédiaires.</li>
+      </ul>
+
+      <h3>Architecture à 4 agents</h3>
+      <p>APA fonctionne avec quatre agents IA spécialisés qui collaborent à chaque itération :</p>
+      <ul>
+        <li><strong>Coordinateur</strong> – Pense stratégiquement et de manière <strong>guidée par les hypothèses</strong>. Formule une hypothèse explicite à chaque tour, commissionne sa vérification et recherche activement des contre-preuves. Reconnaît que de nombreuses questions ne peuvent être mesurées qu'<em>indirectement</em>. Utilise une <strong>mémoire inter-projets</strong> pour intégrer les résultats d'analyses antérieures.</li>
+        <li><strong>Chercheur de tendances</strong> – Spécialiste des données de tendances. Analyse les séries temporelles pour détecter pics, modèles saisonniers, corrélations et anomalies. Rapporte au coordinateur avec des valeurs de données spécifiques et des périodes temporelles.</li>
+        <li><strong>Chercheur RQ</strong> – Spécialiste des requêtes associées. Identifie les groupes thématiques, les liens sémantiques et les tendances montantes. Suggère de nouveaux mots-clés, souvent latéraux, au coordinateur.</li>
+        <li><strong>Critique</strong> – Avocat du diable. Activé une fois les itérations terminées et remet systématiquement en question toutes les conclusions : les corrélations sont-elles interprétées comme des causalités ? Y a-t-il des explications alternatives ? N'a-t-on cherché que des données confirmatives ? Ses retours sont intégrés au rapport final.</li>
+      </ul>
+      <p>Le chercheur de tendances et le chercheur RQ travaillent <strong>en parallèle</strong>. Le critique travaille de manière <strong>adversariale</strong> – c'est le seul agent qui n'agit pas de manière coopérative.</p>
+
+      <h3>Processus</h3>
+      <ul>
+        <li>Après le démarrage, un <strong>moniteur de journal</strong> s'ouvre montrant la progression en temps réel (basé sur SSE). Les noms des agents apparaissent en <span style="color:var(--accent1);font-weight:700;">violet/gras</span>.</li>
+        <li><strong>Phase 1 – Récupération initiale &amp; Mémoire :</strong> Le mot-clé initial est récupéré depuis Google Trends. Le système vérifie si des mots-clés similaires ont déjà été analysés dans des projets précédents (mémoire inter-projets).</li>
+        <li><strong>Phase 2 – Scan automatique des actualités :</strong> Immédiatement après la récupération initiale, jusqu'à 15 articles d'actualité sur le mot-clé initial sont automatiquement recherchés via Google News et leurs <strong>textes intégraux sont extraits</strong> (avec nettoyage des bannières de cookies et du contenu superflu). Les articles sont <strong>créés comme événements dans le projet</strong> et les contenus sont fournis au coordinateur comme contexte. Cela donne à l'IA accès au paysage médiatique actuel sur le sujet dès le début.</li>
+        <li><strong>Phase 3 – Itération guidée par les hypothèses :</strong> À chaque itération, le coordinateur formule une <strong>hypothèse explicite</strong>, commande des récupérations et analyses ciblées pour la tester, et évalue après les rapports des chercheurs : confirmée, réfutée ou ouverte ? La stratégie de recherche cherche activement des contre-preuves. Le coordinateur a accès au contenu des articles extraits et peut l'utiliser pour la formulation d'hypothèses.</li>
+        <li><strong>Phase 4 – Revue du critique :</strong> Après la fin des itérations, l'<strong>agent critique</strong> analyse toutes les conclusions de manière adversariale : erreurs logiques, biais de confirmation, explications alternatives, contre-preuves manquantes, sur-interprétations.</li>
+        <li><strong>Phase 5 – Rapport final forensique :</strong> Le rapport contient des valeurs de confiance pour chaque affirmation principale, une section obligatoire « Ce que cette analyse ne prouve pas », une comparaison de motifs historiques, les retours du critique et les résultats du scan d'actualités.</li>
+        <li>Lorsque des données manquent pour un pays spécifique, un <strong>repli géographique</strong> automatique vers les données mondiales est tenté.</li>
+      </ul>
+
+      <h3>Analyses statistiques &amp; Événements</h3>
+      <ul>
+        <li>Le coordinateur peut exécuter des <strong>analyses statistiques</strong> sur les données récupérées – par ex. détection de points de rupture, corrélation glissante, coïncidence de pics, périodicité, détection de valeurs aberrantes, décomposition de séries temporelles, auto-similarité, <strong>Auto Correlate</strong> (trouve automatiquement les mots-clés les plus fortement corrélés y compris le décalage optimal) et <strong>Forecasting</strong> (prédiction de séries temporelles via Prophet ou ARIMA).</li>
+        <li>Les résultats alimentent directement l'évaluation et le rapport final.</li>
+        <li>Les <strong>événements enregistrés</strong> (annotations créées manuellement) sont automatiquement pris en compte comme contexte – l'IA peut ainsi corréler les pics avec des événements connus.</li>
+      </ul>
+
+      <h3>Sources de données externes</h3>
+      <ul>
+        <li><strong>Scan automatique des actualités</strong> – Effectué immédiatement après le démarrage : jusqu'à 15 articles d'actualité sur le mot-clé initial sont trouvés, extraits et créés comme événements. Le coordinateur peut en plus déclencher des <strong>scans d'actualités ciblés</strong> avec différents termes de recherche ou plages temporelles.</li>
+        <li><strong>Event Probe</strong> – Analyse forensique en fenêtre courte (1 ou 7 jours) autour d'une date d'événement spécifique. Le système récupère les données Google Trends pour une fenêtre temporelle étroite et analyse automatiquement :
+          <ul>
+            <li><strong>Indicateur de connaissance préalable</strong> – Volume de recherche significatif AVANT l'événement → indication possible de connaissance préalable ou de planification</li>
+            <li><strong>Schéma réactif</strong> – Volume de recherche uniquement APRÈS l'événement → schéma de réaction normal</li>
+            <li><strong>Suspect</strong> – Volume de recherche UNIQUEMENT AVANT l'événement, pas après → particulièrement digne d'investigation</li>
+          </ul>
+        </li>
+        <li><strong>Wikipedia Pageviews</strong> – Compteurs de vues journaliers d'articles Wikipedia comme signal indépendant en complément de Google Trends. Sert de validation croisée : les tendances de recherche correspondent-elles à l'intérêt informationnel sur Wikipedia ? Fournit des chiffres absolus (contrairement à l'échelle relative 0–100 de Google Trends). Les pics corrèlent fréquemment avec les cycles d'actualités.</li>
+        <li><strong>Wikipedia Edits</strong> – Historique des modifications d'articles Wikipedia : qui modifie, quand, à quelle fréquence ? Détecte les pics de modifications (campagnes PR, gestion de crise), analyse la réputation des auteurs et les modifications anonymes vs. enregistrées. Pertinent forensiquement pour détecter le blanchiment d'information ou la manipulation coordonnée d'articles.</li>
+        <li><strong>GDELT Media Volume</strong> – Comptage journalier d'articles du projet GDELT, qui surveille les médias d'information mondiaux. Pertinent forensiquement : a-t-on d'abord cherché ou d'abord publié ? Une couverture médiatique manquante avec un volume de recherche élevé est suspecte. Permet la distinction entre intérêt de recherche organique et piloté par les médias.</li>
+        <li><strong>Yahoo Finance</strong> – Données historiques de prix, volume et volatilité pour actions, ETF, cryptomonnaies et indices. Pertinent forensiquement : corrélation entre intérêt de recherche et mouvements du marché, indices d'initiés (a-t-on d'abord cherché, puis le prix a bougé ?), pics de volume lors d'événements d'actualité.</li>
+        <li><strong>NDVI Vegetation Analysis</strong> – Les images satellite Sentinel-2 fournissent l'indice de végétation (NDVI) pour toute région. Détecte les changements d'occupation du sol : déforestation, projets de construction, catastrophes naturelles, incendies, renaturation. Nécessite des identifiants Copernicus.</li>
+        <li><strong>ACLED Conflicts</strong> – Conflits armés et violence politique sous forme de diagramme en barres (événements par jour). Axe Y séparé (rouge). Nécessite une Watch Zone de type « acled » et un compte ACLED.</li>
+        <li><strong>Air Quality (OpenAQ)</strong> – Moyennes journalières PM2.5 provenant des stations de surveillance dans la zone. Axe Y séparé (vert). Nécessite une Watch Zone de type « airquality » et une clé API OpenAQ.</li>
+        <li><strong>Power Grid (ENTSO-E)</strong> – Charge moyenne journalière du réseau électrique. Axe Y séparé (jaune). Nécessite une Watch Zone de type « powergrid » et un jeton ENTSO-E.</li>
+        <li><strong>Migration (UNHCR)</strong> – Chiffres des réfugiés et de l'asile par an. Ligne de référence en pointillés pour les plages temporelles courtes, courbe de tendance pour les vues pluriannuelles. Axe Y séparé (violet). Nécessite une Watch Zone de type « migration ». Aucune clé API requise.</li>
+        <li><strong>Telegram Monitor</strong> – Volume de mentions dans les canaux Telegram publics par jour. Ligne en pointillés (sarcelle). Nécessite une Watch Zone de type « telegram_monitor » avec des mots-clés configurés.</li>
+        <li><strong>Bluesky Monitor</strong> – Volume de publications sur Bluesky par jour. Axe Y séparé (bleu). Nécessite une Watch Zone de type « bluesky_monitor » avec des mots-clés configurés.</li>
+        <li><strong>OSM Changes</strong> – Nombre de modifications OSM par jour sous forme de barres vertes. Axe Y séparé. Nécessite une Watch Zone de type « osm_changes ». Aucune clé API requise.</li>
+        <li><strong>Wayback Frequency</strong> – Snapshots/jour d'une URL sous forme de barres cyan. Les pics indiquent une attention médiatique. Axe Y séparé. Nécessite une Watch Zone de type « wayback_cdx ». Aucune clé API requise.</li>
+        <li>Toutes les sources externes sont utilisées de manière autonome par le coordinateur – par ex. pour la triangulation de pics inexpliqués ou lorsque le briefing suggère une question de recherche forensique.</li>
+        <li>Le menu de triangulation inclut un <strong>champ de recherche</strong> pour filtrer rapidement les sources disponibles. Seuls les plugins avec des identifiants enregistrés sont affichés.</li>
+      </ul>
+
+      <h3>Stratégie de recherche intelligente</h3>
+      <ul>
+        <li><strong>Mesure indirecte :</strong> Des questions comme « Qui est le plus populaire ? » ne peuvent pas être mesurées directement. Le coordinateur le reconnaît et compare plutôt les entités individuelles (par ex. noms de partis, noms de politiciens).</li>
+        <li><strong>Adaptation géographique :</strong> Le briefing peut influencer le contexte géographique. Une question sur la Russie conduit à des recherches en geo=RU avec des mots-clés russes.</li>
+        <li><strong>Comportement de recherche :</strong> Les mots-clés sont formulés comme les gens recherchent réellement – courts, sans mots de remplissage, dans la langue du geo cible.</li>
+        <li><strong>Protection contre les doublons :</strong> Les graphiques de snapshot identiques sont automatiquement évités. Chaque snapshot montre une sélection ciblée de 1 à 3 mots-clés.</li>
+      </ul>
+
+      <h3>Résultat</h3>
+      <ul>
+        <li>Un <strong>nouveau projet</strong> est automatiquement créé, regroupant tous les mots-clés, snapshots et le rapport.</li>
+        <li>Le rapport apparaît dans un <strong>overlay de rapport</strong> et est enregistré comme diapositive dans le projet.</li>
+        <li>Tous les snapshots contiennent des commentaires formatés en Markdown avec des évaluations analytiques.</li>
+        <li>Le rapport contient une <strong>analyse de confiance</strong> : chaque affirmation principale est évaluée avec une valeur de confiance (Élevée/Moyenne/Faible) et une justification (densité des données, période temporelle, signaux convergents).</li>
+        <li><strong>Section obligatoire « Ce que cette analyse ne prouve pas »</strong> : indique explicitement quelles conclusions les données ne soutiennent pas, quelles explications alternatives existent et quelles lacunes de données subsistent.</li>
+        <li><strong>Comparaison de motifs historiques</strong> : comparaison automatique avec des enquêtes antérieures – détecte les répétitions de motifs, les inversions de tendance et les changements de niveau.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>L'AI Project Assistance est particulièrement adaptée pour débuter avec un nouveau sujet – elle fournit rapidement un aperçu basé sur les données avant qu'une analyse manuelle plus approfondie ne suive. Utilisez le champ de briefing pour préciser la question de recherche – plus le briefing est spécifique, plus la recherche est ciblée.</span>
+      </div>
+    </div>
+
+    <!-- ── Events ── -->
+    <div class="help-section" id="events">
+      <h2>Événements <span class="section-url">/events</span></h2>
+      <p class="section-desc">
+        Les événements sont des annotations dans le graphique de tendances – créés manuellement ou détectés automatiquement à partir d'analyses d'actualités.
+        La page combine la gestion des événements, la recherche d'actualités et le briefing d'actualités assisté par IA.
+      </p>
+
+      <h3>Gérer les événements</h3>
+      <ul>
+        <li><strong>Événement ponctuel</strong> – apparaît comme une ligne verticale dans le graphique à une date spécifique.</li>
+        <li><strong>Événement de plage</strong> – apparaît comme une zone colorée entre deux dates.</li>
+        <li><strong>Titre &amp; Description</strong> – sont affichés dans l'infobulle de l'événement.</li>
+        <li><strong>Couleur</strong> – librement sélectionnable via le sélecteur de couleurs ; détermine la couleur de la ligne ou de la zone dans le graphique.</li>
+        <li>Les événements sont affichés sur tous les graphiques d'analyse et peuvent être modifiés ou supprimés à tout moment.</li>
+        <li>Les événements enregistrés sont automatiquement transmis à l'<strong>Analyse IA</strong> et à l'<strong>AI Project Assistance</strong> comme contexte.</li>
+      </ul>
+
+      <h3>Trouver des actualités</h3>
+      <ul>
+        <li><strong>Terme de recherche</strong> – Recherche des articles d'actualité via Google News RSS.</li>
+        <li><strong>Plage de dates</strong> – Filtre optionnel de/à en format de date (JJ.MM.AAAA).</li>
+        <li>Les articles trouvés sont affichés comme des cartes avec titre, source, date et lien.</li>
+        <li><strong>Nuage de mots</strong> – Affiche les 20 termes les plus fréquents des titres des résultats de recherche. Cliquer sur un terme filtre la liste de résultats (combinaison OU pour plusieurs filtres actifs). Cliquer à nouveau supprime le filtre.</li>
+      </ul>
+
+      <h3>Briefing d'actualités</h3>
+      <ul>
+        <li><strong>Analyser les actualités</strong> – Extrait les textes intégraux de tous les articles trouvés et les envoie au modèle de langage configuré pour analyse.</li>
+        <li>Le résultat apparaît dans une <strong>fenêtre modale à deux colonnes</strong> : briefing à gauche, barre latérale avec actions à droite.</li>
+      </ul>
+
+      <h3>Événements détectés (Tableau)</h3>
+      <ul>
+        <li>Directement sous le résumé, un tableau affiche tous les événements détectés par le LLM avec <strong>date, heure, message, nombre de sources et localisation</strong>.</li>
+        <li>Le LLM extrait le <strong>moment réel de l'occurrence</strong> à partir des textes des articles – pas la date de publication.</li>
+        <li>Chaque ligne a une <strong>case à cocher</strong>. La case « Tous » dans l'en-tête sélectionne tous les événements d'un coup.</li>
+        <li><strong>Importer comme événements</strong> – Enregistre les lignes sélectionnées comme événements ponctuels dans la base de données (avec couleur violette), assignés au projet actif.</li>
+      </ul>
+
+      <h3>Présentation Story</h3>
+      <ul>
+        <li><strong>Présenter comme Story</strong> – Ouvre une vue carte en plein écran qui navigue chronologiquement à travers tous les événements détectés.</li>
+        <li>Chaque événement est affiché avec <strong>date, heure, description, sources et localisation</strong> sur une carte interactive (CartoDB Voyager).</li>
+        <li>Pour les <strong>localisations multiples</strong> par événement (par ex. « USA, Iran »), des cartes séparées sont affichées côte à côte, chacune centrée sur la localisation respective.</li>
+        <li>Les <strong>boutons de navigation</strong> (gauche/droite) affichent la différence temporelle avec l'événement suivant (par ex. « il y a 2 jours », « dans 3h 15m », « simultané ») ainsi que la <strong>distance géographique en kilomètres</strong> (à vol d'oiseau).</li>
+        <li>Toutes les localisations d'événements sont géocodées à l'avance (Nominatim) et affichées comme des points subtils sur la carte ; la localisation actuelle est mise en évidence.</li>
+        <li><strong>Barre de progression</strong> en haut indique la position dans la story.</li>
+        <li>Navigation via les <strong>touches fléchées</strong>, la <strong>barre d'espace</strong> (avancer) et <strong>Échap</strong> (fermer).</li>
+      </ul>
+
+      <h3>Barre latérale : Export &amp; Actions</h3>
+      <ul>
+        <li><strong>Copier</strong> – Copie le texte du briefing dans le presse-papiers.</li>
+        <li><strong>PDF</strong> – Exporte le briefing en fichier PDF (via WeasyPrint).</li>
+        <li><strong>DOCX</strong> – Exporte le briefing en document Word (via python-docx).</li>
+        <li><strong>Vers diapositive de projet</strong> – Enregistre le rapport comme diapositive de texte dans un projet sélectionnable.</li>
+      </ul>
+
+      <h3>Barre latérale : Termes fréquents</h3>
+      <ul>
+        <li>Affiche les <strong>20 termes principaux</strong> de tous les textes d'articles extraits, triés par fréquence.</li>
+        <li>Les mots vides allemands et anglais ainsi que le contenu web superflu (bannières de cookies, etc.) sont filtrés.</li>
+        <li>Cliquer sur un terme <strong>ferme la fenêtre modale du briefing</strong> et lance automatiquement une nouvelle recherche d'actualités avec ce terme.</li>
+      </ul>
+
+      <h3>Barre latérale : Questions de suivi</h3>
+      <ul>
+        <li>Champ de saisie de chat pour les <strong>questions de suivi sur le briefing</strong>. L'IA reçoit le texte du briefing comme contexte et peut fournir des analyses plus approfondies, des explications ou des évaluations.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>La combinaison de détection automatique d'événements, présentation story et importation directe dans la base de données permet un flux de travail rapide : rechercher des actualités → créer un briefing → détecter des événements → visualiser comme story → importer les événements pertinents dans l'analyse de tendances.</span>
+      </div>
+    </div>
+
+    <!-- ── Watch Zones ── -->
+    <div class="help-section" id="watchzones">
+      <h2>Watch Zones <span class="section-url">/events → Live View</span></h2>
+      <p class="section-desc">
+        Zones de surveillance pour les données en temps réel, satellite et web. Chaque zone a un type
+        et s'ouvre via l'icône de carte dans la vue des événements.
+      </p>
+
+      <h3>Types de zones</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:8px;">Seuls les plugins avec des identifiants enregistrés apparaissent dans la barre latérale et le menu de triangulation. La barre de recherche dans la barre latérale filtre lorsqu'il y a de nombreux plugins.</p>
+
+      <h4 style="margin-top:14px;">Surveillance géospatiale</h4>
+      <ul>
+        <li><strong>Satellite</strong> – Données d'acquisition Sentinel-2 et analyse de végétation NDVI (nécessite des identifiants Copernicus).</li>
+        <li><strong>Météo</strong> – DWD / NOAA : niveaux d'eau, précipitations, alertes météo, trajectoires de tempêtes.</li>
+        <li><strong>Sismique</strong> – Données sismiques USGS, aucune clé API requise. Triangulable.</li>
+        <li><strong>Lumières nocturnes</strong> – Intensité lumineuse nocturne NASA VIIRS (infrastructure, pannes de courant). Triangulable.</li>
+        <li><strong>Radioactivité</strong> – BfS ODL (Allemagne) + EURDEP (Europe) : débit de dose gamma, respectivement ~1 600 et ~37 000 stations de mesure. Triangulable.</li>
+        <li><strong>Aéronefs</strong> – Trafic aérien en direct via OpenSky Network avec score d'anomalie, globe 3D et analyse de proximité.</li>
+        <li><strong>Navires</strong> – Trafic maritime AIS via aisstream.io.</li>
+      </ul>
+
+      <h4>Infrastructure &amp; Environnement</h4>
+      <ul>
+        <li><strong>Trafic (TomTom)</strong> – Incidents routiers, embouteillages, accidents, fermetures en temps réel. L'indice de flux compare la vitesse actuelle avec la valeur normale. 50 000 requêtes/jour gratuites. Nécessite une clé API TomTom.</li>
+        <li><strong>Antennes relais (OpenCelliD)</strong> – Inventaire des antennes relais (GSM, UMTS, LTE, 5G NR) avec portée, puissance du signal et indicateur de couverture LTE/5G. 1 000 requêtes/jour gratuites. Nécessite une clé API OpenCelliD.</li>
+        <li><strong>Qualité de l'air (OpenAQ)</strong> – PM2.5, PM10, ozone, NO₂, SO₂, CO dans le monde entier. Codage couleur selon l'échelle EPA. Les pics indiquent des incendies, explosions ou accidents industriels. Triangulable. Nécessite une clé API OpenAQ (gratuite).</li>
+        <li><strong>Réseau électrique (ENTSO-E)</strong> – Charge du réseau dans plus de 30 pays européens. Courbe de charge sur 48h avec détection d'anomalies (indicateur de panne à &gt;30% de baisse de charge). Triangulable. Nécessite un jeton de sécurité ENTSO-E (gratuit, demande par e-mail).</li>
+      </ul>
+
+      <h4>Conflits &amp; Migration</h4>
+      <ul>
+        <li><strong>ACLED Conflicts</strong> – Conflits armés, violence politique, manifestations et troubles dans le monde entier. Événements journaliers, géoréférencés avec acteurs et victimes. Triangulable. Nécessite un compte ACLED (gratuit pour la recherche/les médias).</li>
+        <li><strong>Migration (UNHCR)</strong> – Nombre de réfugiés, demandes d'asile et déplacements internes pour plus de 40 pays. Séries temporelles sur 10 ans avec double perspective (pays d'accueil et pays d'origine). Triangulable. Aucune clé API requise.</li>
+        <li><strong>OSM Changes</strong> – Modifications récentes d'OpenStreetMap dans une région : nouvelles routes, bâtiments, infrastructure militaire, aéroports, barrières, infrastructure énergétique. Affiche les principaux contributeurs et la répartition des tags. Triangulable. Aucune clé API requise (Overpass API).</li>
+      </ul>
+
+      <h4>Réseaux sociaux &amp; Web</h4>
+      <ul>
+        <li><strong>Site web</strong> – Surveille une URL via Wayback Machine : comparaison de snapshots, modifications de contenu, détection de trackers, traceroute. Aucune coordonnée géographique requise.</li>
+        <li><strong>Telegram Monitor</strong> – Surveillance par mots-clés des canaux Telegram publics. Affiche le volume de mentions sur 90 jours avec résolution journalière. Triangulable. Nécessite des identifiants API Telegram + session authentifiée.</li>
+        <li><strong>Bluesky Monitor</strong> – Surveillance par mots-clés sur Bluesky (AT Protocol). Volume de publications sur 180 jours. Triangulable. Nécessite un identifiant Bluesky + mot de passe d'application.</li>
+        <li><strong>Wayback Frequency</strong> – À quelle fréquence une URL a-t-elle été mise en cache par l'Internet Archive ? Fréquence élevée = attention médiatique ou archivage coordonné. Triangulable. Aucune clé API requise.</li>
+        <li><strong>CertWatch</strong> – Surveillance du Certificate Transparency Log pour les domaines.</li>
+        <li><strong>Wikipedia</strong> – Surveille les articles Wikipedia pour détecter les modifications.</li>
+        <li><strong>Censys</strong> – Recherche d'actifs Internet (nécessite des identifiants Censys).</li>
+      </ul>
+
+      <h3>Gérer les zones</h3>
+      <ul>
+        <li><strong>Dessiner une zone</strong> – Deux boutons en haut à gauche de la carte : <em>Dessiner une zone polygonale</em> et <em>Dessiner une zone rectangulaire</em>. Pendant le dessin, un réticule avec des lignes pointillées de la couleur d'accentuation apparaît.</li>
+        <li><strong>Liste des zones</strong> – Sous la carte, toutes les zones sont listées (y compris les zones globales avec le marqueur 🌐).</li>
+        <li><strong>Zoom au survol</strong> – Survoler une zone dans la liste zoome la carte sur la zone. En quittant, la carte revient.</li>
+        <li><strong>Ancrage au clic</strong> – Cliquer sur une zone dans la liste ancre le zoom. Cliquer à nouveau libère l'ancrage.</li>
+        <li><strong>Modifier</strong> (icône crayon) – Rend la zone modifiable sur la carte : déplacer les points d'angle pour changer la géométrie. Une barre sauvegarder/annuler apparaît. Double-cliquer sur le nom pour le renommer.</li>
+        <li><strong>Supprimer</strong> (icône corbeille) – Supprime la zone après confirmation.</li>
+        <li><strong>Zones globales</strong> – Apparaissent dans toutes les catégories mais ne peuvent être modifiées ou supprimées que sous « Zones globales ». Dans les autres panneaux, les icônes crayon et corbeille sont grisées avec un indice.</li>
+        <li>Les <strong>noms de zones</strong> sont affichés en haut à gauche au-dessus de la limite de la zone sur la carte.</li>
+      </ul>
+
+      <h3>Ajouter un site web</h3>
+      <ul>
+        <li>Le bouton <strong>+ Ajouter un site web</strong> ouvre une fenêtre modale avec saisie d'URL et nom de zone.</li>
+        <li>En dessous se trouve une <strong>sélection rapide d'URL</strong> avec des domaines préparés, organisés par <strong>31 pays/régions</strong> (USA, Allemagne, Russie, Chine, Ukraine, …) et <strong>5 catégories</strong> :
+          <ul>
+            <li>Militaire · Politique · Actualités · Gestion des urgences · Médecine</li>
+          </ul>
+        </li>
+        <li>Cliquer sur une puce de domaine applique l'URL au champ de saisie. L'<strong>icône ↗</strong> à droite de la puce ouvre le site web directement dans un nouvel onglet.</li>
+        <li>Les données d'URL sont chargées depuis un fichier JSON externe et mises en cache à la première ouverture.</li>
+      </ul>
+
+      <h3>Comparaison de pages (Fenêtre Diff)</h3>
+      <ul>
+        <li>S'ouvre en cliquant sur deux snapshots Wayback d'une zone de site web.</li>
+        <li>Onglets : <strong>Contenu nouveau</strong>, <strong>Contenu supprimé</strong>, <strong>Différence de contenu</strong>, <strong>Code nouveau</strong>, <strong>Code supprimé</strong>, <strong>Différence de code</strong>, <strong>Tracker</strong>.</li>
+        <li>Les onglets de contenu affichent le contenu sous forme de <strong>tuiles</strong> (un terme / une phrase par tuile).</li>
+        <li>L'<strong>onglet Tracker</strong> détecte automatiquement les technologies de suivi intégrées (Google Analytics, Facebook Pixel, Matomo, etc.) et affiche les trackers nouvellement ajoutés, supprimés et persistants.</li>
+      </ul>
+
+      <h3>Traduction dans la comparaison de pages</h3>
+      <ul>
+        <li>Bouton <strong>🌐 Traduire</strong> dans la barre d'outils de la fenêtre diff – actif uniquement pour les onglets de contenu (Contenu nouveau / Supprimé / Diff).</li>
+        <li>Sélection de langue : allemand, anglais, français, espagnol, chinois, russe.</li>
+        <li>Pour les <strong>onglets de tuiles</strong> (Contenu nouveau / Supprimé) : chaque tuile est traduite individuellement. Le texte traduit apparaît directement dans la tuile ; l'original reste visible comme petit texte d'indication en dessous.</li>
+        <li>Pour la <strong>Différence de contenu</strong> : le résultat de la traduction apparaît comme un panneau sous la barre d'onglets.</li>
+        <li>Tous les textes d'un onglet sont traduits en une seule requête API (correspondance ligne par ligne).</li>
+        <li>Les onglets de code et Tracker sont exclus de la traduction (bouton grisé).</li>
+      </ul>
+
+      <h3>Traceroute (Serveur en direct)</h3>
+      <ul>
+        <li>Le bouton <strong>Serveur (en direct)</strong> lance un traceroute vers le serveur cible de la zone de site web.</li>
+        <li>Les résultats sont diffusés en direct via <strong>Server-Sent Events</strong> : saut par saut, IP, RTT, données géographiques (ville, pays, ASN) et rDNS apparaissent.</li>
+        <li>La <strong>carte</strong> et la <strong>liste des sauts</strong> remplissent entièrement l'espace disponible de la fenêtre modale.</li>
+        <li>Les anomalies (par ex. chemins de routage inhabituels) sont mises en évidence en couleur.</li>
+        <li>Les résultats sont sauvegardés et accessibles via l'historique des traceroutes.</li>
+      </ul>
+
+      <h3>Watch Zone aéronefs – Tableau en direct</h3>
+      <ul>
+        <li>Affiche tous les aéronefs dans la zone englobante avec <strong>indicatif d'appel, ICAO24, pays d'origine, altitude, vitesse, cap et score d'anomalie</strong>.</li>
+        <li>Le <strong>score d'anomalie</strong> (0–100) évalue chaque aéronef pour un comportement suspect (squawk 7500/7600/7700, altitude inhabituelle, vitesse lente, etc.) et est mis en évidence en couleur.</li>
+        <li>Cliquer sur une ligne ouvre la <strong>vue détaillée</strong>.</li>
+      </ul>
+
+      <h3>Watch Zone aéronefs – Vue détaillée</h3>
+      <ul>
+        <li>Affiche tous les paramètres disponibles de l'aéronef ainsi qu'une <strong>mini carte</strong> avec la position actuelle.</li>
+        <li>L'<strong>aéronef le plus proche</strong> est affiché comme une icône d'avion sombre sur la mini carte et clignote. Une ligne pointillée relie les deux aéronefs.</li>
+        <li>Sous la carte, la distance horizontale &amp; 3D et la différence d'altitude avec l'aéronef le plus proche sont affichées.</li>
+      </ul>
+
+      <h3>Mesure de densité &amp; Mesure de distance</h3>
+      <ul>
+        <li>Le bouton <strong>🌡 Mesure de densité</strong> superpose la carte avec des cercles basés sur la distance minimale : <strong>Rouge</strong> &lt; 1 km · <strong>Orange</strong> 1–5 km · <strong>Jaune</strong> 5–30 km.</li>
+        <li>Le <strong>panneau de proximité</strong> liste toutes les paires critiques (&lt; 1 km). Cliquer sur une entrée zoome la carte sur la paire.</li>
+        <li><kbd>D</kbd> – Mesure de distance : sélectionner le premier aéronef, puis le second → affiche la distance 2D et 3D y compris la différence d'altitude.</li>
+      </ul>
+
+      <h3>Globe 3D</h3>
+      <ul>
+        <li>Le bouton <strong>⬡ 3D</strong> bascule vers une <strong>vue 3D interactive Cesium.js</strong>.</li>
+        <li>Chaque aéronef apparaît comme une icône colorée avec étiquette d'indicatif et ligne verticale au sol.</li>
+        <li>Cliquer sur <strong>⬡ 2D</strong> à nouveau revient à la carte Leaflet.</li>
+      </ul>
+
+      <h3>Intégration APA</h3>
+      <ul>
+        <li>Le chat APA a un accès direct à toutes les Watch Zones de l'utilisateur via les outils suivants :</li>
+        <ul>
+          <li><strong>list_watchzones</strong> – Lister toutes les zones (nom, type, ID, projet).</li>
+          <li><strong>get_watchzone_details</strong> – Récupérer la configuration et les métadonnées d'une zone.</li>
+          <li><strong>get_live_data</strong> – Récupérer les données actuelles (site web, météo, sismique).</li>
+          <li><strong>get_website_history</strong> – Interroger les changements Wayback dans une plage temporelle.</li>
+          <li><strong>get_traceroute_history</strong> – Récupérer les résultats de traceroute sauvegardés d'une zone.</li>
+          <li><strong>create_watchzone</strong> – Créer une nouvelle zone (site web avec URL ; zones géo avec lat/lon/rayon).</li>
+          <li><strong>get_radiation_data</strong> – Débit de dose gamma pour une zone (BfS/EURDEP).</li>
+          <li><strong>acled_conflict_data</strong> – Événements de conflit ACLED pour une région et une plage temporelle.</li>
+          <li><strong>get_airquality_data</strong> – Données de qualité de l'air (PM2.5, ozone, etc.) pour une zone.</li>
+          <li><strong>get_powergrid_data</strong> – Données de charge du réseau électrique (ENTSO-E) pour les zones européennes.</li>
+          <li><strong>get_migration_data</strong> – Données de réfugiés et de migration UNHCR.</li>
+          <li><strong>get_traffic_data</strong> – Incidents de trafic et indice de flux (TomTom).</li>
+          <li><strong>get_celltower_data</strong> – Antennes relais (OpenCelliD).</li>
+          <li><strong>telegram_keyword_search</strong> – Recherche par mots-clés dans les canaux Telegram.</li>
+          <li><strong>bluesky_keyword_search</strong> – Recherche par mots-clés sur Bluesky.</li>
+          <li><strong>get_osm_changes</strong> – Changements récents d'OpenStreetMap dans une zone.</li>
+          <li><strong>wayback_url_frequency</strong> – Fréquence d'archivage d'une URL (Wayback CDX).</li>
+        </ul>
+        <li>L'APA appelle les outils automatiquement et de manière répétée selon les besoins (jusqu'à 5 tours) puis résume les résultats en langage naturel.</li>
+        <li>Exemples de requêtes : <em>« Quelles Watch Zones ai-je ? »</em> · <em>« Crée une zone de site web pour defense.gov »</em> · <em>« Qu'est-ce qui a changé sur tagesschau.de la semaine dernière ? »</em> · <em>« Y a-t-il des conflits dans la zone Ukraine ? »</em> · <em>« Quelle est la qualité de l'air dans ma zone ? »</em></li>
+        <li>Le coordinateur APA peut en plus utiliser <strong>vessel_traffic</strong>, <strong>aircraft_traffic</strong> et tous les outils ci-dessus pour intégrer des données dans les analyses en cours.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Flux de travail de zone de site web : Créer une zone → Comparer les snapshots (fenêtre diff) → Traduire les tuiles → Lancer un traceroute → Demander à l'APA dans le chat : <em>« Qu'est-ce qui a changé sur ce site web ? »</em></span>
+      </div>
+    </div>
+
+    <!-- ── Projects ── -->
+    <div class="help-section" id="projects">
+      <h2>Projets <span class="section-url">/projects</span></h2>
+      <p class="section-desc">
+        La boîte à outils de présentation : les mots-clés et analyses sont capturés comme snapshots
+        et regroupés en projets – exportables en PDF.
+      </p>
+
+      <h3>Projets &amp; Snapshots</h3>
+      <ul>
+        <li><strong>Créer un projet</strong> – donne à une collection de snapshots un nom et une couleur. Directement accessible via « + Nouveau projet » dans la barre latérale.</li>
+        <li><strong>Recherche de projet</strong> – Le champ de recherche au-dessus de la liste des projets filtre les entrées en direct par nom. <kbd>Échap</kbd> efface la recherche.</li>
+        <li>Le nom du projet actuellement sélectionné est affiché comme grand titre au-dessus de la liste des diapositives.</li>
+        <li><strong>Briefing de projet</strong> – texte libre optionnel pour le projet (sujet, question de recherche, public cible). Automatiquement envoyé comme contexte avec les évaluations IA sur la page d'analyse. Modifiable via « 📋 Modifier le briefing » dans la gestion de projet.</li>
+        <li><strong>Assigner des mots-clés</strong> – Les mots-clés peuvent appartenir à plusieurs projets simultanément. Assignation via la page Mots-clés (mode projet ou modale « Vers le projet… »).</li>
+        <li><strong>Créer un snapshot</strong> – enregistre l'état actuel d'un graphique (mots-clés, plage temporelle, zoom, corrélations, statistiques temporelles) comme une carte reproductible.</li>
+        <li>Les snapshots peuvent être réordonnés au sein d'un projet par glisser-déposer.</li>
+        <li>Chaque snapshot a un titre, une description et un préréglage de résolution sélectionnable.</li>
+      </ul>
+
+      <h3>Diapositives</h3>
+      <ul>
+        <li>Différents types de diapositives peuvent être ajoutés via <strong>+ Page</strong> : page de titre, section, carte, intégration de site web et <strong>📋 Briefing de projet</strong> (affiche le briefing comme diapositive propre).</li>
+        <li>Les diapositives et les snapshots forment ensemble la séquence d'une présentation et peuvent être triés par glisser-déposer.</li>
+      </ul>
+
+      <h3>Diapositives de carte</h3>
+      <ul>
+        <li>Les diapositives de carte (<strong>Map / Maps</strong>) affichent une carte interactive Leaflet avec un nombre quelconque de marqueurs.</li>
+        <li><strong>Recherche d'adresse</strong> – Champ de recherche au-dessus de la carte avec autocomplétion Nominatim. Les résultats affichent des badges de type (pays, ville, rue, …). Lors de la sélection, la carte zoome sur la localisation et un marqueur est placé.</li>
+        <li><strong>Frontières de pays</strong> – Lorsqu'un pays est sélectionné comme résultat de recherche (identifiable par le badge « Pays »), ses <strong>frontières sont rendues comme un polygone GeoJSON</strong> sur la carte. L'affichage des frontières est sauvegardé avec la diapositive et affiché dans la présentation.</li>
+        <li><strong>Placer un marqueur</strong> – Cliquer sur la carte ouvre une popup ; vous pouvez y saisir un commentaire, un horodatage et un <strong>rayon optionnel (km)</strong> directement.</li>
+        <li>Le commentaire, la date/heure et le rayon sont modifiables à tout moment dans la liste des marqueurs après placement.</li>
+        <li>Les marqueurs peuvent être réordonnés dans la liste par glisser-déposer.</li>
+        <li>Un rayon &gt; 0 km dessine un cercle en pointillés sur la carte – utile pour les visualisations de portée et de zone de chalandise.</li>
+        <li><strong>Snapshot de carte depuis le mode Distance d'analyse</strong> – crée automatiquement une diapositive de carte avec marqueur d'origine et anneaux (la portée correspond à la période sélectionnée).</li>
+      </ul>
+
+      <h3>Mode présentation</h3>
+      <ul>
+        <li>Ouvre une <strong>présentation en plein écran</strong> pour tous les contenus d'un projet.</li>
+        <li><strong>Thèmes</strong> : Tout sombre · Graphiques sombres / texte clair · Tout clair.</li>
+        <li><strong>Dispositions</strong> : Image à gauche · Image à droite · Image en haut – commutable via un bouton.</li>
+        <li>Navigation avec les touches fléchées ou clic ; les graphiques sont calculés et rendus en direct.</li>
+        <li>Les statistiques temporelles apparaissent sous le graphique à la même largeur.</li>
+        <li>Les <strong>diapositives de carte</strong> dans la présentation affichent les marqueurs, les anneaux de distance, les flèches de connexion et les frontières de pays (GeoJSON).</li>
+      </ul>
+
+      <h3>Export</h3>
+      <ul>
+        <li><strong>Export PDF</strong> – rend toutes les diapositives d'un projet via html2canvas et génère un fichier PDF multi-pages.</li>
+        <li><strong>Capture d'écran</strong> – enregistre des vues de graphiques individuelles comme images.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Le logo et le nom de l'auteur pour la présentation sont configurés sous <a href="#admin" style="color:var(--accent);">Admin → Présentation</a>.</span>
+      </div>
+    </div>
+
+    <!-- ── Alerts ── -->
+    <div class="help-section" id="alerts">
+      <h2>Alertes <span class="section-url">/alerts</span></h2>
+      <p class="section-desc">
+        Notifications automatiques lorsque des changements pertinents se produisent dans les données de tendances.
+        Les événements déclenchés apparaissent sur le tableau de bord.
+      </p>
+
+      <h3>Types d'alertes</h3>
+      <ul>
+        <li><strong>Apparition</strong> – déclenchée lorsqu'un mot-clé apparaît dans les requêtes associées alors qu'il n'était pas présent auparavant.</li>
+        <li><strong>Disparition</strong> – déclenchée lorsqu'un mot-clé disparaît des requêtes associées.</li>
+        <li><strong>Pic</strong> – déclenché lorsque la valeur de tendance actuelle dépasse un seuil. Seuil définissable comme <em>valeur absolue</em> (0–100) ou comme <em>augmentation en pourcentage</em> par rapport à la moyenne.</li>
+        <li><strong>Volume apparaît</strong> – Le volume total dans la fenêtre temporelle définie augmente significativement.</li>
+        <li><strong>Volume disparaît</strong> – Le volume total dans la fenêtre temporelle définie diminue significativement.</li>
+      </ul>
+
+      <h3>Configuration</h3>
+      <ul>
+        <li><strong>Portée des mots-clés</strong> : « Tous les mots-clés » ou une sélection manuelle de mots-clés spécifiques.</li>
+        <li><strong>Seuil</strong> : Pour les alertes de pic, sélectionnable comme valeur absolue ou valeur en pourcentage.</li>
+        <li><strong>Fenêtre temporelle</strong> : Pour les alertes de volume, la fenêtre spécifie sur combien de points de données la moyenne est calculée.</li>
+        <li>Les alertes peuvent être individuellement activées et désactivées.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Les alertes sont évaluées à chaque récupération automatique. Via « Vérifier maintenant » sur le tableau de bord, l'évaluation peut être déclenchée manuellement.</span>
+      </div>
+    </div>
+
+    <!-- ── Statistics ── -->
+    <div class="help-section" id="statistik">
+      <h2>Statistiques <span class="section-url">/statistik</span></h2>
+      <p class="section-desc">
+        Vue d'ensemble des volumes de données collectées, des performances de récupération des backends et du quota IA.
+      </p>
+
+      <h3>Récupération de données</h3>
+      <ul>
+        <li><strong>Résumé</strong> – Nombre total de points de données de tendances stockés, de sessions de récupération et de requêtes associées.</li>
+        <li><strong>Répartition par backend</strong> – Points de données par backend (Playwright / pytrends / SerpAPI) avec codage couleur.</li>
+        <li><strong>Historique de récupération</strong> – Diagramme en barres : points de données réussis par session de récupération, codés par couleur selon le backend.</li>
+        <li><strong>Chronologie des points de données</strong> – Évolution cumulative de l'inventaire de données dans le temps.</li>
+        <li><strong>Journaux de récupération</strong> – Liste tabulaire de toutes les opérations de récupération avec statut, backend, taux de réussite, durée d'exécution et détails des erreurs (paginé, 50 entrées par page).</li>
+      </ul>
+
+      <h3>Quota IA</h3>
+      <ul>
+        <li><strong>Utilisation</strong> – Affiche le nombre d'appels IA utilisés dans le mois en cours par rapport à la limite assignée.</li>
+        <li><strong>Barre de progression</strong> – Codée par couleur : violet (moins de 70%), orange (70–90%), rouge (plus de 90%).</li>
+        <li><strong>Afficher les détails</strong> – Vue détaillée extensible avec répartition par source (Analyse, Analyse de projet, Suggestions de mots-clés, Génération d'introduction, Chat IA, Traduction APA, Coordinateur APA, Chercheur de tendances APA, Chercheur RQ APA, Critique APA, Rapport APA).</li>
+        <li>Le tableau de détails affiche l'horodatage, la source et le contexte de chaque appel individuel.</li>
+        <li>Le quota est fixé mensuellement par le superadmin dans la gestion des utilisateurs.</li>
+      </ul>
+    </div>
+
+    <!-- ── Plugins ── -->
+    <div class="help-section" id="plugins">
+      <h2>Plugins <span class="section-url">/plugins</span></h2>
+      <p class="section-desc">
+        Gestion centralisée de tous les modules : Watch Zones, modules IA et méthodes d'analyse.
+        Ici les plugins sont activés, les identifiants sont enregistrés et les fournisseurs IA sont configurés.
+        Accessible via le menu utilisateur (en bas à droite).
+      </p>
+
+      <h3>Cartes de plugins</h3>
+      <ul>
+        <li>Chaque plugin est affiché comme une <strong>carte</strong> avec icône, nom, description et interrupteur de statut.</li>
+        <li>Les cartes sont regroupées par type de plugin : <strong>Watch Zones</strong>, <strong>Modules IA</strong>, <strong>Méthodes d'analyse</strong>.</li>
+        <li>L'<strong>interrupteur</strong> active ou désactive un plugin. Les plugins désactivés n'apparaissent pas dans la barre latérale, le chat IA ou la triangulation.</li>
+      </ul>
+
+      <h3>Indicateurs de statut</h3>
+      <ul>
+        <li><strong>Activé</strong> (vert) – Le plugin est prêt à l'utilisation.</li>
+        <li><strong>Désactivé</strong> (orange) – Le plugin a été désactivé par l'utilisateur.</li>
+        <li><strong>Identifiants requis</strong> (rouge) – Le plugin nécessite des clés API qui n'ont pas encore été enregistrées. L'interrupteur est verrouillé jusqu'à ce que les données soient saisies.</li>
+        <li><strong>Verrouillé par l'administrateur</strong> (gris) – Le superadmin a bloqué l'accès à ce plugin pour l'utilisateur actuel. L'interrupteur et la saisie d'identifiants sont désactivés.</li>
+      </ul>
+
+      <h3>Identifiants</h3>
+      <ul>
+        <li>Les plugins avec des exigences API affichent un <strong>panneau d'identifiants</strong> extensible sous la carte.</li>
+        <li>Des points colorés affichent le statut par clé : <strong>vert</strong> = présent, <strong>orange</strong> = manquant.</li>
+        <li>Les champs de mot de passe ont un <strong>bouton de visibilité</strong> (icône œil).</li>
+        <li>Après la sauvegarde, les points et les espaces réservés sont immédiatement mis à jour.</li>
+        <li>Si la <strong>permission API est définie sur « API Superadmin »</strong> (par l'administrateur dans la gestion des utilisateurs), aucun panneau d'identifiants n'apparaît – l'utilisateur utilise automatiquement les clés de l'admin.</li>
+      </ul>
+
+      <h3>Modules IA – Fournisseur &amp; Modèle</h3>
+      <ul>
+        <li>Les plugins IA affichent en plus des champs déroulants pour le <strong>fournisseur IA</strong> (Anthropic, OpenAI, Gemini, Mistral) et le <strong>modèle</strong>.</li>
+        <li>La sélection du modèle s'adapte automatiquement au fournisseur choisi.</li>
+        <li>Après la sauvegarde, il est demandé si le réglage doit être appliqué à <strong>tous les modules IA</strong>.</li>
+      </ul>
+
+      <h3>Méthodes d'analyse – Visibilité</h3>
+      <ul>
+        <li>Les plugins d'analyse ont un menu déroulant supplémentaire <strong>« Afficher dans »</strong> : Labo, Popup de mot-clé, Les deux ou Nulle part.</li>
+        <li>Cela contrôle où l'analyse apparaît dans l'interface – dans le menu éprouvette, dans le menu contextuel du mot-clé ou aux deux endroits.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Les plugins sans exigences API (Sismique, Météo, Lumières nocturnes, etc.) peuvent être activés directement. Les plugins avec des clés API affichent un avis lors de la tentative d'activation indiquant que les identifiants doivent d'abord être saisis.</span>
+      </div>
+    </div>
+
+    <!-- ── Admin ── -->
+    <!-- ── Audit Trail ── -->
+    <div class="help-section" id="audit">
+      <h2>Audit Trail <span class="section-url">/audit</span></h2>
+      <p class="section-desc">
+        Journal chaîné par hachage de toutes les actions liées aux projets.
+        Permet la traçabilité forensique et la vérification de l'intégrité de l'ensemble de la chaîne d'analyse.
+      </p>
+
+      <h3>Activation</h3>
+      <ul>
+        <li>L'Audit Trail est activé/désactivé dans la <strong>section Admin</strong> via un interrupteur.</li>
+        <li>Lorsqu'il est activé, <strong>Audit Trail</strong> apparaît comme élément de menu propre à gauche de Statistiques.</li>
+        <li>Lorsque l'Audit Trail est désactivé, aucune entrée n'est écrite et l'élément de menu est masqué.</li>
+      </ul>
+
+      <h3>Actions journalisées</h3>
+      <ul>
+        <li><strong>snapshot_create</strong> – Snapshot créé (manuellement ou via APA)</li>
+        <li><strong>snapshot_delete</strong> – Snapshot supprimé</li>
+        <li><strong>analysis_run</strong> – Analyse IA effectuée (avec mode d'analyse et mots-clés)</li>
+        <li><strong>keyword_fetch</strong> – Récupération manuelle de données lancée (en masse ou individuelle)</li>
+        <li><strong>project_create</strong> / <strong>project_delete</strong> – Projet créé ou supprimé</li>
+        <li><strong>apa_start</strong> / <strong>apa_complete</strong> – Analyse APA démarrée ou terminée</li>
+        <li><strong>export_docx</strong> / <strong>export_pdf</strong> – Export en document Word ou PDF</li>
+      </ul>
+
+      <h3>Chaînage par hachage</h3>
+      <ul>
+        <li>Chaque entrée d'audit contient un <strong>hachage SHA-256</strong> calculé à partir des données de l'entrée et du hachage de l'entrée précédente.</li>
+        <li>Ce chaînage forme une <strong>mini blockchain</strong> : l'insertion, la suppression ou la modification rétroactive d'entrées est détectable.</li>
+        <li>La première entrée utilise <code>GENESIS</code> comme hachage prédécesseur.</li>
+      </ul>
+
+      <h3>Vérification de l'intégrité</h3>
+      <ul>
+        <li>Via le bouton <strong>Vérifier la chaîne de hachage</strong>, l'ensemble de la chaîne est vérifié.</li>
+        <li>Résultat : message vert si la chaîne est intacte, message rouge si une manipulation est détectée.</li>
+      </ul>
+
+      <h3>Filtre et navigation</h3>
+      <ul>
+        <li><strong>Filtre par projet</strong> – Restreindre les entrées par projet.</li>
+        <li><strong>Filtre par action</strong> – Filtrer les entrées par type d'action (par ex. uniquement les exports ou uniquement les snapshots).</li>
+        <li>Navigation paginée avec 50 entrées par page.</li>
+      </ul>
+
+      <h3>Intégrité forensique des données</h3>
+      <ul>
+        <li>Les snapshots reçoivent lors de leur création un <strong>hachage de contenu SHA-256</strong> qui prouve que les données n'ont pas été altérées.</li>
+        <li>Le hachage de contenu est enregistré dans l'audit trail et peut être vérifié individuellement via <code>/api/snapshots/&lt;id&gt;/verify</code>.</li>
+        <li>Dans les exports DOCX, le hachage SHA-256 du snapshot est affiché.</li>
+      </ul>
+    </div>
+
+    <!-- ── Admin ── -->
+    <div class="help-section" id="admin">
+      <h2>Admin <span class="section-url">/admin</span></h2>
+      <p class="section-desc">
+        Configuration du système : prioriser les backends, enregistrer les clés API,
+        configurer la récupération automatique et maintenir les métadonnées de présentation.
+      </p>
+
+      <p class="section-desc" style="margin-top:4px;">
+        Toutes les sections sont repliables – l'état est sauvegardé par navigateur.
+      </p>
+
+      <h3>Schéma de couleurs</h3>
+      <ul>
+        <li>Basculer entre le schéma de couleurs <strong>clair</strong> et <strong>sombre</strong> via deux boutons dans la section Admin.</li>
+        <li>Le réglage est sauvegardé dans le navigateur et côté serveur et s'applique à toutes les pages.</li>
+      </ul>
+
+      <h3>Flux de récupération</h3>
+      <ul>
+        <li>Les trois backends (Playwright · pytrends · SerpAPI) peuvent être réordonnés en priorité via les <strong>boutons fléchés</strong>.</li>
+        <li>Chaque backend peut être individuellement <strong>activé ou désactivé</strong>.</li>
+        <li>Lors de la récupération, le premier backend actif est essayé ; en cas d'erreur, le suivant suit automatiquement (repli).</li>
+      </ul>
+
+      <h3>API &amp; Configuration</h3>
+      <p class="section-desc" style="margin-top:4px;">Paramètres API à l'échelle du système (superadmin). Les identifiants spécifiques aux plugins (Bluesky, Telegram, Copernicus, Censys, AISHub, etc.) sont gérés sous <a href="#plugins" style="color:var(--accent);">Plugins</a>.</p>
+      <ul>
+        <li><strong>Sources de données de tendances</strong> – Clé SerpAPI (100 requêtes gratuites/mois), fichier cookies (pour le backend Playwright) et clé NewsAPI (pour « Trouver des actualités », 100 requêtes/jour).</li>
+        <li><strong>Automatisation</strong> – Heure (heure serveur) pour la récupération quotidienne planifiée de tous les mots-clés actifs.</li>
+      </ul>
+
+      <h3>Analyse IA</h3>
+      <ul>
+        <li><strong>Fournisseur &amp; Modèle IA</strong> – Réglage par défaut à l'échelle du système. Les utilisateurs peuvent sélectionner leurs propres fournisseurs et modèles dans les <a href="#plugins" style="color:var(--accent);">paramètres de plugins</a>.</li>
+        <li><strong>Repli de clé API</strong> – Les utilisateurs utilisent par défaut les clés du superadmin. Ce n'est que lorsque « API propre » est activé dans la <a href="#plugins" style="color:var(--accent);">gestion des utilisateurs</a> que les clés propres sont utilisées.</li>
+        <li>Les utilisateurs avec leur propre clé LLM ne sont <strong>soumis à aucun quota</strong> – les affichages de quota sont automatiquement masqués.</li>
+      </ul>
+
+      <h3>Présentation</h3>
+      <ul>
+        <li><strong>URL du logo</strong> – affiché dans l'en-tête de la présentation.</li>
+        <li><strong>Auteur</strong> – Nom de l'auteur pour la présentation.</li>
+      </ul>
+
+      <h3>Audit Trail</h3>
+      <ul>
+        <li><strong>Interrupteur</strong> – Active ou désactive l'Audit Trail chaîné par hachage (voir <a href="#audit" style="color:var(--accent);">Audit Trail</a>).</li>
+      </ul>
+
+      <h3>Gestion des utilisateurs (Enterprise uniquement)</h3>
+      <ul>
+        <li>Uniquement disponible en mode multi-utilisateurs (<code>MULTI_USER=true</code>). Accessible via le menu utilisateur → <strong>Utilisateurs</strong>. Visible uniquement pour les superadmins.</li>
+        <li><strong>Accès aux plugins</strong> – Par utilisateur et par plugin, les éléments suivants peuvent être configurés :
+          <ul>
+            <li><strong>API Superadmin</strong> – L'utilisateur utilise les clés de l'administrateur (pas de panneau d'identifiants pour l'utilisateur).</li>
+            <li><strong>API propre</strong> – L'utilisateur doit enregistrer ses propres clés (panneau d'identifiants visible).</li>
+            <li><strong>Désactivé</strong> – Le plugin est complètement verrouillé pour l'utilisateur.</li>
+          </ul>
+        </li>
+        <li>Les plugins sans exigences API affichent uniquement <strong>Autorisé</strong> ou <strong>Désactivé</strong>.</li>
+        <li><strong>Backends de flux de travail</strong> – Playwright, pytrends et SerpAPI peuvent être activés par utilisateur.</li>
+        <li><strong>Limites</strong> – Quota SerpAPI/LLM, projets et mots-clés maximum par utilisateur.</li>
+      </ul>
+
+      <h3>Journaux de récupération</h3>
+      <ul>
+        <li>Vue tabulaire de toutes les opérations de récupération (heure, statut, backend, taux de réussite, erreurs, durée d'exécution).</li>
+        <li>Les journaux peuvent être entièrement supprimés (l'inventaire de données reste inchangé).</li>
+      </ul>
+
+      <h3>Gérer les données</h3>
+      <ul>
+        <li><strong>Supprimer toutes les données</strong> – supprime tous les points de données de tendances, les requêtes associées et les journaux de récupération.</li>
+      </ul>
+      <div class="help-tip help-warn">
+        <span class="tip-icon">⚠</span>
+        <span>La suppression de toutes les données est <strong>irréversible</strong>. Les mots-clés, événements et règles d'alerte sont préservés, mais les données de tendances historiques ne le sont pas.</span>
+      </div>
+    </div>
+
+    <!-- ── Développeurs ── -->
+    <div class="help-section" id="dev">
+      <h2>Documentation développeur</h2>
+      <p class="section-desc">
+        Référence technique pour le système de plugins, l'architecture API et l'extension de la plateforme.
+        Cette section s'adresse aux développeurs qui souhaitent créer leurs propres plugins ou étendre les plugins existants.
+      </p>
+
+      <h3>Architecture des plugins</h3>
+      <ul>
+        <li>Tous les plugins héritent de <strong>BasePlugin</strong> (<kbd>plugins/base.py</kbd>). Les classes spécifiques au type (<strong>WatchZonePlugin</strong>, <strong>AIPlugin</strong>) étendent cette base.</li>
+        <li>Le <strong>PluginManager</strong> (<kbd>plugins/__init__.py</kbd>) gère le registre central. Les plugins sont automatiquement découverts et enregistrés au démarrage de l'application via <kbd>discover_all()</kbd>.</li>
+        <li>Chaque plugin définit <kbd>plugin_type</kbd> (par ex. <kbd>"watchzone"</kbd>, <kbd>"ai"</kbd>) et <kbd>plugin_id</kbd> (par ex. <kbd>"vessel"</kbd>, <kbd>"trend_analysis"</kbd>).</li>
+      </ul>
+
+      <h3>Structure de fichiers (plugins intégrés)</h3>
+      <ul>
+        <li><kbd>plugins/base.py</kbd> – Classe BasePlugin avec dictionnaire <kbd>meta</kbd> et vérification <kbd>is_available()</kbd>.</li>
+        <li><kbd>plugins/__init__.py</kbd> – PluginManager (registre, gestionnaires de types, activation/désactivation, découverte, support de bundle).</li>
+        <li>Chaque plugin est un dossier propre avec <kbd>__init__.py</kbd>, optionnellement <kbd>i18n.json</kbd>, <kbd>templates/</kbd> et <kbd>static/</kbd> :
+          <pre style="font-size:11px;color:var(--muted);margin:6px 0;padding:8px 12px;background:var(--bg);border-radius:6px;">plugins/watchzone/vessel/
+├── __init__.py          # Classe du plugin
+├── i18n.json            # Traductions (de/en/fr/es)
+├── templates/_panel.html # Fragment Jinja2
+└── static/vessel.js     # JavaScript</pre>
+        </li>
+        <li><kbd>plugins/watchzone/</kbd> – Plugins Watch Zone (géo, web, recherche).</li>
+        <li><kbd>plugins/ai/</kbd> – Plugins IA (analyse de tendances, article scientifique, assistant de projet, etc.).</li>
+        <li><kbd>plugins/analysis/</kbd> – Plugins d'analyse (prévision, valeurs aberrantes, CPD, Granger, etc.).</li>
+      </ul>
+
+      <h3>Métadonnées de plugin</h3>
+      <ul>
+        <li>Chaque plugin définit un dictionnaire <kbd>meta</kbd> avec : <kbd>label</kbd>, <kbd>icon_svg</kbd>, <kbd>color</kbd>, <kbd>description</kbd>, <kbd>required_credentials</kbd>, <kbd>i18n</kbd>.</li>
+        <li><kbd>required_credentials</kbd> – Liste des clés AppSetting requises (par ex. <kbd>["censys_api_id", "censys_api_secret"]</kbd>). La méthode générique <kbd>is_available()</kbd> vérifie automatiquement Utilisateur → Global → repli Env.</li>
+        <li><kbd>i18n</kbd> – Traductions dans 4 langues (<kbd>de</kbd>, <kbd>en</kbd>, <kbd>fr</kbd>, <kbd>es</kbd>), qui sont automatiquement fusionnées dans le système i18n du frontend.</li>
+      </ul>
+
+      <h3>Créer un nouveau plugin Watch Zone</h3>
+      <ul>
+        <li>Créer un nouveau dossier sous <kbd>plugins/watchzone/</kbd> (par ex. <kbd>plugins/watchzone/my_sensor/</kbd>).</li>
+        <li><kbd>__init__.py</kbd> : Hériter de <kbd>WatchZonePlugin</kbd>, définir <kbd>plugin_id</kbd> et <kbd>meta</kbd>.</li>
+        <li>Surcharger les méthodes : <kbd>live_handler()</kbd> pour les données en direct, <kbd>history_routes()</kbd> pour l'API d'historique, <kbd>ai_tools()</kbd> + <kbd>ai_tool_handler()</kbd> pour l'intégration IA, <kbd>analysis_provider()</kbd> pour la triangulation.</li>
+        <li>Optionnel : <kbd>i18n.json</kbd> (traductions), <kbd>templates/</kbd> (fragments HTML), <kbd>static/</kbd> (JS/CSS).</li>
+        <li>À la fin de <kbd>__init__.py</kbd> : <kbd>PluginManager.register(MySensorPlugin())</kbd>.</li>
+        <li>Le plugin est automatiquement découvert et enregistré au prochain démarrage de l'application. i18n.json, templates et fichiers statiques sont automatiquement inclus.</li>
+      </ul>
+
+      <h3>Créer un nouveau plugin IA</h3>
+      <ul>
+        <li>Créer un nouveau dossier sous <kbd>plugins/ai/</kbd>.</li>
+        <li>Hériter de <kbd>AIPlugin</kbd>. Par défaut : <kbd>required_credentials: ["anthropic_api_key"]</kbd>.</li>
+        <li>La classe de base <kbd>AIPlugin</kbd> fournit <kbd>is_available()</kbd> avec repli de fournisseur (vérifie le fournisseur LLM actif de l'utilisateur).</li>
+        <li>Les routes API sont définies via <kbd>api_routes()</kbd> et automatiquement enregistrées au démarrage de l'application.</li>
+        <li>Appel LLM via <kbd>call_llm()</kbd> depuis <kbd>plugins/ai/_llm.py</kbd> — supporte automatiquement Anthropic, OpenAI, Gemini, Mistral.</li>
+        <li>Vérification de quota et garde-fou via <kbd>_guard()</kbd>.</li>
+      </ul>
+
+      <h3>Système de permissions API</h3>
+      <ul>
+        <li>Les API principales (SerpAPI, NewsAPI, fournisseurs LLM) sont mappées sur des groupes via <kbd>_KEY_TO_API_GROUP</kbd>. Les identifiants spécifiques aux plugins (Bluesky, Telegram, Copernicus, Censys, AISHub, etc.) sont gérés via le système d'identifiants de plugins.</li>
+        <li>Par utilisateur et groupe API, il existe trois niveaux de permission : <kbd>admin_key</kbd> (utiliser les clés du superadmin), <kbd>own_key</kbd> (clé propre), <kbd>disabled</kbd> (verrouillé).</li>
+        <li><kbd>_resolve_api_key(key, user_id)</kbd> résout automatiquement : clé utilisateur → clé admin → variable d'environnement, selon la politique.</li>
+      </ul>
+
+      <h3>Contrôle d'accès aux plugins (Enterprise uniquement)</h3>
+      <ul>
+        <li>Uniquement en mode multi-utilisateurs. Le superadmin contrôle l'accès par utilisateur et par plugin via la gestion des utilisateurs (<kbd>/users</kbd>).</li>
+        <li>Trois niveaux par plugin : <strong>API Superadmin</strong> (clés admin), <strong>API propre</strong> (clés utilisateur), <strong>Désactivé</strong> (verrouillé).</li>
+        <li>Stocké comme <kbd>plugin_access_&lt;type&gt;_&lt;id&gt;</kbd> dans <kbd>AppSetting</kbd>. Entrée manquante = autorisé (par défaut).</li>
+        <li>Les plugins verrouillés apparaissent sur la page des plugins comme « Verrouillé par l'administrateur » et ne peuvent être ni activés ni configurés.</li>
+      </ul>
+
+      <h3>Quota LLM &amp; Clé propre</h3>
+      <ul>
+        <li>Les utilisateurs avec la permission <kbd>own_key</kbd> pour le fournisseur LLM actif ne sont soumis à aucun quota.</li>
+        <li>Dans ce cas, les affichages de quota (page de statistiques, barre de navigation) sont automatiquement masqués.</li>
+        <li><kbd>_user_uses_own_llm_key(user_id)</kbd> vérifie le fournisseur actif et sa permission API.</li>
+      </ul>
+
+      <h3>Points de terminaison REST API (Plugins)</h3>
+      <ul>
+        <li><kbd>GET /api/plugins</kbd> – Tous les plugins avec statut, identifiants, groupes API par utilisateur.</li>
+        <li><kbd>PUT /api/plugins/&lt;type&gt;/&lt;id&gt;/toggle</kbd> – Activer/désactiver un plugin.</li>
+        <li><kbd>PUT /api/plugins/&lt;type&gt;/&lt;id&gt;/credentials</kbd> – Enregistrer les identifiants.</li>
+        <li><kbd>PUT /api/plugins/ai-settings</kbd> – Définir le fournisseur et le modèle IA.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Les nouveaux plugins sont automatiquement découverts au démarrage de l'application – aucune inscription manuelle dans <kbd>app.py</kbd> n'est nécessaire. Créer un dossier sous <kbd>plugins/&lt;type&gt;/</kbd>, hériter de la classe de base appropriée et appeler <kbd>PluginManager.register()</kbd>.</span>
+      </div>
+
+      <h3>Architecture Open-Core</h3>
+      <ul>
+        <li>Le système supporte deux modes de fonctionnement via <kbd>MULTI_USER</kbd> dans le fichier <kbd>.env</kbd> :</li>
+        <li><strong>Community</strong> (<kbd>MULTI_USER=false</kbd>) – Pas de connexion, utilisateur unique, auto-connexion comme utilisateur fantôme. L'administration, l'audit et la gestion des utilisateurs sont omis.</li>
+        <li><strong>Enterprise</strong> (<kbd>MULTI_USER=true</kbd>) – Multi-utilisateurs avec connexion, rôles, quotas et gestion des utilisateurs.</li>
+        <li>L'abstraction d'authentification réside dans <kbd>auth.py</kbd> : en mode Community, <kbd>login_required</kbd> et <kbd>superadmin_required</kbd> sont des no-ops.</li>
+        <li>La gestion des utilisateurs (connexion, CRUD utilisateur, politiques API) réside de manière isolée dans <kbd>enterprise.py</kbd> — chargé uniquement en mode Enterprise.</li>
+        <li>Pour GitHub open-core : omettre <kbd>enterprise.py</kbd>, <kbd>templates/users.html</kbd> et <kbd>templates/login.html</kbd>.</li>
+      </ul>
+    </div>
+
+  </div><!-- /help-content -->
+</div><!-- /help-layout -->
+
+<script>
+  // Mettre en évidence les liens TOC actifs lors du défilement
+  (function () {
+    const sections = document.querySelectorAll(".help-section[id]");
+    const tocLinks = document.querySelectorAll(".help-toc a");
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const id = e.target.id;
+          tocLinks.forEach(a => {
+            a.classList.toggle("active", a.getAttribute("href") === "#" + id);
+          });
+        }
+      });
+    }, { rootMargin: "-20% 0px -70% 0px" });
+    sections.forEach(s => observer.observe(s));
+  })();
+</script>
+{% endblock %}

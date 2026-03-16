@@ -1,0 +1,31 @@
+<!-- Aircraft: Proximity Panel -->
+<div id="wz-proximity-panel" style="display:none;width:260px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);flex-direction:column;overflow:hidden;">
+  <div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:#ef4444;flex-shrink:0;display:flex;align-items:center;gap:6px;">
+    <span>⚠</span><span id="wz-prox-title" data-i18n="wz_critical_proximity">Critical Proximity</span>
+  </div>
+  <div id="wz-prox-list" style="overflow-y:auto;flex:1;font-size:11px;"></div>
+</div>
+<!-- Aircraft: Stundenprojektion Panel -->
+<div id="wz-projection-panel" style="display:none;width:280px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);flex-direction:column;overflow:hidden;">
+  <div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:#a78bfa;flex-shrink:0;display:flex;align-items:center;gap:6px;">
+    <span>🕐</span><span data-i18n="wz_hour_projection">Hour Projection</span>
+  </div>
+  <div style="padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;">
+    <button id="wz-proj-play-btn" onclick="wzProjPlay()"
+      style="width:100%;background:var(--accent1);color:#fff;border:none;border-radius:6px;
+             padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;
+             display:flex;align-items:center;justify-content:center;gap:6px;">
+      <span id="wz-proj-play-icon">▶</span>
+      <span id="wz-proj-play-label" data-i18n="wz_start_simulation">Start Simulation</span>
+    </button>
+    <div id="wz-proj-progress-wrap" style="display:none;margin-top:8px;">
+      <div style="position:relative;background:var(--border);border-radius:3px;height:6px;">
+        <div id="wz-proj-progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#a78bfa,var(--accent1));border-radius:3px;position:relative;z-index:1;"></div>
+        <div id="wz-proj-collision-marks" style="position:absolute;inset:0;z-index:2;pointer-events:none;"></div>
+      </div>
+      <div id="wz-proj-time-label" style="font-size:10px;color:var(--muted);margin-top:4px;text-align:center;">0:00 / 60:00</div>
+    </div>
+  </div>
+  <div id="wz-proj-result-header" style="display:none;padding:6px 12px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;"></div>
+  <div id="wz-proj-collision-list" style="overflow-y:auto;flex:1;font-size:11px;"></div>
+</div>

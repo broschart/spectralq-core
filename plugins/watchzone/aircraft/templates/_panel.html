@@ -1,0 +1,16 @@
+<div id="panel-aircraft" class="wz-panel" style="display:none;">
+  <div class="wz-main-header">
+    <h2 data-i18n="wz_aircraft_title">Aircraft Tracking</h2>
+    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_aircraft_source">Source: ADS-B Exchange / airplanes.live</span>
+    </button>
+    <p class="wz-panel-desc" data-i18n="wz_aircraft_desc">Tracks aircraft via ADS-B within a defined airspace. "Live" opens the real-time map with altitude, heading and speed – critical proximity between aircraft is colour-coded. Click on a pair to zoom the map directly to them.</p>
+  </div>
+  <div class="wz-main-body">
+    <div id="wz-map-aircraft" class="wz-map-container" style="height:500px;"></div>
+    <div class="wz-hint" id="wz-hint-aircraft" data-i18n="wz_aircraft_hint">
+      Draw airspace zones on the map. ADS-B data (airplanes.live) shows
+      flight movements in real time and enables anomaly detection.
+    </div>
+    <div class="wz-zone-list" id="wz-zones-aircraft"></div>
+  </div>
+</div>

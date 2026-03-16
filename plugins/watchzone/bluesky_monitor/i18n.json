@@ -1,0 +1,46 @@
+{
+  "de": {
+    "wz_sidebar_bluesky_monitor": "Bluesky",
+    "wz_bsm_title": "Bluesky Keyword-Monitor",
+    "wz_bsm_source": "Quelle: Bluesky / AT Protocol",
+    "wz_bsm_desc": "Ueberwacht die Erwaehnung von Begriffen auf Bluesky. Zeigt Postvolumen ueber Zeit — nuetzlich zur Erkennung von Diskursverschiebungen, viralen Narrativen und oeffentlicher Resonanz.",
+    "wz_bsm_hint": "Keywords eingeben und Zone erstellen. Posts auf Bluesky werden automatisch gezaehlt.",
+    "wz_bsm_keywords": "Keywords",
+    "wz_bsm_total": "Gesamt",
+    "wz_bsm_days": "Tage",
+    "wz_bsm_daily_avg": "⌀/Tag",
+    "wz_bsm_peak": "Peak",
+    "wz_bsm_empty": "Keine Ergebnisse fuer diese Keywords.",
+    "wz_bsm_no_creds": "Bluesky-Zugangsdaten fehlen (Handle + App-Password unter Plugins).",
+    "wz_bsm_header": "Posts (180 Tage)"
+  },
+  "en": {
+    "wz_sidebar_bluesky_monitor": "Bluesky",
+    "wz_bsm_title": "Bluesky Keyword Monitor",
+    "wz_bsm_source": "Source: Bluesky / AT Protocol",
+    "wz_bsm_desc": "Monitors keyword mentions on Bluesky. Shows post volume over time — useful for detecting discourse shifts, viral narratives and public resonance.",
+    "wz_bsm_hint": "Enter keywords and create a zone. Posts on Bluesky will be counted automatically.",
+    "wz_bsm_keywords": "Keywords",
+    "wz_bsm_total": "Total",
+    "wz_bsm_days": "days",
+    "wz_bsm_daily_avg": "⌀/day",
+    "wz_bsm_peak": "Peak",
+    "wz_bsm_empty": "No results for these keywords.",
+    "wz_bsm_no_creds": "Bluesky credentials missing (handle + app password in Plugins).",
+    "wz_bsm_header": "Posts (180 days)"
+  },
+  "fr": {
+    "wz_sidebar_bluesky_monitor": "Bluesky",
+    "wz_bsm_title": "Moniteur Bluesky",
+    "wz_bsm_source": "Source : Bluesky / AT Protocol",
+    "wz_bsm_empty": "Aucun resultat.",
+    "wz_bsm_no_creds": "Identifiants Bluesky manquants."
+  },
+  "es": {
+    "wz_sidebar_bluesky_monitor": "Bluesky",
+    "wz_bsm_title": "Monitor Bluesky",
+    "wz_bsm_source": "Fuente: Bluesky / AT Protocol",
+    "wz_bsm_empty": "Sin resultados.",
+    "wz_bsm_no_creds": "Faltan las credenciales de Bluesky."
+  }
+}

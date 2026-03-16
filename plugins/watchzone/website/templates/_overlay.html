@@ -1,0 +1,35 @@
+<!-- Website: Traceroute Historische Analyse Modal -->
+<div id="wz-hist-modal" style="display:none;position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,.78);
+     align-items:center;justify-content:center;" onclick="if(event.target===this)wzCloseHistModal()">
+  <div id="wz-hist-box" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;
+              width:94%;max-width:1200px;max-height:90vh;display:flex;flex-direction:column;
+              overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.5);">
+    <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;">
+      <h3 style="margin:0;font-size:15px;font-weight:600;" data-i18n="wz_web_hist_title">&#x1F4CA; Historische Analyse – Traceroute</h3>
+      <span id="wz-hist-count" style="font-size:11px;color:var(--muted);"></span>
+      <button onclick="(function(){const w=document.getElementById('wz-parcoords-wrap');if(w&&w._pcS){w._pcS.brushes={};w._pcS.axes=null;}wzOpenHistModal();})()"
+              style="display:inline-flex;align-items:center;gap:4px;background:transparent;border:1px solid var(--border);
+              border-radius:6px;color:var(--muted);padding:4px 10px;cursor:pointer;font-size:11px;margin-left:8px;">
+        <span data-i18n="wz_web_hist_reset">&#x21BA; Achsen &amp; Filter zurücksetzen</span>
+      </button>
+      <button onclick="wzToggleFullscreen('wz-hist-modal')" title="Vollbild"
+              style="margin-left:auto;background:transparent;border:1px solid var(--border);
+              border-radius:6px;color:var(--muted);padding:4px 10px;cursor:pointer;font-size:13px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+        </svg>
+      </button>
+      <button onclick="wzCloseHistModal()" style="background:transparent;border:1px solid var(--border);
+              border-radius:6px;color:var(--muted);padding:4px 10px;cursor:pointer;font-size:13px;">✕</button>
+    </div>
+    <div style="padding:16px 20px;flex:1;overflow:auto;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">
+        <span data-i18n="wz_web_hist_legend">Jede Linie = ein Traceroute-Durchlauf. Grau = ältere Läufe, Lila = neueste. Hover für Details.</span>
+      </div>
+      <div id="wz-parcoords-wrap" style="width:100%;overflow-x:auto;"></div>
+    </div>
+  </div>
+  <div id="wz-hist-tooltip" style="display:none;position:fixed;background:var(--surface2);border:1px solid var(--border);
+       border-radius:8px;padding:10px 14px;font-size:11px;pointer-events:none;z-index:10020;max-width:260px;line-height:1.7;
+       box-shadow:0 4px 16px rgba(0,0,0,.4);"></div>
+</div>

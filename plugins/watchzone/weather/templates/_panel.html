@@ -1,0 +1,21 @@
+<style>
+  .wz-weather-panel { padding: 20px; display: none; flex-direction: column; gap: 16px; }
+  .wz-weather-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+  .wz-weather-card h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
+  .wz-weather-card p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
+</style>
+<div id="panel-weather" class="wz-panel" style="display:none;">
+  <div class="wz-main-header">
+    <h2 data-i18n="wz_weather_title">Weather &amp; Water Level</h2>
+    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_weather_source">Source: DWD / NOAA</span>
+    </button>
+    <p class="wz-panel-desc" data-i18n="wz_weather_desc">Fetches weather and water level data (DWD/NOAA) for the drawn area. Useful for correlating weather events with other observations – e.g. storms with increased vessel traffic or flood risk.</p>
+  </div>
+  <div class="wz-main-body">
+    <div id="wz-map-weather" class="wz-map-container" style="height:500px;"></div>
+    <div class="wz-hint" id="wz-hint-weather" data-i18n="wz_weather_hint">
+      Draw observation areas on the map for which weather and water level data should be fetched.
+    </div>
+    <div class="wz-zone-list" id="wz-zones-weather"></div>
+  </div>
+</div>

@@ -1,0 +1,737 @@
+{% extends "base.html" %}
+{% block title %}Statistik – spectralQ{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 0;
+  }
+  .stat-box {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-box .val {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .stat-box .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+  .backend-legend {
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+    margin-bottom: 14px;
+  }
+  .backend-dot {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 500;
+  }
+  .backend-dot span {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+
+  #chart-wrap { position: relative; height: 320px; }
+  #dp-chart-wrap { position: relative; height: 180px; }
+
+  .log-errors { max-width: 260px; white-space: nowrap; overflow: hidden;
+                text-overflow: ellipsis; cursor: pointer; }
+  .log-errors.expanded { white-space: pre-wrap; overflow: visible; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 data-i18n="stat_title">Statistik</h1>
+
+<!-- KI-Kontingent -->
+<div class="card" id="card-llm-quota">
+  <h2><span data-i18n="stat_llm_quota">KI-Kontingent</span> <span style="font-size:12px;color:var(--muted);font-weight:400;" data-i18n="stat_current_month">(aktueller Monat)</span></h2>
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="val" id="s-llm-used" style="color:#a78bfa;">–</div>
+      <div class="lbl" data-i18n="stat_llm_used">KI-Anfragen verwendet</div>
+    </div>
+    <div class="stat-box">
+      <div class="val" id="s-llm-limit">–</div>
+      <div class="lbl" data-i18n="stat_quota">Kontingent</div>
+    </div>
+    <div class="stat-box">
+      <div class="val" id="s-llm-remaining">–</div>
+      <div class="lbl" data-i18n="stat_remaining">Verbleibend</div>
+    </div>
+  </div>
+  <div id="llm-bar-wrap" style="margin-top:14px;">
+    <div style="background:var(--surface);border-radius:6px;height:8px;overflow:hidden;">
+      <div id="llm-bar" style="height:100%;border-radius:6px;background:#a78bfa;transition:width .4s;width:0%;"></div>
+    </div>
+    <div id="llm-bar-label" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+  </div>
+  <div style="margin-top:14px;">
+    <a href="#" id="llm-detail-toggle" style="font-size:12px;color:#a78bfa;text-decoration:none;" onclick="event.preventDefault();toggleLlmDetail()" data-i18n="stat_show_details">Details anzeigen ▸</a>
+  </div>
+  <div id="llm-detail" style="display:none;margin-top:14px;">
+    <div id="llm-by-source" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;"></div>
+    <table style="font-size:12px;">
+      <thead>
+        <tr>
+          <th data-i18n="stat_time">Zeit</th>
+          <th data-i18n="stat_source">Quelle</th>
+          <th data-i18n="stat_details">Details</th>
+        </tr>
+      </thead>
+      <tbody id="llm-log-tbody">
+        <tr><td colspan="3" class="text-muted" style="text-align:center;padding:16px;" data-i18n="stat_loading">Lade…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Zusammenfassung -->
+<div class="card">
+  <h2 data-i18n="stat_data_fetches">Datenabrufe</h2>
+  <div class="stat-grid" id="summary-grid">
+    <div class="stat-box">
+      <div class="val" id="s-records">–</div>
+      <div class="lbl" data-i18n="stat_trend_dp">Trend-Datenpunkte</div>
+    </div>
+    <div class="stat-box">
+      <div class="val" id="s-sessions">–</div>
+      <div class="lbl" data-i18n="stat_fetch_sessions">Abruf-Sitzungen</div>
+    </div>
+    <div class="stat-box">
+      <div class="val" id="s-related">–</div>
+      <div class="lbl" data-i18n="stat_related_queries">Verwandte Suchanfragen</div>
+    </div>
+    <div id="backend-boxes"></div>
+  </div>
+</div>
+
+<!-- Abruf-Verlauf -->
+<div class="card">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+    <h2 style="margin:0;" data-i18n="stat_fetch_history">Abruf-Verlauf</h2>
+    <span class="text-muted text-sm" data-i18n-html="stat_fetch_hint">Jeder Balken = eine Abruf-Sitzung · Höhe = abgerufene Keywords · <span style="color:#ef4444;">Rot = Fehler</span></span>
+  </div>
+  <div class="backend-legend" id="backend-legend"></div>
+  <div id="chart-wrap">
+    <canvas id="fetch-chart"></canvas>
+  </div>
+</div>
+
+<!-- Datenpunkte pro Tag -->
+<div class="card">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+    <h2 style="margin:0;" data-i18n="stat_dp_per_day">Datenpunkte pro Tag</h2>
+    <span class="text-muted text-sm" data-i18n="stat_dp_hint">Anzahl gespeicherter Trend-Werte je Abruftag</span>
+  </div>
+  <div id="dp-chart-wrap">
+    <canvas id="dp-chart"></canvas>
+  </div>
+</div>
+
+<!-- Abruf-Log Tabelle -->
+<div class="card">
+  <div style="display:flex;align-items:center;margin-bottom:14px;gap:10px;">
+    <h2 style="margin:0;" data-i18n="stat_fetch_log">Abruf-Log</h2>
+    <span id="log-pg-info" class="text-muted text-sm"></span>
+    <button id="btn-refresh-log" class="btn btn-ghost btn-sm" style="margin-left:auto;" data-i18n="stat_refresh">Aktualisieren</button>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th data-i18n="stat_time">Zeit</th>
+        <th>Status</th>
+        <th>Backend</th>
+        <th data-i18n="stat_ok_total">OK / Gesamt</th>
+        <th data-i18n="stat_errors">Fehler</th>
+        <th data-i18n="stat_duration">Laufzeit</th>
+        <th data-i18n="stat_details">Details</th>
+      </tr>
+    </thead>
+    <tbody id="log-tbody">
+      <tr><td colspan="7" class="text-muted" style="text-align:center;padding:24px;" data-i18n="stat_loading">Lade…</td></tr>
+    </tbody>
+  </table>
+  <div id="log-pagination" style="display:none;align-items:center;justify-content:space-between;margin-top:14px;gap:8px;flex-wrap:wrap;">
+    <span id="log-pg-range" style="font-size:12px;color:var(--muted);"></span>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button id="log-pg-prev" class="btn btn-ghost btn-sm" data-i18n-html="stat_prev">&#8592; Zurück</button>
+      <span id="log-pg-pages" style="display:flex;gap:4px;"></span>
+      <button id="log-pg-next" class="btn btn-ghost btn-sm" data-i18n-html="stat_next">Weiter &#8594;</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // i18n-fähige Statistik-Texte
+  window._mergeI18n({
+    de: {
+      stat_title: 'Statistik',
+      stat_llm_quota: 'KI-Kontingent',
+      stat_current_month: '(aktueller Monat)',
+      stat_llm_used: 'KI-Anfragen verwendet',
+      stat_quota: 'Kontingent',
+      stat_remaining: 'Verbleibend',
+      stat_show_details: 'Details anzeigen \u25b8',
+      stat_hide_details: 'Details ausblenden \u25be',
+      stat_time: 'Zeit',
+      stat_source: 'Quelle',
+      stat_details: 'Details',
+      stat_loading: 'Lade\u2026',
+      stat_data_fetches: 'Datenabrufe',
+      stat_trend_dp: 'Trend-Datenpunkte',
+      stat_fetch_sessions: 'Abruf-Sitzungen',
+      stat_related_queries: 'Verwandte Suchanfragen',
+      stat_fetch_history: 'Abruf-Verlauf',
+      stat_fetch_hint: 'Jeder Balken = eine Abruf-Sitzung \u00b7 H\u00f6he = abgerufene Keywords \u00b7 <span style="color:#ef4444;">Rot = Fehler</span>',
+      stat_dp_per_day: 'Datenpunkte pro Tag',
+      stat_dp_hint: 'Anzahl gespeicherter Trend-Werte je Abruftag',
+      stat_fetch_log: 'Abruf-Log',
+      stat_refresh: 'Aktualisieren',
+      stat_ok_total: 'OK / Gesamt',
+      stat_errors: 'Fehler',
+      stat_duration: 'Laufzeit',
+      stat_prev: '\u2190 Zur\u00fcck',
+      stat_next: 'Weiter \u2192',
+      stat_no_logs: 'Keine Logs',
+      stat_running: 'l\u00e4uft\u2026',
+      stat_entries_total: 'Eintr\u00e4ge gesamt',
+      stat_of: 'von',
+      stat_pct_used: '% verbraucht',
+      stat_error_loading: 'Fehler beim Laden',
+      stat_error: 'Fehler',
+      stat_backend: 'Backend',
+      stat_keywords_ok: 'Keywords OK',
+      stat_status: 'Status',
+      stat_chart_duration: 'Dauer',
+      stat_datapoints: 'Datenpunkte',
+      stat_no_data: 'Keine Daten vorhanden',
+      stat_unknown: 'Unbekannt',
+      stat_no_llm_month: 'Keine KI-Anfragen in diesem Monat',
+      stat_src_analyse: 'Trendanalyse',
+      stat_src_projektanalyse: 'Projektanalyse',
+      stat_src_keyword_suggestions: 'Keyword-Vorschl\u00e4ge',
+      stat_src_intro: 'Intro-Generierung',
+      stat_src_chat: 'KI-Chat',
+      stat_src_apa_translate: 'APA: \u00dcbersetzung',
+      stat_src_apa_iteration: 'APA: Iteration',
+      stat_src_apa_report: 'APA: Bericht',
+      stat_src_other: 'Sonstige',
+    },
+    en: {
+      stat_title: 'Statistics',
+      stat_llm_quota: 'AI Quota',
+      stat_current_month: '(current month)',
+      stat_llm_used: 'AI requests used',
+      stat_quota: 'Quota',
+      stat_remaining: 'Remaining',
+      stat_show_details: 'Show details \u25b8',
+      stat_hide_details: 'Hide details \u25be',
+      stat_time: 'Time',
+      stat_source: 'Source',
+      stat_details: 'Details',
+      stat_loading: 'Loading\u2026',
+      stat_data_fetches: 'Data Fetches',
+      stat_trend_dp: 'Trend data points',
+      stat_fetch_sessions: 'Fetch sessions',
+      stat_related_queries: 'Related queries',
+      stat_fetch_history: 'Fetch History',
+      stat_fetch_hint: 'Each bar = one fetch session \u00b7 Height = fetched keywords \u00b7 <span style="color:#ef4444;">Red = errors</span>',
+      stat_dp_per_day: 'Data points per day',
+      stat_dp_hint: 'Number of stored trend values per fetch day',
+      stat_fetch_log: 'Fetch Log',
+      stat_refresh: 'Refresh',
+      stat_ok_total: 'OK / Total',
+      stat_errors: 'Errors',
+      stat_duration: 'Duration',
+      stat_prev: '\u2190 Previous',
+      stat_next: 'Next \u2192',
+      stat_no_logs: 'No logs',
+      stat_running: 'running\u2026',
+      stat_entries_total: 'entries total',
+      stat_of: 'of',
+      stat_pct_used: '% used',
+      stat_error_loading: 'Error loading',
+      stat_error: 'Errors',
+      stat_backend: 'Backend',
+      stat_keywords_ok: 'Keywords OK',
+      stat_status: 'Status',
+      stat_chart_duration: 'Duration',
+      stat_datapoints: 'Data points',
+      stat_no_data: 'No data available',
+      stat_unknown: 'Unknown',
+      stat_no_llm_month: 'No AI requests this month',
+      stat_src_analyse: 'Trend Analysis',
+      stat_src_projektanalyse: 'Project Analysis',
+      stat_src_keyword_suggestions: 'Keyword Suggestions',
+      stat_src_intro: 'Intro Generation',
+      stat_src_chat: 'AI Chat',
+      stat_src_apa_translate: 'APA: Translation',
+      stat_src_apa_iteration: 'APA: Iteration',
+      stat_src_apa_report: 'APA: Report',
+      stat_src_other: 'Other',
+    },
+    fr: {
+      stat_title: 'Statistiques',
+      stat_llm_quota: 'Quota IA',
+      stat_current_month: '(mois en cours)',
+      stat_llm_used: 'Requ\u00eates IA utilis\u00e9es',
+      stat_quota: 'Quota',
+      stat_remaining: 'Restant',
+      stat_show_details: 'Afficher les d\u00e9tails \u25b8',
+      stat_hide_details: 'Masquer les d\u00e9tails \u25be',
+      stat_time: 'Heure',
+      stat_source: 'Source',
+      stat_details: 'D\u00e9tails',
+      stat_loading: 'Chargement\u2026',
+      stat_data_fetches: 'R\u00e9cup\u00e9rations',
+      stat_trend_dp: 'Points de donn\u00e9es',
+      stat_fetch_sessions: 'Sessions de r\u00e9cup\u00e9ration',
+      stat_related_queries: 'Recherches associ\u00e9es',
+      stat_fetch_history: 'Historique des r\u00e9cup\u00e9rations',
+      stat_fetch_hint: 'Chaque barre = une session \u00b7 Hauteur = mots-cl\u00e9s r\u00e9cup\u00e9r\u00e9s \u00b7 <span style="color:#ef4444;">Rouge = erreurs</span>',
+      stat_dp_per_day: 'Points de donn\u00e9es par jour',
+      stat_dp_hint: 'Nombre de valeurs de tendance stock\u00e9es par jour',
+      stat_fetch_log: 'Journal de r\u00e9cup\u00e9ration',
+      stat_refresh: 'Actualiser',
+      stat_ok_total: 'OK / Total',
+      stat_errors: 'Erreurs',
+      stat_duration: 'Dur\u00e9e',
+      stat_prev: '\u2190 Pr\u00e9c\u00e9dent',
+      stat_next: 'Suivant \u2192',
+      stat_no_logs: 'Aucun journal',
+      stat_running: 'en cours\u2026',
+      stat_entries_total: 'entr\u00e9es au total',
+      stat_of: 'de',
+      stat_pct_used: '% utilis\u00e9',
+      stat_error_loading: 'Erreur de chargement',
+      stat_error: 'Erreurs',
+      stat_backend: 'Backend',
+      stat_keywords_ok: 'Mots-cl\u00e9s OK',
+      stat_status: 'Statut',
+      stat_chart_duration: 'Dur\u00e9e',
+      stat_datapoints: 'Points de donn\u00e9es',
+      stat_no_data: 'Aucune donn\u00e9e disponible',
+      stat_unknown: 'Inconnu',
+      stat_no_llm_month: 'Aucune requ\u00eate IA ce mois-ci',
+      stat_src_analyse: 'Analyse de tendances',
+      stat_src_projektanalyse: 'Analyse de projet',
+      stat_src_keyword_suggestions: 'Suggestions de mots-cl\u00e9s',
+      stat_src_intro: 'G\u00e9n\u00e9ration d\u2019intro',
+      stat_src_chat: 'Chat IA',
+      stat_src_apa_translate: 'APA : Traduction',
+      stat_src_apa_iteration: 'APA : It\u00e9ration',
+      stat_src_apa_report: 'APA : Rapport',
+      stat_src_other: 'Autres',
+    },
+    es: {
+      stat_title: 'Estad\u00edsticas',
+      stat_llm_quota: 'Cuota de IA',
+      stat_current_month: '(mes actual)',
+      stat_llm_used: 'Solicitudes de IA usadas',
+      stat_quota: 'Cuota',
+      stat_remaining: 'Restante',
+      stat_show_details: 'Mostrar detalles \u25b8',
+      stat_hide_details: 'Ocultar detalles \u25be',
+      stat_time: 'Hora',
+      stat_source: 'Fuente',
+      stat_details: 'Detalles',
+      stat_loading: 'Cargando\u2026',
+      stat_data_fetches: 'Recuperaciones',
+      stat_trend_dp: 'Puntos de datos',
+      stat_fetch_sessions: 'Sesiones de recuperaci\u00f3n',
+      stat_related_queries: 'Consultas relacionadas',
+      stat_fetch_history: 'Historial de recuperaciones',
+      stat_fetch_hint: 'Cada barra = una sesi\u00f3n \u00b7 Altura = keywords recuperados \u00b7 <span style="color:#ef4444;">Rojo = errores</span>',
+      stat_dp_per_day: 'Puntos de datos por d\u00eda',
+      stat_dp_hint: 'N\u00famero de valores de tendencia almacenados por d\u00eda',
+      stat_fetch_log: 'Registro de recuperaci\u00f3n',
+      stat_refresh: 'Actualizar',
+      stat_ok_total: 'OK / Total',
+      stat_errors: 'Errores',
+      stat_duration: 'Duraci\u00f3n',
+      stat_prev: '\u2190 Anterior',
+      stat_next: 'Siguiente \u2192',
+      stat_no_logs: 'Sin registros',
+      stat_running: 'en curso\u2026',
+      stat_entries_total: 'entradas en total',
+      stat_of: 'de',
+      stat_pct_used: '% utilizado',
+      stat_error_loading: 'Error al cargar',
+      stat_error: 'Errores',
+      stat_backend: 'Backend',
+      stat_keywords_ok: 'Keywords OK',
+      stat_status: 'Estado',
+      stat_chart_duration: 'Duraci\u00f3n',
+      stat_datapoints: 'Puntos de datos',
+      stat_no_data: 'No hay datos disponibles',
+      stat_unknown: 'Desconocido',
+      stat_no_llm_month: 'Sin solicitudes de IA este mes',
+      stat_src_analyse: 'An\u00e1lisis de tendencias',
+      stat_src_projektanalyse: 'An\u00e1lisis de proyecto',
+      stat_src_keyword_suggestions: 'Sugerencias de keywords',
+      stat_src_intro: 'Generaci\u00f3n de intro',
+      stat_src_chat: 'Chat IA',
+      stat_src_apa_translate: 'APA: Traducci\u00f3n',
+      stat_src_apa_iteration: 'APA: Iteraci\u00f3n',
+      stat_src_apa_report: 'APA: Informe',
+      stat_src_other: 'Otros',
+    },
+  });
+  window._applyI18n();
+
+  // Backend-Farben & Labels
+  const BACKEND_META = {
+    "serpapi":    { label: "SerpAPI",          color: "#4f8ef7" },
+    "playwright": { label: "Chrome/Playwright", color: "#f7924f" },
+    "pytrends":   { label: "PyTrends",          color: "#4ff79e" },
+    "":           { label: t("stat_unknown"),    color: "#6b7280" },
+    "unbekannt":  { label: t("stat_unknown"),    color: "#6b7280" },
+  };
+  function backendMeta(b) {
+    return BACKEND_META[b] ?? { label: b, color: "#c44ff7" };
+  }
+
+  const SOURCE_KEY_MAP = {
+    "analyse":           "stat_src_analyse",
+    "projektanalyse":    "stat_src_projektanalyse",
+    "keyword-vorschläge":"stat_src_keyword_suggestions",
+    "intro-generierung": "stat_src_intro",
+    "ki-chat":           "stat_src_chat",
+    "apa-übersetzung":   "stat_src_apa_translate",
+    "apa-iteration":     "stat_src_apa_iteration",
+    "apa-bericht":       "stat_src_apa_report",
+    "sonstige":          "stat_src_other",
+  };
+  const SOURCE_COLORS = {
+    "analyse":"#4f8ef7", "projektanalyse":"#22c55e", "keyword-vorschläge":"#f97316",
+    "intro-generierung":"#06b6d4", "ki-chat":"#eab308",
+    "apa-übersetzung":"#a78bfa", "apa-iteration":"#ec4899", "apa-bericht":"var(--accent1)",
+  };
+
+  function fmtDe(isoStr) {
+    if (!isoStr) return "–";
+    return window.fmtDate ? window.fmtDate(isoStr) : new Date(isoStr).toLocaleString("de-DE", {dateStyle:"short", timeStyle:"short"});
+  }
+  function fmtDate(isoStr) {
+    if (!isoStr) return "–";
+    return window.fmtDateOnly ? window.fmtDateOnly(isoStr) : new Date(isoStr).toLocaleDateString("de-DE", {dateStyle:"short"});
+  }
+
+  async function loadStats() {
+    let data;
+    try { data = await api("/api/stats"); }
+    catch(e) { toast(t("stat_error_loading") + ": " + e.message, "error"); return; }
+
+    const { sessions, data_by_day, summary } = data;
+
+    // ── KI-Kontingent ─────────────────────────────────────────────
+    const llmUsed  = summary.llm_used || 0;
+    const llmLimit = summary.llm_limit || 0;
+    const ownsLlm  = !!summary.uses_own_llm;
+    document.getElementById("s-llm-used").textContent = llmUsed.toLocaleString();
+
+    if (ownsLlm) {
+      document.getElementById("s-llm-limit").closest(".stat-box").style.display = "none";
+      document.getElementById("s-llm-remaining").closest(".stat-box").style.display = "none";
+      document.getElementById("llm-bar-wrap").style.display = "none";
+    } else {
+      document.getElementById("s-llm-limit").textContent = llmLimit ? llmLimit.toLocaleString() : "∞";
+      if (llmLimit) {
+        const remaining = Math.max(0, llmLimit - llmUsed);
+        document.getElementById("s-llm-remaining").textContent = remaining.toLocaleString();
+        document.getElementById("s-llm-remaining").style.color = remaining <= 5 ? "var(--danger)" : "#22c55e";
+        const pct = Math.min(100, Math.round(llmUsed / llmLimit * 100));
+        document.getElementById("llm-bar").style.width = pct + "%";
+        document.getElementById("llm-bar").style.background = pct >= 90 ? "#ef4444" : pct >= 70 ? "#f97316" : "#a78bfa";
+        document.getElementById("llm-bar-label").textContent = pct + t("stat_pct_used");
+      } else {
+        document.getElementById("s-llm-remaining").textContent = "∞";
+        document.getElementById("s-llm-remaining").style.color = "#22c55e";
+        document.getElementById("llm-bar-wrap").style.display = "none";
+      }
+    }
+
+    // ── Zusammenfassung ──────────────────────────────────────────
+    document.getElementById("s-records").textContent  = summary.total_records.toLocaleString();
+    document.getElementById("s-sessions").textContent = summary.fetch_sessions.toLocaleString();
+    document.getElementById("s-related").textContent  = summary.total_related.toLocaleString();
+
+    // Backend-Boxes
+    const bbEl = document.getElementById("backend-boxes");
+    bbEl.style.display = "contents";
+    bbEl.innerHTML = Object.entries(summary.by_backend).map(([b, cnt]) => {
+      const m = backendMeta(b);
+      return `<div class="stat-box" style="border-left:3px solid ${m.color};">
+        <div class="val" style="color:${m.color};">${cnt}</div>
+        <div class="lbl">${m.label}</div>
+      </div>`;
+    }).join("");
+
+    // ── Backend-Legende ──────────────────────────────────────────
+    const usedBackends = [...new Set(sessions.map(s => s.backend || ""))];
+    document.getElementById("backend-legend").innerHTML = usedBackends.map(b => {
+      const m = backendMeta(b);
+      return `<span class="backend-dot"><span style="background:${m.color};"></span>${m.label}</span>`;
+    }).join("");
+
+    // ── Abruf-Verlauf (gestapeltes Balken-Diagramm) ──────────────
+    const labels   = sessions.map(s => fmtDe(s.started_at));
+    const okVals   = sessions.map(s => s.keywords_ok);
+    const errVals  = sessions.map(s => s.keywords_failed || 0);
+    const colors   = sessions.map(s => backendMeta(s.backend || "").color);
+    const statusBadge = { ok: "✓", partial: "~", failed: "✗", running: "…" };
+
+    const fetchCtx = document.getElementById("fetch-chart").getContext("2d");
+    new Chart(fetchCtx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Keywords OK",
+            data: okVals,
+            backgroundColor: colors.map(c => c + "cc"),
+            borderColor: colors,
+            borderWidth: 1.5,
+            borderRadius: 0,
+            stack: "s",
+          },
+          {
+            label: t("stat_errors"),
+            data: errVals,
+            backgroundColor: "rgba(239,68,68,0.8)",
+            borderColor: "#ef4444",
+            borderWidth: 1.5,
+            borderRadius: 4,
+            stack: "s",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            mode: "index",
+            callbacks: {
+              title: (items) => sessions[items[0].dataIndex]
+                ? fmtDe(sessions[items[0].dataIndex].started_at) : "",
+              label: (item) => {
+                const s = sessions[item.dataIndex];
+                if (!s) return "";
+                if (item.datasetIndex === 1) {
+                  return s.keywords_failed > 0 ? `${t("stat_errors")}: ${s.keywords_failed}` : null;
+                }
+                const m = backendMeta(s.backend || "");
+                const dur = s.finished_at
+                  ? Math.round((new Date(s.finished_at) - new Date(s.started_at)) / 1000) + "s"
+                  : "–";
+                return [
+                  `${t("stat_backend")}: ${m.label}`,
+                  `${t("stat_keywords_ok")}: ${s.keywords_ok}`,
+                  `${t("stat_status")}: ${statusBadge[s.status] ?? s.status} ${s.status}`,
+                  `${t("stat_chart_duration")}: ${dur}`,
+                ];
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            stacked: true,
+            ticks: { color: "#6b7280", maxRotation: 45, font: { size: 11 } },
+            grid:  { color: "#2e3147" },
+          },
+          y: {
+            stacked: true,
+            min: 0,
+            ticks: { color: "#6b7280", stepSize: 1 },
+            grid:  { color: "#2e3147" },
+            title: { display: true, text: "Keywords", color: "#6b7280", font: { size: 11 } },
+          },
+        },
+      },
+    });
+
+    // ── Datenpunkte pro Tag (Linien-Diagramm) ───────────────────
+    if (data_by_day.length) {
+      const dpLabels = data_by_day.map(r => fmtDate(r.day));
+      const dpValues = data_by_day.map(r => r.count);
+      const dpCtx    = document.getElementById("dp-chart").getContext("2d");
+      new Chart(dpCtx, {
+        type: "bar",
+        data: {
+          labels: dpLabels,
+          datasets: [{
+            label: t("stat_datapoints"),
+            data: dpValues,
+            backgroundColor: "rgba(79,142,247,0.25)",
+            borderColor: "#4f8ef7",
+            borderWidth: 1.5,
+            borderRadius: 3,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (item) => `${item.raw.toLocaleString()} ${t("stat_datapoints")}`,
+              },
+            },
+          },
+          scales: {
+            x: { ticks: { color: "#6b7280", maxRotation: 45, font: { size: 11 } }, grid: { color: "#2e3147" } },
+            y: { min: 0, ticks: { color: "#6b7280" }, grid: { color: "#2e3147" } },
+          },
+        },
+      });
+    } else {
+      document.getElementById("dp-chart-wrap").innerHTML =
+        `<p class="text-muted text-sm" style="text-align:center;padding:40px 0;">${t("stat_no_data")}</p>`;
+    }
+  }
+
+  // ── Abruf-Log Tabelle ─────────────────────────────────────────
+  const LOG_STATUS_BADGE = {
+    ok: "badge-green", partial: "badge-yellow", failed: "badge-red",
+    no_data: "badge-orange", running: "badge-blue",
+  };
+  let logCurrentPage = 1;
+
+  async function loadLogTable(page) {
+    logCurrentPage = page;
+    const tbody = document.getElementById("log-tbody");
+    try {
+      const r = await api(`/api/logs?page=${page}`);
+      const { logs, total, pages } = r;
+
+      if (!logs.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-muted" style="text-align:center;padding:24px;">${t("stat_no_logs")}</td></tr>`;
+        document.getElementById("log-pagination").style.display = "none";
+        return;
+      }
+      tbody.innerHTML = logs.map(l => {
+        const dur = l.finished_at
+          ? Math.round((new Date(l.finished_at) - new Date(l.started_at)) / 1000) + " s"
+          : t("stat_running");
+        const badge = LOG_STATUS_BADGE[l.status] || "badge-blue";
+        const bm = backendMeta(l.backend || "");
+        return `<tr>
+          <td class="text-sm">${fmtDe(l.started_at)}</td>
+          <td><span class="badge ${badge}">${esc(l.status)}</span></td>
+          <td class="text-sm" style="color:${bm.color};">${bm.label}</td>
+          <td>${l.keywords_ok} / ${l.keywords_total}</td>
+          <td>${l.keywords_failed || 0}</td>
+          <td class="text-sm text-muted">${dur}</td>
+          <td class="text-sm text-muted log-errors" onclick="this.classList.toggle('expanded')">${esc(l.errors || "–")}</td>
+        </tr>`;
+      }).join("");
+
+      // Paginierung
+      const wrap  = document.getElementById("log-pagination");
+      const range = document.getElementById("log-pg-range");
+      const pagesEl = document.getElementById("log-pg-pages");
+      if (pages <= 1) { wrap.style.display = "none"; }
+      else {
+        wrap.style.display = "flex";
+        const start = (page - 1) * 50 + 1;
+        const end   = Math.min(page * 50, total);
+        range.textContent = `${start}–${end} ${t("stat_of")} ${total}`;
+        document.getElementById("log-pg-prev").disabled = page === 1;
+        document.getElementById("log-pg-next").disabled = page === pages;
+        const show = new Set([1, pages, page, page-1, page+1].filter(p => p>=1 && p<=pages));
+        const sorted = [...show].sort((a,b)=>a-b);
+        let html = ""; let prevP = 0;
+        for (const p of sorted) {
+          if (prevP && p-prevP>1) html += `<span style="color:var(--muted);padding:0 2px;">…</span>`;
+          const act = p===page ? "style=\"border-color:var(--accent);color:var(--text);\"" : "";
+          html += `<button class="btn btn-ghost btn-sm" ${act} onclick="loadLogTable(${p})">${p}</button>`;
+          prevP = p;
+        }
+        pagesEl.innerHTML = html;
+      }
+      document.getElementById("log-pg-info").textContent = total ? `${total} ${t("stat_entries_total")}` : "";
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-muted">${t("stat_error")}: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  document.getElementById("log-pg-prev").addEventListener("click", () => loadLogTable(logCurrentPage - 1));
+  document.getElementById("log-pg-next").addEventListener("click", () => loadLogTable(logCurrentPage + 1));
+  document.getElementById("btn-refresh-log").addEventListener("click", () => loadLogTable(logCurrentPage));
+
+  loadStats();
+  loadLogTable(1);
+
+  // ── LLM-Detail ─────────────────────────────────────────────
+  let llmDetailLoaded = false;
+
+  function toggleLlmDetail() {
+    const el = document.getElementById("llm-detail");
+    const link = document.getElementById("llm-detail-toggle");
+    if (el.style.display === "none") {
+      el.style.display = "block";
+      link.textContent = t("stat_hide_details");
+      if (!llmDetailLoaded) loadLlmDetail();
+    } else {
+      el.style.display = "none";
+      link.textContent = t("stat_show_details");
+    }
+  }
+
+  async function loadLlmDetail() {
+    try {
+      const data = await api("/api/stats/llm-log");
+      llmDetailLoaded = true;
+
+      // Gruppierung nach Quelle
+      const srcEl = document.getElementById("llm-by-source");
+      srcEl.innerHTML = Object.entries(data.by_source).map(([s, cnt]) => {
+        const labelKey = SOURCE_KEY_MAP[s];
+        const label = labelKey ? t(labelKey) : s;
+        const color = SOURCE_COLORS[s] || "#6b7280";
+        return `<div class="stat-box" style="border-left:3px solid ${color};padding:10px 14px;min-width:120px;">
+          <div class="val" style="font-size:20px;color:${color};">${cnt}</div>
+          <div class="lbl">${esc(label)}</div>
+        </div>`;
+      }).join("");
+
+      // Einzelne Einträge
+      const tbody = document.getElementById("llm-log-tbody");
+      if (!data.logs.length) {
+        tbody.innerHTML = `<tr><td colspan="3" class="text-muted" style="text-align:center;padding:16px;">${t("stat_no_llm_month")}</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.logs.map(l => {
+        const labelKey = SOURCE_KEY_MAP[l.source];
+        const src = labelKey ? t(labelKey) : (l.source || "–");
+        const color = SOURCE_COLORS[l.source] || "#6b7280";
+        return `<tr>
+          <td class="text-sm text-muted">${fmtDe(l.created_at)}</td>
+          <td><span style="color:${color};font-weight:600;font-size:11px;">${esc(src)}</span></td>
+          <td class="text-sm text-muted" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.detail)}">${esc(l.detail || "–")}</td>
+        </tr>`;
+      }).join("");
+    } catch(e) {
+      document.getElementById("llm-log-tbody").innerHTML =
+        `<tr><td colspan="3" class="text-muted">${t("stat_error")}: ${esc(e.message)}</td></tr>`;
+    }
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}Audit Trail – spectralQ{% endblock %}
+
+{% block head %}
+<style>
+  .audit-wrap { max-width:1100px; margin:0 auto; padding:24px; }
+  .audit-header { display:flex; align-items:center; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
+  .audit-header h1 { font-size:22px; font-weight:700; margin:0; }
+  .audit-filters { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .audit-filters select, .audit-filters input {
+    background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    color:var(--text); padding:5px 10px; font-size:12px; }
+  .audit-verify { margin-left:auto; }
+  .audit-verify button {
+    background:none; border:1px solid var(--border); border-radius:6px;
+    color:var(--text); padding:6px 14px; font-size:12px; font-weight:600;
+    cursor:pointer; transition:border-color .15s; }
+  .audit-verify button:hover { border-color:var(--accent); color:var(--accent); }
+  .audit-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .audit-table th {
+    text-align:left; padding:8px 10px; font-size:11px; font-weight:600;
+    color:var(--muted); border-bottom:2px solid var(--border);
+    text-transform:uppercase; letter-spacing:.03em; }
+  .audit-table td {
+    padding:7px 10px; border-bottom:1px solid var(--border);
+    vertical-align:top; }
+  .audit-table tr:hover td { background:var(--surface2); }
+  .audit-action {
+    display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px;
+    font-weight:600; background:var(--surface2); }
+  .audit-action[data-a="snapshot_create"] { color:#4f8ef7; }
+  .audit-action[data-a="keyword_fetch"] { color:#22c55e; }
+  .audit-action[data-a="analysis_run"] { color:#f59e0b; }
+  .audit-action[data-a="apa_start"],
+  .audit-action[data-a="apa_complete"] { color:#a78bfa; }
+  .audit-action[data-a="export_docx"],
+  .audit-action[data-a="export_pdf"] { color:#ec4899; }
+  .audit-hash { font-family:monospace; font-size:10px; color:var(--muted); word-break:break-all; }
+  .audit-detail { max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .audit-detail:hover { white-space:normal; }
+  .audit-status { padding:10px 16px; border-radius:8px; font-size:13px; font-weight:600; margin-bottom:16px; }
+  .audit-status.ok { background:rgba(34,197,94,.1); color:#22c55e; border:1px solid rgba(34,197,94,.25); }
+  .audit-status.fail { background:rgba(239,68,68,.1); color:#ef4444; border:1px solid rgba(239,68,68,.25); }
+  .audit-pager { display:flex; gap:8px; justify-content:center; margin-top:24px; }
+  .audit-pager button {
+    background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    color:var(--text); padding:5px 12px; font-size:12px; cursor:pointer; }
+  .audit-pager button:disabled { opacity:.3; cursor:default; }
+  .audit-empty { text-align:center; color:var(--muted); padding:40px; font-size:14px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="audit-wrap">
+  <div class="audit-header">
+    <h1 data-i18n="audit_title">Audit Trail</h1>
+    <div class="audit-filters">
+      <select id="audit-filter-project">
+        <option value="" data-i18n="audit_all_projects">Alle Projekte</option>
+      </select>
+      <select id="audit-filter-action">
+        <option value="" data-i18n="audit_all_actions">Alle Aktionen</option>
+      </select>
+      <button onclick="verifyChain()" style="background:var(--accent1);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;" data-i18n="audit_verify_btn">Hash-Kette verifizieren</button>
+    </div>
+  </div>
+  <div id="audit-status"></div>
+  <table class="audit-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th data-i18n="audit_th_time">Zeitpunkt</th>
+        <th data-i18n="audit_th_user">Benutzer</th>
+        <th data-i18n="audit_th_action">Aktion</th>
+        <th data-i18n="audit_th_object">Objekt</th>
+        <th data-i18n="audit_th_project">Projekt</th>
+        <th data-i18n="audit_th_detail">Detail</th>
+        <th>Hash</th>
+      </tr>
+    </thead>
+    <tbody id="audit-tbody"></tbody>
+  </table>
+  <div id="audit-empty" class="audit-empty" style="display:none;" data-i18n="audit_empty">Keine Audit-Einträge vorhanden.</div>
+  <div class="audit-pager">
+    <button id="audit-prev" onclick="auditPage(-1)" data-i18n-html="audit_prev">&#9664; Zurück</button>
+    <span id="audit-page-info" style="font-size:12px;color:var(--muted);padding:5px 8px;"></span>
+    <button id="audit-next" onclick="auditPage(1)" data-i18n-html="audit_next">Weiter &#9654;</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window._mergeI18n({
+  de: {
+    audit_title: 'Audit Trail',
+    audit_all_projects: 'Alle Projekte',
+    audit_all_actions: 'Alle Aktionen',
+    audit_verify_btn: 'Hash-Kette verifizieren',
+    audit_th_time: 'Zeitpunkt',
+    audit_th_user: 'Benutzer',
+    audit_th_action: 'Aktion',
+    audit_th_object: 'Objekt',
+    audit_th_project: 'Projekt',
+    audit_th_detail: 'Detail',
+    audit_empty: 'Keine Audit-Eintr\u00e4ge vorhanden.',
+    audit_prev: '\u25c4 Zur\u00fcck',
+    audit_next: 'Weiter \u25ba',
+    audit_entries: 'Eintr\u00e4ge',
+    audit_verifying: 'Verifiziere \u2026',
+    audit_error: 'Fehler',
+  },
+  en: {
+    audit_title: 'Audit Trail',
+    audit_all_projects: 'All Projects',
+    audit_all_actions: 'All Actions',
+    audit_verify_btn: 'Verify Hash Chain',
+    audit_th_time: 'Timestamp',
+    audit_th_user: 'User',
+    audit_th_action: 'Action',
+    audit_th_object: 'Object',
+    audit_th_project: 'Project',
+    audit_th_detail: 'Detail',
+    audit_empty: 'No audit entries found.',
+    audit_prev: '\u25c4 Previous',
+    audit_next: 'Next \u25ba',
+    audit_entries: 'entries',
+    audit_verifying: 'Verifying \u2026',
+    audit_error: 'Error',
+  },
+  fr: {
+    audit_title: 'Journal d\u2019audit',
+    audit_all_projects: 'Tous les projets',
+    audit_all_actions: 'Toutes les actions',
+    audit_verify_btn: 'V\u00e9rifier la cha\u00eene de hachage',
+    audit_th_time: 'Horodatage',
+    audit_th_user: 'Utilisateur',
+    audit_th_action: 'Action',
+    audit_th_object: 'Objet',
+    audit_th_project: 'Projet',
+    audit_th_detail: 'D\u00e9tail',
+    audit_empty: 'Aucune entr\u00e9e d\u2019audit.',
+    audit_prev: '\u25c4 Pr\u00e9c\u00e9dent',
+    audit_next: 'Suivant \u25ba',
+    audit_entries: 'entr\u00e9es',
+    audit_verifying: 'V\u00e9rification \u2026',
+    audit_error: 'Erreur',
+  },
+  es: {
+    audit_title: 'Registro de auditor\u00eda',
+    audit_all_projects: 'Todos los proyectos',
+    audit_all_actions: 'Todas las acciones',
+    audit_verify_btn: 'Verificar cadena de hash',
+    audit_th_time: 'Marca de tiempo',
+    audit_th_user: 'Usuario',
+    audit_th_action: 'Acci\u00f3n',
+    audit_th_object: 'Objeto',
+    audit_th_project: 'Proyecto',
+    audit_th_detail: 'Detalle',
+    audit_empty: 'Sin entradas de auditor\u00eda.',
+    audit_prev: '\u25c4 Anterior',
+    audit_next: 'Siguiente \u25ba',
+    audit_entries: 'entradas',
+    audit_verifying: 'Verificando \u2026',
+    audit_error: 'Error',
+  },
+});
+window._applyI18n();
+
+const PAGE_SIZE = 50;
+let auditOffset = 0;
+let auditTotal = 0;
+
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+function fmtDt(iso) {
+  if (!iso) return "–";
+  return window.fmtDate ? window.fmtDate(iso) : new Date(iso).toLocaleString("de-DE", {dateStyle:"short", timeStyle:"medium"});
+}
+
+async function api(url, body) {
+  const opts = body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {};
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(r.statusText);
+  return r.json();
+}
+
+async function loadAudit() {
+  const pid = document.getElementById("audit-filter-project").value;
+  const act = document.getElementById("audit-filter-action").value;
+  let url = `/api/audit?limit=${PAGE_SIZE}&offset=${auditOffset}`;
+  if (pid) url += `&project_id=${pid}`;
+  if (act) url += `&action=${act}`;
+  const data = await api(url);
+  auditTotal = data.total;
+  const entries = data.entries;
+  const tbody = document.getElementById("audit-tbody");
+  const empty = document.getElementById("audit-empty");
+  if (!entries.length) {
+    tbody.innerHTML = "";
+    empty.style.display = "";
+  } else {
+    empty.style.display = "none";
+    tbody.innerHTML = entries.map(e => `<tr>
+      <td>${e.id}</td>
+      <td style="white-space:nowrap;">${fmtDt(e.created_at)}</td>
+      <td>${esc(e.username || "–")}</td>
+      <td><span class="audit-action" data-a="${esc(e.action)}">${esc(e.action)}</span></td>
+      <td>${e.object_type ? esc(e.object_type) + (e.object_id ? " #" + e.object_id : "") : "–"}</td>
+      <td>${e.project_name ? esc(e.project_name) : "–"}</td>
+      <td class="audit-detail" title="${esc(e.detail)}">${esc(e.detail || "–")}</td>
+      <td class="audit-hash" title="${e.entry_hash}">${e.entry_hash ? e.entry_hash.slice(0,12) + "…" : "–"}</td>
+    </tr>`).join("");
+  }
+  // Pager
+  document.getElementById("audit-prev").disabled = auditOffset === 0;
+  document.getElementById("audit-next").disabled = auditOffset + PAGE_SIZE >= auditTotal;
+  const page = Math.floor(auditOffset / PAGE_SIZE) + 1;
+  const pages = Math.ceil(auditTotal / PAGE_SIZE) || 1;
+  document.getElementById("audit-page-info").textContent = `${page} / ${pages} (${auditTotal} ${t('audit_entries','Einträge')})`;
+}
+
+function auditPage(dir) {
+  auditOffset = Math.max(0, auditOffset + dir * PAGE_SIZE);
+  loadAudit();
+}
+
+async function loadFilters() {
+  try {
+    const actions = await api("/api/audit/actions");
+    const sel = document.getElementById("audit-filter-action");
+    actions.forEach(a => {
+      const opt = document.createElement("option");
+      opt.value = a; opt.textContent = a;
+      sel.appendChild(opt);
+    });
+  } catch(_) {}
+  try {
+    const projects = await api("/api/projects");
+    const sel = document.getElementById("audit-filter-project");
+    projects.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.id; opt.textContent = p.name;
+      sel.appendChild(opt);
+    });
+  } catch(_) {}
+}
+
+async function verifyChain() {
+  const el = document.getElementById("audit-status");
+  el.className = "audit-status";
+  el.textContent = t('audit_verifying','Verifiziere …');
+  try {
+    const r = await api("/api/audit/verify");
+    if (r.ok) {
+      el.className = "audit-status ok";
+      el.textContent = "✓ " + r.msg;
+    } else {
+      el.className = "audit-status fail";
+      el.textContent = "✗ " + r.msg;
+    }
+  } catch(e) {
+    el.className = "audit-status fail";
+    el.textContent = t('audit_error','Fehler') + ": " + e.message;
+  }
+}
+
+document.getElementById("audit-filter-project").addEventListener("change", () => { auditOffset = 0; loadAudit(); });
+document.getElementById("audit-filter-action").addEventListener("change", () => { auditOffset = 0; loadAudit(); });
+
+loadFilters();
+loadAudit();
+</script>
+{% endblock %}

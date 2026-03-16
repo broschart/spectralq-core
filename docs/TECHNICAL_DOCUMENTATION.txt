@@ -1,0 +1,491 @@
+============================================================================
+  spectralQ — Technical Documentation
+  System architecture, data flow, and internal APIs
+============================================================================
+
+
+TABLE OF CONTENTS
+
+  1. System Overview
+  2. Technology Stack
+  3. Directory Structure
+  4. Application Lifecycle
+  5. Database Schema
+  6. Plugin System
+  7. Authentication & Open Core
+  8. API Architecture
+  9. Data Flow
+  10. Frontend Architecture
+  11. Scheduler & Background Tasks
+  12. AI Integration
+  13. Configuration
+  14. Deployment
+
+
+============================================================================
+1. SYSTEM OVERVIEW
+============================================================================
+
+spectralQ is a digital forensic analysis platform that overlays multiple
+independent data layers — from Google Trends to AIS ship tracking to
+satellite imagery — onto a shared timeline. When multiple sources spike
+simultaneously, a hint becomes a finding.
+
+Core capabilities:
+  - Google Trends monitoring with multi-backend fetching
+  - 22 WatchZone plugin types (geospatial, web, social media)
+  - 11 statistical analysis methods (forecasting, outlier detection, etc.)
+  - 7 AI plugins (trend analysis, project assistant, scientific paper, etc.)
+  - Project-based workflow with snapshots, presentations, and exports
+  - Alert system with automated anomaly detection
+  - Hash-chained audit trail for forensic integrity
+
+
+============================================================================
+2. TECHNOLOGY STACK
+============================================================================
+
+  Backend:
+    Python 3.13, Flask, SQLAlchemy, Flask-Login
+    Gunicorn (production), APScheduler (background tasks)
+    python-docx (Word export), matplotlib (chart rendering)
+    Playwright / pytrends / SerpAPI (Google Trends backends)
+
+  Database:
+    SQLite (default, file-based) or PostgreSQL
+
+  Frontend:
+    Vanilla JavaScript (no framework), Jinja2 templates
+    Leaflet.js (maps), Chart.js (charts), Cesium.js (3D globe)
+
+  AI:
+    Anthropic Claude, OpenAI, Google Gemini, Mistral
+    Multi-provider abstraction via plugins/ai/_llm.py
+
+
+============================================================================
+3. DIRECTORY STRUCTURE
+============================================================================
+
+  /
+  ├── app.py                    Main Flask application (~5100 lines, core routes)
+  ├── apa_tools.py              APA tool definitions + execution (~575 lines)
+  ├── apa_stream.py             AI Project Assistant SSE stream (~3950 lines)
+  ├── auth.py                   Authentication abstraction (Open Core)
+  ├── enterprise.py             Enterprise module (user mgmt, login)
+  ├── models.py                 SQLAlchemy models
+  ├── fetcher.py                Google Trends data fetching
+  ├── transport.py              Shared utilities (credentials, Copernicus auth,
+  │                             domain geolocation) — ~290 lines
+  ├── translator.py             Text translation helper
+  ├── alerts.py                 Alert rule evaluation engine
+  │
+  ├── plugins/                  Plugin system root
+  │   ├── __init__.py           PluginManager (registry, discovery)
+  │   ├── base.py               BasePlugin base class
+  │   ├── watchzone/            WatchZone plugins (22 types)
+  │   │   ├── __init__.py       WatchZonePlugin base + core i18n
+  │   │   ├── _helpers.py       Shared utilities (bbox, geojson)
+  │   │   ├── vessel/           Example: AIS ship tracking
+  │   │   │   ├── __init__.py   Plugin class + api_routes()
+  │   │   │   ├── _transport.py API fetch functions (AISHub)
+  │   │   │   ├── i18n.json
+  │   │   │   ├── templates/
+  │   │   │   └── static/
+  │   │   ├── satellite/        Sentinel-2 imagery
+  │   │   │   ├── _transport.py fetch_sentinel_image()
+  │   │   │   └── _routes.py    /api/sentinel/image endpoint
+  │   │   └── ... (20 more, each self-contained)
+  │   ├── analysis/             Analysis plugins (11 methods)
+  │   │   ├── __init__.py       AnalysisPlugin base (incl. modal_template)
+  │   │   ├── _helpers.py       load_series() helper
+  │   │   ├── ssim/             Example: Self-Similarity Matrix
+  │   │   │   ├── __init__.py   Plugin class + modal_template
+  │   │   │   ├── i18n.json     Translations (de/en/fr/es)
+  │   │   │   └── templates/
+  │   │   │       └── _modal.html  Complete modal (HTML+CSS+JS)
+  │   │   └── ... (10 more, each with own _modal.html)
+  │   └── ai/                   AI plugins (7 modules)
+  │       ├── __init__.py       AIPlugin base + guard/quota
+  │       ├── _llm.py           Multi-provider LLM abstraction
+  │       ├── trend_analysis/   Example: Chat-based trend analysis
+  │       └── ... (6 more)
+  │
+  ├── templates/                Jinja2 templates
+  │   ├── base.html             Layout, navigation, i18n, date formatting
+  │   ├── start.html             Start page (alerts, AI assistant)
+  │   ├── analysis.html         Analysis core (~13.7K lines, modals via plugins)
+  │   ├── events_watchzones.html  WatchZone management
+  │   └── ...
+  │
+  ├── static/
+  │   ├── js/
+  │   │   ├── plugins.js        Frontend plugin registry
+  │   │   └── wz/
+  │   │       └── wz_core.js    WatchZone core (maps, zones, live popup)
+  │   └── css/, img/, ...
+  │
+  └── .env                      Configuration (4 lines)
+
+
+============================================================================
+4. APPLICATION LIFECYCLE
+============================================================================
+
+  1. STARTUP (app.py)
+     - Load .env via dotenv
+     - Create Flask app, configure SQLAlchemy, Flask-Login
+     - Call init_auth(app) — sets up Community or Enterprise mode
+     - Register enterprise_bp Blueprint (only if MULTI_USER=true)
+     - PluginManager.discover_all() — imports all plugin modules
+     - Extend Jinja2 loader with plugin template directories
+     - Register plugin static file route
+     - Register dynamic routes (WZ history, analysis, AI)
+     - Register context processors (plugins, i18n, user data)
+     - Initialize APScheduler for daily fetches
+     - Run database migrations
+     - Create initial admin user if no users exist
+
+  2. REQUEST HANDLING
+     - Flask routes decorated with @login_required (real or no-op)
+     - current_user provides user context (real or phantom)
+     - User-scoped queries: Model.query.filter_by(user_id=current_user.id)
+     - Plugin-scoped: PluginManager.enabled_for_user(type, user_id)
+
+  3. PLUGIN DISCOVERY (PluginManager.discover_all)
+     For each subdirectory in plugins/:
+       a) Import plugins/<type>/__init__.py → registers plugin TYPE
+       b) Import each module/package in the type dir → registers INSTANCES
+       c) For bundled plugins (folder with __init__.py):
+          - Auto-load i18n.json into meta["i18n"]
+          - Register templates/ dir for Jinja2 PrefixLoader
+     Result: All plugins registered, routes ready for app.add_url_rule()
+
+
+============================================================================
+5. DATABASE SCHEMA
+============================================================================
+
+  Core Models (models.py):
+
+    User            User accounts (id, username, password_hash, role, quotas)
+    Keyword         Tracked search terms (keyword, geo, timeframe, gprop)
+    TrendData       Time series data points (keyword_id, date, value, run_tag)
+    FetchLog        Fetch operation logs (timestamp, status, backend, errors)
+    AppSetting      Key-value settings (key, value, user_id nullable)
+    Project         Analysis projects (name, briefing, user_id)
+    Snapshot        Saved chart states (chart_json, markers_json, content_hash)
+    Slide           Presentation slides (type, title, description, sort_order)
+    Event           Significant events/news (title, dt, source, description)
+    Alert           Alert rules (keyword_id, alert_type, threshold)
+    AlertEvent      Triggered alert instances
+    WatchZone       Geographic/web monitoring zones (geometry, config, zone_type)
+    RelatedQuery    Related search queries from Google Trends
+    RegionInterest  Geographic interest data from Google Trends
+    WaitlistEntry   Waitlist registrations
+    LlmLog          AI API call logging (user_id, source, timestamp)
+
+  Key Relationships:
+    User → Keyword, Project, Event, Alert, WatchZone, AppSetting (via user_id)
+    Keyword → TrendData, Alert (via keyword_id)
+    Project → Snapshot, Slide (via project_id)
+    Keyword ↔ Project (many-to-many via keyword_projects)
+
+  AppSetting Pattern:
+    user_id = NULL    → global/system setting
+    user_id = <int>   → per-user setting
+    Fallback: user-specific → global → environment variable
+
+
+============================================================================
+6. PLUGIN SYSTEM
+============================================================================
+
+  Three plugin types with inheritance hierarchy:
+
+    BasePlugin (plugins/base.py)
+    ├── WatchZonePlugin (plugins/watchzone/__init__.py)
+    │   └── 22 concrete plugins (vessel, seismic, aircraft, ...)
+    ├── AnalysisPlugin (plugins/analysis/__init__.py)
+    │   └── 11 concrete plugins (outlier, forecast, cpd, ...)
+    └── AIPlugin (plugins/ai/__init__.py)
+        └── 7 concrete plugins (trend_analysis, scientific_paper, ...)
+
+  Registration Flow:
+    1. Type registration:   PluginManager.register_type("watchzone", WatchZonePlugin)
+    2. Instance registration: PluginManager.register(VesselPlugin())
+    3. Route registration:  app.add_url_rule() for each plugin's api_routes()
+       - _register_wz_api_routes()      — WatchZone standalone API routes
+       - _register_wz_history_routes()   — WatchZone history routes
+       - _register_analysis_routes()     — Analysis plugin routes
+       - _register_ai_routes()           — AI plugin routes
+
+  Per-User Enable/Disable:
+    Opt-out principle: all plugins enabled by default
+    Disable: AppSetting key "plugin_disabled_<type>_<id>" = "1"
+    Query:   PluginManager.enabled_for_user("watchzone", user_id)
+
+  Credential Check:
+    BasePlugin.is_available(user_id) checks required_credentials:
+      1. User-specific AppSetting
+      2. Global AppSetting (user_id=None)
+      3. Environment variable (KEY_NAME → uppercase)
+
+  See PLUGIN_DEVELOPMENT_GUIDE.txt for detailed development instructions.
+
+
+============================================================================
+7. AUTHENTICATION & OPEN CORE
+============================================================================
+
+  Two operating modes controlled by MULTI_USER in .env:
+
+  COMMUNITY MODE (MULTI_USER=false):
+    - auth.py: login_required = no-op, superadmin_required = no-op
+    - before_request: auto-login as first user (phantom user)
+    - enterprise.py NOT loaded (no /login, /users, /api/users, /api/me)
+    - /login redirects to /start
+    - base.html: Admin, Users, Audit, Logout hidden in nav
+    - All data belongs to phantom user (id=1)
+
+  ENTERPRISE MODE (MULTI_USER=true):
+    - auth.py: real Flask-Login decorators
+    - enterprise.py registered as Blueprint (login, user CRUD, /api/me)
+    - Full multi-user with roles (superadmin, user)
+    - Per-user quotas (LLM calls, projects, keywords)
+    - Per-user API key policies (admin_key, own_key, disabled)
+    - Per-user plugin access control
+
+  Files for GitHub Open Core distribution:
+    EXCLUDE: enterprise.py, templates/users.html, templates/login.html
+    INCLUDE: everything else (works standalone in Community mode)
+
+
+============================================================================
+8. API ARCHITECTURE
+============================================================================
+
+  All API endpoints follow REST conventions under /api/:
+
+  KEYWORD MANAGEMENT:
+    GET    /api/keywords                List all keywords
+    POST   /api/keywords                Create keyword
+    PUT    /api/keywords/<id>           Update keyword
+    DELETE /api/keywords/<id>           Delete keyword + data
+    POST   /api/fetch                   Trigger data fetch
+
+  PROJECT MANAGEMENT:
+    GET    /api/projects                List projects
+    POST   /api/projects                Create project
+    PUT    /api/projects/<id>           Update project
+    DELETE /api/projects/<id>           Delete project + slides + snapshots
+
+  WATCHZONES:
+    GET    /api/watchzones              List zones
+    POST   /api/watchzones              Create zone
+    PUT    /api/watchzones/<id>         Update zone (name, geometry, config)
+    DELETE /api/watchzones/<id>         Delete zone
+    GET    /api/watchzones/<id>/live    Fetch live data (delegates to plugin)
+
+  DYNAMICALLY REGISTERED (from plugins):
+    GET    /api/watchzones/<id>/<suffix>   History routes (per WZ plugin)
+    *      /api/sentinel/*, /api/bluesky-* etc.  Standalone WZ routes (per plugin)
+    POST   /api/<method>                   Analysis routes (per analysis plugin)
+    *      /api/ai-*                       AI routes (per AI plugin)
+
+  PLUGIN MANAGEMENT:
+    GET    /api/plugins                 List all plugins with status
+    PUT    /api/plugins/<type>/<id>/toggle       Enable/disable
+    PUT    /api/plugins/<type>/<id>/credentials  Store API keys
+    PUT    /api/plugins/<type>/<id>/show-in      Configure display location
+    PUT    /api/plugins/ai-settings              Set AI provider/model
+
+  SYSTEM:
+    GET    /api/system-settings         Date/time format, language, colors
+    GET    /api/dashboard/summary       Alert counts, recent events
+
+
+============================================================================
+9. DATA FLOW
+============================================================================
+
+  TREND DATA COLLECTION:
+    Scheduler (06:00 daily) or manual trigger
+    → fetcher.py: run_fetch()
+    → Try backends in priority order: SerpAPI → Playwright → pytrends
+    → Store in TrendData (date, value, keyword_id, run_tag)
+    → Evaluate alert rules (alerts.py)
+    → Log to FetchLog + AuditTrail
+
+  LIVE WATCHZONE DATA:
+    User clicks "Live" on a zone
+    → GET /api/watchzones/<id>/live?as_type=<type>
+    → app.py resolves plugin via PluginManager.get("watchzone", type)
+    → plugin.live_handler(zone, config, geo, bbox, user_id)
+    → Plugin calls external API (via plugin's _transport.py)
+    → Returns JSON → rendered by plugin's JS renderer
+
+  ANALYSIS:
+    User triggers analysis from popup or lab
+    → POST /api/<method> with {keyword_ids: [...]}
+    → plugin.compute(body) using load_series() helper
+    → Returns JSON with results + summary
+    → Frontend renders chart/table + optional AI interpretation
+
+  AI FEATURES:
+    User invokes AI analysis
+    → Plugin._guard() checks: authenticated? enabled? quota ok?
+    → Build prompt from project/snapshot data
+    → call_llm(prompt, settings, max_tokens=N)
+    → _llm.py dispatches to configured provider (Anthropic/OpenAI/Gemini/Mistral)
+    → Returns {ok: true, text: "...", model: "provider/model"}
+    → increment_usage() logs the call
+
+
+============================================================================
+10. FRONTEND ARCHITECTURE
+============================================================================
+
+  No framework — vanilla JS with Jinja2 server-rendered templates.
+
+  GLOBAL SYSTEMS (base.html):
+    - i18n: window._t(key, fallback), data-i18n attributes, 4 languages
+    - Date formatting: window.fmtDate(), fmtDateOnly(), fmtTimeOnly()
+      Configured via /api/system-settings → localStorage
+    - Theme: dark/light via data-theme attribute on <html>
+    - Navigation: active state via URL matching
+
+  PLUGIN FRONTEND (static/js/plugins.js):
+    window.VT_PLUGINS = {};
+    window.vtRegisterPlugin(type, id, hooks);
+    window.vtGetPlugin(type, id);
+    window.vtAllPlugins(type);
+
+  WATCHZONE FRONTEND (static/js/wz/wz_core.js):
+    WZ.registerPlugin(plugin_id, {
+      renderer: function(data) { ... },
+      has_map: true,
+      has_live_map: true,
+      has_heatmap: false,
+      ...
+    });
+
+    Core responsibilities:
+    - Panel switching (sidebar navigation)
+    - Map initialization per panel (Leaflet + draw controls)
+    - Zone CRUD (create, rename, edit geometry, delete)
+    - Zone list rendering (hover-zoom, click-anchor, edit/delete icons)
+    - Live popup management (open, close, fullscreen)
+    - Crosshair drawing mode
+
+  CHART RENDERING (analysis.html):
+    - Chart.js for time series with zoom plugin
+    - Multiple Y-axes for different data sources
+    - Triangulation overlays from WatchZone data
+    - AI-generated interpretations below charts
+
+
+============================================================================
+11. SCHEDULER & BACKGROUND TASKS
+============================================================================
+
+  APScheduler with CronTrigger:
+    Configured via FETCH_HOUR and FETCH_MINUTE in .env
+    Default: daily at 06:00
+
+  Job: scheduled_fetch
+    → fetcher.run_fetch(app)
+    → Fetches all active keywords
+    → Evaluates alert rules
+    → Logs results
+
+  Manual trigger: POST /api/fetch (login_required)
+
+
+============================================================================
+12. AI INTEGRATION
+============================================================================
+
+  Central LLM abstraction: plugins/ai/_llm.py
+
+    call_llm(prompt_or_messages, settings, max_tokens, system, tools)
+
+  Supported providers:
+    - Anthropic (Claude) — primary, with tool_use support
+    - OpenAI (GPT) — with function calling support
+    - Google Gemini
+    - Mistral AI
+
+  Settings resolution:
+    get_ai_settings(user_id) → {ai_provider, ai_model, resolve()}
+    - User-specific provider/model from AppSetting
+    - Fallback to global admin settings
+    - API key resolved via _resolve_api_key() with policy checks
+
+  Quota system:
+    check_quota(user_id) → (ok, used, limit)
+    increment_usage(user_id, source, detail) → logs to LlmLog
+    Monthly reset, configurable per user (max_llm_calls)
+    Users with own_key bypass quota
+
+  AI Project Assistant (APA):
+    Multi-round tool-use agent (apa_tools.py + apa_stream.py) with access to:
+    - All WatchZone plugin tools via plugin.ai_tools() (auto-discovered)
+    - Core tools: list_watchzones, create_watchzone, get_live_data
+    - Standalone tools: wiki_views, gdelt_volume, yahoo_finance,
+      run_traceroute, bgp_lookup, wayback
+    - Up to 5 tool-use rounds per conversation turn
+
+
+============================================================================
+13. CONFIGURATION
+============================================================================
+
+  .env (minimal, 4 variables):
+    MULTI_USER=true|false       Open Core mode switch
+    SECRET_KEY=<random>         Flask session secret
+    FETCH_HOUR=6                Daily fetch hour (server time)
+    FETCH_MINUTE=0              Daily fetch minute
+
+  All other configuration lives in the database (AppSetting):
+    API keys (SerpAPI, Anthropic, OpenAI, etc.)
+    AI provider and model selection
+    Date/time format preferences
+    Theme (dark/light)
+    Accent colors
+    Audit trail toggle
+    Presentation metadata (logo, author)
+    Plugin enable/disable states
+    Plugin credentials (per user)
+
+  Environment variables as fallback:
+    ANTHROPIC_API_KEY, SERPAPI_KEY, etc.
+    Only used if no AppSetting exists
+
+
+============================================================================
+14. DEPLOYMENT
+============================================================================
+
+  DEVELOPMENT:
+    python app.py                  # Flask dev server on :5000
+
+  PRODUCTION:
+    gunicorn --bind 0.0.0.0:5000 --workers 1 --threads 4 \
+             --timeout 120 --preload app:app
+
+    Workers=1 required (APScheduler, in-memory state)
+    Threads=4 for concurrent request handling
+
+  DOCKER:
+    Base image: python:3.13-slim
+    Install: pip install -r requirements.txt
+    Playwright browsers: playwright install chromium (if using Playwright backend)
+    Volume mount: /app/trends.db for persistent SQLite
+
+  FIRST START:
+    1. Copy .env and set SECRET_KEY, MULTI_USER
+    2. Start server → auto-creates DB, admin user (admin/admin)
+    3. Log in → Admin → configure API keys
+    4. Add keywords → trigger first fetch
+    5. Enable desired plugins on /plugins page

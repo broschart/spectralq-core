@@ -1,0 +1,16 @@
+<div id="panel-radiation" class="wz-panel" style="display:none;">
+  <div class="wz-main-header">
+    <h2 data-i18n="wz_rad_title">Radiation Monitoring</h2>
+    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_rad_source">Sources: BfS ODL (Germany) + EURDEP (Europe)</span>
+    </button>
+    <p class="wz-panel-desc" data-i18n="wz_rad_desc">Monitors ambient gamma dose rate in an area. BfS ODL provides data for ~1,600 stations in Germany, EURDEP for ~37,000 stations Europe-wide. Elevated values (>0.3 µSv/h) are flagged as anomalies.</p>
+  </div>
+  <div class="wz-main-body">
+    <div id="wz-map-radiation" class="wz-map-container" style="height:500px;"></div>
+    <div class="wz-hint" id="wz-hint-radiation" data-i18n="wz_rad_hint">
+      Draw observation zones on the map. Gamma dose rate data
+      will be fetched automatically for all stations in the zone.
+    </div>
+    <div class="wz-zone-list" id="wz-zones-radiation"></div>
+  </div>
+</div>

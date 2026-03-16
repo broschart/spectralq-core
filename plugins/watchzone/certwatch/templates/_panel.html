@@ -1,0 +1,17 @@
+<div id="panel-certwatch" class="wz-panel" style="display:none;">
+  <div class="wz-main-header">
+    <h2 data-i18n="wz_ct_title">Certificate Transparency</h2>
+    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_ct_source">Source: crt.sh (Certificate Transparency Logs)</span>
+    <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="wzAddCertWatch()" data-i18n="wz_ct_add_btn">
+      + Add Domain
+    </button>
+    <p class="wz-panel-desc" data-i18n="wz_ct_desc">Monitors certificate transparency logs for domains. New certificates and subdomains are detected as early indicators of campaign preparation or new infrastructure.</p>
+  </div>
+  <div class="wz-main-body">
+    <div class="wz-hint" id="wz-hint-certwatch" data-i18n="wz_ct_hint">
+      Add domains whose certificate transparency should be monitored.
+      New subdomains and certificates are automatically detected.
+    </div>
+    <div class="wz-zone-list" id="wz-zones-certwatch"></div>
+  </div>
+</div>

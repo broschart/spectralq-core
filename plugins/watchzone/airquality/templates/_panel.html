@@ -1,0 +1,16 @@
+<div id="panel-airquality" class="wz-panel" style="display:none;">
+  <div class="wz-main-header">
+    <h2 data-i18n="wz_aq_title">Air Quality &amp; Particulates</h2>
+    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_aq_source">Source: OpenAQ (global sensor data)</span>
+    </button>
+    <p class="wz-panel-desc" data-i18n="wz_aq_desc">Monitors particulate matter (PM2.5, PM10), ozone, NO₂, SO₂ and CO worldwide. Sudden spikes can indicate fires, explosions, industrial accidents or military activity.</p>
+  </div>
+  <div class="wz-main-body">
+    <div id="wz-map-airquality" class="wz-map-container" style="height:500px;"></div>
+    <div class="wz-hint" id="wz-hint-airquality" data-i18n="wz_aq_hint">
+      Draw observation areas on the map. Air quality data
+      will be fetched automatically from OpenAQ.
+    </div>
+    <div class="wz-zone-list" id="wz-zones-airquality"></div>
+  </div>
+</div>

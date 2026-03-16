@@ -1,0 +1,460 @@
+<!-- ═══════════════════════════════════════════════════════════
+     CHANGE-POINT-DETECTION OVERLAY
+═══════════════════════════════════════════════════════════ -->
+<style>
+#cpd-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82);
+  display: none; align-items: center; justify-content: center;
+  z-index: 9500; padding: 16px; box-sizing: border-box;
+}
+#cpd-dialog {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; width: 96vw; max-width: 1400px;
+  height: 85vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#cpd-chart-wrap {
+  flex: 1; min-height: 0;
+  padding: 12px 16px 0; overflow: hidden;
+}
+#cpd-canvas-box {
+  position: relative; width: 100%; height: 100%;
+}
+#cpd-list-wrap {
+  overflow-y: auto; max-height: 260px;
+  padding: 0 20px 12px;
+}
+.cpd-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.cpd-row:last-child { border-bottom: none; }
+.cpd-dir { font-weight: 700; font-size: 15px; }
+.cpd-dir.up   { color: #22c55e; }
+.cpd-dir.down { color: #ef4444; }
+.cpd-mag { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600; min-width: 56px; text-align: right; }
+.cpd-kw-chip { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; color: #fff; }
+</style>
+
+<div id="cpd-overlay">
+  <div id="cpd-dialog">
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <h2 style="margin:0 0 3px;font-size:16px;font-weight:600;" data-i18n="analysis_cpd_label">Change-Point-Detection</h2>
+        <div id="cpd-subtitle" style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:700px;"></div>
+      </div>
+      {% if 'trend_analysis' in ai_plugins_enabled %}
+      <button id="btn-cpd-ai" style="flex-shrink:0;padding:6px 14px;border-radius:6px;border:1px solid rgba(139,92,246,.5);background:none;color:#a78bfa;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">
+        <svg viewBox="0 0 20 16" width="14" height="11" fill="currentColor" style="vertical-align:middle;margin-right:3px;"><text x="1" y="13" font-family="system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="0.5">AI</text></svg> <span data-i18n="an_cpd_ai_btn">KI-Analyse</span>
+      </button>
+      {% endif %}
+      <button id="btn-cpd-snap" style="flex-shrink:0;width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,12.5 5,7.5 8,9.5 11.5,4.5 14.5,6.5"/></svg>
+      </button>
+      <button id="btn-cpd-close" style="flex-shrink:0;width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;">×</button>
+    </div>
+
+    <!-- Controls -->
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        <span data-i18n="an_cpd_penalty_label">Sensitivität (Penalty):</span>
+        <input id="cpd-penalty" type="range" min="1" max="30" step="0.5" value="10"
+               style="width:120px;accent-color:var(--accent);">
+        <strong id="cpd-penalty-val" style="min-width:26px;">10</strong>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        <span data-i18n="an_cpd_minseg_label">Min. Segmentlänge:</span>
+        <input id="cpd-minseg" type="range" min="3" max="30" step="1" value="7"
+               style="width:100px;accent-color:var(--accent);">
+        <strong id="cpd-minseg-val" style="min-width:22px;">7</strong>
+      </label>
+      <label id="cpd-kw-wrap" style="display:none;align-items:center;gap:6px;font-size:12px;">
+        <span data-i18n="an_cpd_keyword_label">Keyword:</span>
+        <select id="cpd-kw-sel" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:12px;"></select>
+      </label>
+    </div>
+
+    <!-- Chart -->
+    <div id="cpd-chart-wrap">
+      <div id="cpd-canvas-box">
+        <canvas id="cpd-canvas" style="width:100%;height:100%;"></canvas>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div id="cpd-status" style="padding:6px 20px;font-size:11px;color:var(--muted);flex-shrink:0;"></div>
+
+    <!-- Results -->
+    <div id="cpd-list-wrap">
+      <div id="cpd-list" style="padding-top:8px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  let _cpdChart = null;
+  let _lastCpdData = null;
+  let _cpdKwId = null;
+
+  // ── PELT-inspirierte Change-Point-Detection ────────────────────
+  // Kostenbasierte Segmentierung: minimiert Summe der Segmentkosten + Penalty pro Changepoint
+  // Kostenfunktion: negative Log-Likelihood unter Normalverteilung (Varianz-basiert)
+
+  function segmentCost(values, start, end) {
+    // Kosten eines Segments [start, end) unter Normalverteilungs-Annahme
+    const n = end - start;
+    if (n < 2) return 0;
+    let sum = 0, sum2 = 0, count = 0;
+    for (let i = start; i < end; i++) {
+      if (values[i] !== null) { sum += values[i]; sum2 += values[i] * values[i]; count++; }
+    }
+    if (count < 2) return 0;
+    const mean = sum / count;
+    const variance = Math.max(1e-10, sum2 / count - mean * mean);
+    return count * Math.log(variance);
+  }
+
+  function detectChangePoints(values, penalty, minSeg) {
+    const n = values.length;
+    if (n < minSeg * 2) return [];
+
+    // DP: F[t] = min. Kosten die ersten t Punkte zu segmentieren
+    const F = new Float64Array(n + 1).fill(Infinity);
+    const prev = new Int32Array(n + 1).fill(-1);
+    F[0] = 0;
+
+    for (let t = minSeg; t <= n; t++) {
+      // Pruned: nur plausible Startpunkte testen
+      const earliest = Math.max(0, t - Math.min(n, 200));
+      for (let s = earliest; s <= t - minSeg; s++) {
+        const cost = F[s] + segmentCost(values, s, t) + penalty;
+        if (cost < F[t]) {
+          F[t] = cost;
+          prev[t] = s;
+        }
+      }
+    }
+
+    // Changepoints aus DP-Pfad extrahieren
+    const cps = [];
+    let pos = n;
+    while (pos > 0 && prev[pos] >= 0) {
+      if (prev[pos] > 0) cps.push(prev[pos]);
+      pos = prev[pos];
+    }
+    cps.sort((a, b) => a - b);
+    return cps;
+  }
+
+  // Segment-Statistiken berechnen
+  function segmentStats(values, start, end) {
+    let sum = 0, count = 0;
+    for (let i = start; i < end; i++) {
+      if (values[i] !== null) { sum += values[i]; count++; }
+    }
+    return { mean: count ? sum / count : 0, n: count };
+  }
+
+  // ── Daten zusammenstellen ─────────────────────────────────────
+  function getCpdSeries(kwId) {
+    const mainChart = window._mainChart;
+    if (!mainChart || !mainChart.data) return null;
+
+    const labels = mainChart.data.labels;
+    if (kwId != null) {
+      // Einzelnes Keyword
+      const ds = mainChart.data.datasets.find(d => d._kwId === kwId && !d._isEvent && !d._isBand && !d._isSunArc);
+      if (!ds) return null;
+      return { labels, series: [{ keyword: ds.label, values: ds.data.slice(), color: ds.borderColor, kwId }] };
+    }
+    // Alle aktiven
+    const series = mainChart.data.datasets
+      .filter(d => !d._isEvent && !d._isBand && !d._isSunArc && d.data && d.data.length)
+      .map(d => ({ keyword: d.label, values: d.data.slice(), color: d.borderColor, kwId: d._kwId }));
+    return series.length ? { labels, series } : null;
+  }
+
+  // ── Chart rendern ─────────────────────────────────────────────
+  function fmtDate(iso) {
+    if (!iso) return '';
+    return window.fmtDateOnly ? window.fmtDateOnly(iso) : (function() { const s = String(iso).slice(0,10).split('-'); return s.length===3 ? `${s[2]}.${s[1]}.${s[0].slice(2)}` : iso; })();
+  }
+
+  function renderCpdChart(labels, seriesData, allChangepoints) {
+    if (_cpdChart) { _cpdChart.destroy(); _cpdChart = null; }
+    const canvas = document.getElementById('cpd-canvas');
+    canvas.style.display = 'block';
+
+    const datasets = seriesData.map(s => ({
+      label: s.keyword,
+      data: s.values,
+      borderColor: s.color,
+      backgroundColor: s.color + '22',
+      borderWidth: 1.8,
+      tension: 0.3,
+      pointRadius: 0,
+      pointHoverRadius: 3,
+      fill: false,
+    }));
+
+    // Annotations: vertikale Linien bei Changepoints + Segment-Hintergrund
+    const annotations = {};
+    allChangepoints.forEach((cp, i) => {
+      annotations[`cp${i}`] = {
+        type: 'line',
+        xMin: cp.idx, xMax: cp.idx,
+        borderColor: '#fb923c',
+        borderWidth: 2,
+        borderDash: [4, 3],
+        label: {
+          display: true,
+          content: fmtDate(cp.date),
+          position: 'start',
+          backgroundColor: 'rgba(251,146,60,.85)',
+          color: '#fff',
+          font: { size: 10, weight: '600' },
+          padding: { x: 5, y: 2 },
+          borderRadius: 4,
+        }
+      };
+    });
+
+    // Alternating segment backgrounds
+    const bounds = [0, ...allChangepoints.map(c => c.idx), labels.length - 1];
+    for (let i = 0; i < bounds.length - 1; i++) {
+      annotations[`seg${i}`] = {
+        type: 'box',
+        xMin: bounds[i],
+        xMax: bounds[i + 1],
+        backgroundColor: i % 2 === 0 ? 'rgba(251,146,60,.04)' : 'rgba(139,92,246,.04)',
+        borderWidth: 0,
+      };
+    }
+
+    _cpdChart = new Chart(canvas, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { labels: { color: '#e2e4ef', font: { size: 12 } } },
+          annotation: { annotations },
+          tooltip: {
+            backgroundColor: 'rgba(20,20,30,.92)',
+            titleColor: '#e2e4ef',
+            bodyColor: '#e2e4ef',
+            borderColor: 'rgba(255,255,255,.1)',
+            borderWidth: 1,
+            callbacks: {
+              title: items => items.length ? fmtDate(labels[items[0].dataIndex]) : '',
+            }
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: '#888', maxRotation: 45, autoSkip: true, maxTicksLimit: 28,
+                     callback: (_, i) => fmtDate(labels[i]) },
+            grid: { color: 'rgba(255,255,255,.06)' },
+          },
+          y: {
+            ticks: { color: '#888' },
+            grid: { color: 'rgba(255,255,255,.06)' },
+          },
+        },
+      },
+    });
+  }
+
+  // ── Erkennung ausfuehren ──────────────────────────────────────
+  function runCpd() {
+    const statusEl = document.getElementById('cpd-status');
+    const listEl = document.getElementById('cpd-list');
+
+    const data = getCpdSeries(_cpdKwId);
+    if (!data || !data.series.length) {
+      statusEl.textContent = 'Keine Daten verfügbar.';
+      listEl.innerHTML = ''; return;
+    }
+
+    const penalty = parseFloat(document.getElementById('cpd-penalty').value);
+    const minSeg = parseInt(document.getElementById('cpd-minseg').value, 10);
+    const labels = data.labels;
+
+    // Changepoints pro Reihe erkennen
+    const allCps = [];
+    const perSeries = [];
+
+    for (const s of data.series) {
+      const cps = detectChangePoints(s.values, penalty, minSeg);
+      const detailed = cps.map(idx => {
+        const before = segmentStats(s.values, Math.max(0, idx - minSeg), idx);
+        const after = segmentStats(s.values, idx, Math.min(s.values.length, idx + minSeg));
+        const delta = after.mean - before.mean;
+        return {
+          idx,
+          date: labels[idx],
+          keyword: s.keyword,
+          color: s.color,
+          kwId: s.kwId,
+          meanBefore: before.mean,
+          meanAfter: after.mean,
+          delta,
+          dir: delta >= 0 ? 'up' : 'down',
+          magnitude: Math.abs(delta),
+        };
+      });
+      perSeries.push({ keyword: s.keyword, color: s.color, changepoints: detailed });
+      allCps.push(...detailed);
+    }
+
+    // Deduplizieren: wenn mehrere Reihen am gleichen Index brechen, gruppieren
+    allCps.sort((a, b) => a.idx - b.idx || b.magnitude - a.magnitude);
+
+    // Unique Changepoint-Indizes fuer Chart
+    const uniqueIdxSet = new Set(allCps.map(c => c.idx));
+    const uniqueCps = [...uniqueIdxSet].sort((a, b) => a - b).map(idx => ({
+      idx, date: labels[idx]
+    }));
+
+    renderCpdChart(labels, data.series, uniqueCps);
+
+    // Ergebnistabelle
+    const subtitle = data.series.map(s => s.keyword).join(', ');
+    document.getElementById('cpd-subtitle').textContent = subtitle;
+
+    _lastCpdData = { changepoints: allCps, perSeries, penalty, minSeg, labels, series: data.series };
+
+    statusEl.textContent =
+      window.t('an_cpd_status','${n} Strukturbruch${pl} erkannt · Penalty: ${pen} · Min. Segmentlänge: ${seg} · ${s} Reihe(n)')
+        .replace('${n}',allCps.length).replace('${pl}',allCps.length!==1?'e':'').replace('${pen}',penalty).replace('${seg}',minSeg).replace('${s}',data.series.length);
+
+    if (!allCps.length) {
+      listEl.innerHTML = `<p style="color:var(--muted);font-size:12px;padding:8px 0 4px;">${window.t('an_cpd_no_result','Keine Changepoints bei diesen Parametern gefunden. Penalty senken oder Min. Segmentlänge verringern.')}</p>`;
+      return;
+    }
+
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+      '<thead><tr style="text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;">' +
+      `<th style="padding:6px 8px;">${window.t('an_cpd_th_date','Datum')}</th><th style="padding:6px 8px;">${window.t('an_cpd_th_keyword','Keyword')}</th>` +
+      `<th style="padding:6px 8px;">${window.t('an_cpd_th_direction','Richtung')}</th><th style="padding:6px 8px;">${window.t('an_cpd_th_before','Vorher')}</th>` +
+      `<th style="padding:6px 8px;">${window.t('an_cpd_th_after','Nachher')}</th><th style="padding:6px 8px;">${window.t('an_cpd_th_delta','Delta')}</th></tr></thead><tbody>`;
+
+    for (const cp of allCps) {
+      const dirIcon = cp.dir === 'up' ? '↑' : '↓';
+      const dirCls = cp.dir === 'up' ? 'up' : 'down';
+      html += `<tr class="cpd-row">
+        <td style="padding:6px 8px;font-variant-numeric:tabular-nums;">${fmtDate(cp.date)}</td>
+        <td style="padding:6px 8px;"><span class="cpd-kw-chip" style="background:${cp.color};">${cp.keyword}</span></td>
+        <td style="padding:6px 8px;" class="cpd-dir ${dirCls}">${dirIcon} ${cp.dir === 'up' ? window.t('an_cpd_dir_up','Anstieg') : window.t('an_cpd_dir_down','Abfall')}</td>
+        <td style="padding:6px 8px;font-variant-numeric:tabular-nums;">${cp.meanBefore.toFixed(1)}</td>
+        <td style="padding:6px 8px;font-variant-numeric:tabular-nums;">${cp.meanAfter.toFixed(1)}</td>
+        <td style="padding:6px 8px;" class="cpd-mag">${cp.dir === 'up' ? '+' : ''}${cp.delta.toFixed(1)}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    listEl.innerHTML = html;
+  }
+
+  // ── Öffnen / Schließen ────────────────────────────────────────
+  function openCpd(kwId) {
+    _cpdKwId = kwId ?? null;
+    const overlay = document.getElementById('cpd-overlay');
+
+    // Keyword-Selector befuellen wenn multi-keyword
+    const kwWrap = document.getElementById('cpd-kw-wrap');
+    const kwSel = document.getElementById('cpd-kw-sel');
+    const mainChart = window._mainChart;
+    if (!kwId && mainChart && mainChart.data) {
+      const kws = mainChart.data.datasets
+        .filter(d => !d._isEvent && !d._isBand && !d._isSunArc)
+        .map(d => ({ id: d._kwId, label: d.label }));
+      if (kws.length > 1) {
+        kwSel.innerHTML = `<option value="">${window.t('an_cpd_all_keywords','Alle Keywords')}</option>` +
+          kws.map(k => `<option value="${k.id}">${k.label}</option>`).join('');
+        kwWrap.style.display = 'flex';
+      } else {
+        kwWrap.style.display = 'none';
+      }
+    } else {
+      kwWrap.style.display = 'none';
+    }
+
+    overlay.style.display = 'flex';
+    runCpd();
+  }
+
+  function closeCpd() {
+    document.getElementById('cpd-overlay').style.display = 'none';
+    if (_cpdChart) { _cpdChart.destroy(); _cpdChart = null; }
+  }
+
+  // ── Expose for context menu ───────────────────────────────────
+  window.openCpdForKw = function(kwId) { openCpd(kwId); };
+
+  // ── Event Listeners ───────────────────────────────────────────
+  if (document.getElementById('btn-changepoint')) document.getElementById('btn-changepoint').addEventListener('click', () => openCpd(null));
+  document.getElementById('btn-cpd-close').addEventListener('click', closeCpd);
+
+  document.getElementById('cpd-overlay').addEventListener('click', e => {
+    if (e.target.id === 'cpd-overlay') closeCpd();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('cpd-overlay').style.display === 'flex') closeCpd();
+  });
+
+  // Slider updates
+  document.getElementById('cpd-penalty').addEventListener('input', e => {
+    document.getElementById('cpd-penalty-val').textContent = parseFloat(e.target.value).toFixed(1);
+    runCpd();
+  });
+  document.getElementById('cpd-minseg').addEventListener('input', e => {
+    document.getElementById('cpd-minseg-val').textContent = e.target.value;
+    runCpd();
+  });
+  document.getElementById('cpd-kw-sel').addEventListener('change', e => {
+    _cpdKwId = e.target.value ? parseInt(e.target.value, 10) : null;
+    runCpd();
+  });
+
+  // Snapshot
+  document.getElementById('btn-cpd-snap').addEventListener('click', () => {
+    if (!_cpdChart) return;
+    const canvas = document.getElementById('cpd-canvas');
+    const subtitle = document.getElementById('cpd-subtitle').textContent;
+    if (typeof window.openAnalysisSnap === 'function') {
+      window.openAnalysisSnap('changepoint', canvas, subtitle,
+        { penalty: parseFloat(document.getElementById('cpd-penalty').value),
+          minSeg: parseInt(document.getElementById('cpd-minseg').value, 10) });
+    }
+  });
+
+  // KI-Analyse
+  if (document.getElementById('btn-cpd-ai')) document.getElementById('btn-cpd-ai').addEventListener('click', () => {
+    if (!_lastCpdData || !_lastCpdData.changepoints.length) {
+      alert(window.t('an_cpd_no_cps','Keine Changepoints vorhanden.')); return;
+    }
+    const series = window._collectSeries ? window._collectSeries(null) : [];
+    if (!series.length) { alert(window.t('an_cpd_no_data','Keine aktiven Datenpunkte.')); return; }
+    const context = `${window.t('analysis_cpd_label','Change-Point-Detection')}: Penalty ${_lastCpdData.penalty}, ${window.t('an_cpd_minseg_label','Min. Segmentlänge:')} ${_lastCpdData.minSeg}`;
+    const extras = {
+      changepoints: _lastCpdData.changepoints.slice(0, 30).map(cp => ({
+        date: cp.date,
+        keyword: cp.keyword,
+        dir: cp.dir === 'up' ? window.t('an_cpd_dir_up','Anstieg') : window.t('an_cpd_dir_down','Abfall'),
+        meanBefore: cp.meanBefore.toFixed(1),
+        meanAfter: cp.meanAfter.toFixed(1),
+        delta: cp.delta.toFixed(1),
+      }))
+    };
+    if (window._openAiWithContext) {
+      window._openAiWithContext(series, context, window.t('an_cpd_ai_context','Change-Point-Detection · KI-Analyse'), 'cpd', extras);
+    }
+  });
+})();
+</script>
+

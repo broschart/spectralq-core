@@ -1,0 +1,484 @@
+<!-- ═══════════════════════════════════════════════════════════
+     PERIODIZITAETS-FILTER OVERLAY
+     ═══════════════════════════════════════════════════════════ -->
+<style>
+#pf-overlay {
+  display:none;position:fixed;inset:0;z-index:900;
+  background:rgba(0,0,0,.65);align-items:center;justify-content:center;
+}
+#pf-dialog {
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  width:min(900px,95vw);max-height:90vh;display:flex;flex-direction:column;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+#pf-freq-list { max-height:200px; overflow-y:auto; }
+.pf-freq-row {
+  display:flex;align-items:center;gap:10px;padding:6px 12px;font-size:13px;
+  border-bottom:1px solid var(--border);
+}
+.pf-freq-row:hover { background:var(--surface2); }
+.pf-freq-row label { flex:1;cursor:pointer; }
+.pf-bar { height:6px;border-radius:3px;background:var(--accent2);min-width:2px; }
+.pf-tech { color:#f59e0b;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em; }
+</style>
+
+<div id="pf-overlay">
+  <div id="pf-dialog">
+    <div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="flex:1;">
+        <h2 style="margin:0 0 3px;font-size:16px;font-weight:600;">Periodizitaets-Filter</h2>
+        <div id="pf-subtitle" style="font-size:12px;color:var(--muted);"></div>
+      </div>
+      <button id="btn-pf-close" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;">&times;</button>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:16px 20px;">
+      <!-- Keyword-Auswahl -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;">Keyword:</label>
+        <select id="pf-kw-sel" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:12px;flex:1;max-width:300px;"></select>
+        <button id="btn-pf-run" class="btn btn-primary" style="font-size:12px;padding:5px 14px;">Spektrum berechnen</button>
+      </div>
+
+      <!-- Spektrum-Chart -->
+      <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:14px;background:var(--bg);">
+        <canvas id="pf-spectrum-canvas" height="220"></canvas>
+      </div>
+
+      <!-- Frequenzliste -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Dominante Frequenzen</span>
+        <span id="pf-auto-label" style="font-size:11px;color:var(--accent2);display:none;">Technische Periodizitaeten automatisch markiert</span>
+      </div>
+      <div id="pf-freq-list"></div>
+
+      <!-- Aktionen -->
+      <div style="display:flex;gap:10px;margin-top:14px;align-items:center;">
+        <button id="btn-pf-apply" class="btn btn-primary" style="font-size:12px;padding:6px 16px;background:var(--accent2);border-color:var(--accent2);" disabled>Filter anwenden</button>
+        <button id="btn-pf-reset" class="btn btn-ghost btn-sm" style="font-size:12px;" disabled>Filter zuruecksetzen</button>
+        <span id="pf-status" style="font-size:12px;color:var(--muted);margin-left:auto;"></span>
+      </div>
+
+      <!-- KI-Button -->
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+        {% if 'trend_analysis' in ai_plugins_enabled %}
+        <button id="btn-pf-ai" style="padding:6px 14px;border-radius:6px;border:1px solid rgba(139,92,246,.5);background:none;color:#a78bfa;font-size:12px;font-weight:600;cursor:pointer;">KI-Interpretation</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  let _pfChart = null;
+  let _pfFreqs = [];
+  let _pfFilteredData = null; // {kwId, original, filtered, removedFreqs}
+  let _pfApplied = false;
+
+  // ── FFT (Cooley-Tukey radix-2) ──────────────────────────────────
+  function fft(re, im) {
+    const n = re.length;
+    if (n <= 1) return;
+
+    // Bit-reversal permutation
+    for (let i = 1, j = 0; i < n; i++) {
+      let bit = n >> 1;
+      for (; j & bit; bit >>= 1) j ^= bit;
+      j ^= bit;
+      if (i < j) {
+        [re[i], re[j]] = [re[j], re[i]];
+        [im[i], im[j]] = [im[j], im[i]];
+      }
+    }
+
+    for (let len = 2; len <= n; len *= 2) {
+      const halfLen = len / 2;
+      const angle = -2 * Math.PI / len;
+      const wRe = Math.cos(angle), wIm = Math.sin(angle);
+      for (let i = 0; i < n; i += len) {
+        let curRe = 1, curIm = 0;
+        for (let j = 0; j < halfLen; j++) {
+          const tRe = curRe * re[i + j + halfLen] - curIm * im[i + j + halfLen];
+          const tIm = curRe * im[i + j + halfLen] + curIm * re[i + j + halfLen];
+          re[i + j + halfLen] = re[i + j] - tRe;
+          im[i + j + halfLen] = im[i + j] - tIm;
+          re[i + j] += tRe;
+          im[i + j] += tIm;
+          const newCurRe = curRe * wRe - curIm * wIm;
+          curIm = curRe * wIm + curIm * wRe;
+          curRe = newCurRe;
+        }
+      }
+    }
+  }
+
+  function ifft(re, im) {
+    const n = re.length;
+    for (let i = 0; i < n; i++) im[i] = -im[i];
+    fft(re, im);
+    for (let i = 0; i < n; i++) { re[i] /= n; im[i] = -im[i] / n; }
+  }
+
+  function nextPow2(n) { let p = 1; while (p < n) p *= 2; return p; }
+
+  // ── Spektrum berechnen ──────────────────────────────────────────
+  function computeSpectrum(values, stepHours) {
+    const n = values.length;
+    const N = nextPow2(n);
+
+    // Detrend (Mittelwert abziehen)
+    const mean = values.reduce((s, v) => s + v, 0) / n;
+    const re = new Float64Array(N);
+    const im = new Float64Array(N);
+    for (let i = 0; i < n; i++) re[i] = values[i] - mean;
+
+    fft(re, im);
+
+    // Power spectrum (einseitig)
+    const spectrum = [];
+    const halfN = Math.floor(N / 2);
+    for (let k = 1; k < halfN; k++) {
+      const power = (re[k] * re[k] + im[k] * im[k]) / (N * N);
+      const freqPerStep = k / N;                     // Zyklen pro Datenpunkt
+      const periodSteps = 1 / freqPerStep;            // Periode in Datenpunkten
+      const periodHours = periodSteps * stepHours;
+      const periodDays  = periodHours / 24;
+      spectrum.push({ k, power, periodDays, periodHours, freqPerStep });
+    }
+
+    return { spectrum, N, mean, re: Array.from(re), im: Array.from(im) };
+  }
+
+  // ── Bekannte technische Periodizitaeten ────────────────────────
+  const KNOWN_TECH = [
+    { days: 7,   label: '7-Tage (woechentliches Sampling)', tolerance: 0.15 },
+    { days: 3.5, label: '3.5-Tage (Halb-Wochen-Harmonische)', tolerance: 0.1 },
+    { days: 1,   label: '24h (taeglicher Zyklus)', tolerance: 0.08 },
+  ];
+
+  function isTechnical(periodDays) {
+    for (const t of KNOWN_TECH) {
+      if (Math.abs(periodDays - t.days) / t.days <= t.tolerance) return t;
+    }
+    return null;
+  }
+
+  // ── Dominante Frequenzen finden ─────────────────────────────────
+  function findDominantFreqs(spectrum, topN = 12) {
+    const sorted = [...spectrum].sort((a, b) => b.power - a.power);
+    const maxPower = sorted[0]?.power || 1;
+    return sorted.slice(0, topN).map(s => ({
+      ...s,
+      relPower: s.power / maxPower,
+      tech: isTechnical(s.periodDays),
+    }));
+  }
+
+  // ── Spektrum-Chart rendern ──────────────────────────────────────
+  function renderSpectrumChart(spectrum, dominantKs) {
+    const canvas = document.getElementById('pf-spectrum-canvas');
+    if (_pfChart) { _pfChart.destroy(); _pfChart = null; }
+
+    // Nur sinnvoller Bereich (Perioden > 0.5 Tage)
+    const filtered = spectrum.filter(s => s.periodDays >= 0.4);
+    const labels = filtered.map(s => {
+      if (s.periodDays >= 2) return s.periodDays.toFixed(1) + 'd';
+      return (s.periodDays * 24).toFixed(0) + 'h';
+    });
+    const powers = filtered.map(s => s.power);
+    const colors = filtered.map(s => {
+      if (dominantKs.has(s.k) && isTechnical(s.periodDays)) return '#f59e0b';
+      if (dominantKs.has(s.k)) return (window._VT_ACCENT2 || '#4f8ef7');
+      return 'rgba(255,255,255,.15)';
+    });
+
+    _pfChart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: powers,
+          backgroundColor: colors,
+          borderWidth: 0,
+          barPercentage: 1,
+          categoryPercentage: 1,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => {
+                const s = filtered[items[0].dataIndex];
+                const pLabel = s.periodDays >= 1
+                  ? `Periode: ${s.periodDays.toFixed(2)} Tage`
+                  : `Periode: ${(s.periodDays * 24).toFixed(1)} Stunden`;
+                const t = isTechnical(s.periodDays);
+                return t ? `${pLabel} [TECHNISCH: ${t.label}]` : pLabel;
+              },
+              label: (item) => `Power: ${item.raw.toExponential(2)}`,
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Periode', color: '#888', font: { size: 11 } },
+            ticks: { color: '#888', maxRotation: 60, font: { size: 9 }, maxTicksLimit: 40 },
+            grid: { display: false },
+          },
+          y: {
+            title: { display: true, text: 'Power', color: '#888', font: { size: 11 } },
+            ticks: { color: '#888', font: { size: 10 } },
+            grid: { color: 'rgba(255,255,255,.06)' },
+          },
+        },
+      },
+    });
+  }
+
+  // ── Frequenzliste rendern ───────────────────────────────────────
+  function renderFreqList(dominants) {
+    const listEl = document.getElementById('pf-freq-list');
+    const maxP = dominants[0]?.power || 1;
+    listEl.innerHTML = dominants.map((d, i) => {
+      const pLabel = d.periodDays >= 1
+        ? `${d.periodDays.toFixed(2)} Tage`
+        : `${(d.periodDays * 24).toFixed(1)} Stunden`;
+      const barW = Math.max(2, Math.round(d.relPower * 120));
+      const techBadge = d.tech
+        ? `<span class="pf-tech">technisch</span>`
+        : '';
+      const checked = d.tech ? 'checked' : '';
+      return `<div class="pf-freq-row">
+        <input type="checkbox" id="pf-cb-${i}" data-k="${d.k}" ${checked} style="accent-color:var(--accent2);">
+        <label for="pf-cb-${i}">
+          <strong>${pLabel}</strong>
+          <span style="color:var(--muted);font-size:12px;margin-left:6px;">(${(d.periodDays / 7).toFixed(2)} Wochen)</span>
+          ${techBadge}
+        </label>
+        <div class="pf-bar" style="width:${barW}px;${d.tech ? 'background:#f59e0b;' : ''}"></div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('pf-auto-label').style.display =
+      dominants.some(d => d.tech) ? '' : 'none';
+    document.getElementById('btn-pf-apply').disabled = false;
+  }
+
+  // ── Filter anwenden (Bandstop) ──────────────────────────────────
+  function applyBandstop(fftResult, ksToRemove) {
+    const re = [...fftResult.re];
+    const im = [...fftResult.im];
+    const N = fftResult.N;
+
+    for (const k of ksToRemove) {
+      // Nullsetzen: Frequenz k und Spiegelbild N-k
+      re[k] = 0; im[k] = 0;
+      if (k > 0 && k < N) { re[N - k] = 0; im[N - k] = 0; }
+      // Auch benachbarte Bins daempfen (Fenstereffekt)
+      for (const dk of [-1, 1]) {
+        const nk = k + dk;
+        if (nk > 0 && nk < N / 2) {
+          re[nk] *= 0.3; im[nk] *= 0.3;
+          re[N - nk] *= 0.3; im[N - nk] *= 0.3;
+        }
+      }
+    }
+
+    ifft(re, im);
+    // Mittelwert zurueckaddieren, auf Originallaenge zuschneiden
+    return re;
+  }
+
+  // ── Hauptfunktion ───────────────────────────────────────────────
+  function getKwData(kwId) {
+    if (!window._mainChart) return null;
+    const entries = typeof rawData !== 'undefined' ? Object.values(rawData) : [];
+    const entry = entries.find(e => e.kwId === kwId && e.data.length > 0);
+    if (!entry) return null;
+    return entry;
+  }
+
+  function getStepHours(data) {
+    if (data.length < 2) return 24;
+    const d0 = new Date(data[0].date || data[0].x);
+    const d1 = new Date(data[1].date || data[1].x);
+    return Math.max(1, Math.round((d1 - d0) / 3600000));
+  }
+
+  let _fftResult = null;
+  let _pfKwId = null;
+  let _pfOriginalLen = 0;
+
+  function runSpectrum() {
+    const sel = document.getElementById('pf-kw-sel');
+    const kwId = parseInt(sel.value, 10);
+    if (!kwId) return;
+
+    const entry = getKwData(kwId);
+    if (!entry || entry.data.length < 16) {
+      document.getElementById('pf-status').textContent = 'Mindestens 16 Datenpunkte erforderlich.';
+      return;
+    }
+
+    _pfKwId = kwId;
+    const values = entry.data.map(d => d.value ?? d.y ?? 0);
+    _pfOriginalLen = values.length;
+    const stepH = getStepHours(entry.data);
+
+    document.getElementById('pf-status').textContent = `${values.length} Punkte, Schrittweite ${stepH >= 24 ? (stepH / 24).toFixed(1) + ' Tage' : stepH + 'h'}`;
+
+    _fftResult = computeSpectrum(values, stepH);
+    const dominants = findDominantFreqs(_fftResult.spectrum);
+    _pfFreqs = dominants;
+
+    const domKs = new Set(dominants.map(d => d.k));
+    renderSpectrumChart(_fftResult.spectrum, domKs);
+    renderFreqList(dominants);
+  }
+
+  // ── Overlay oeffnen/schliessen ──────────────────────────────────
+  function openPf() {
+    document.getElementById('pf-overlay').style.display = 'flex';
+    // Keyword-Dropdown befuellen
+    const sel = document.getElementById('pf-kw-sel');
+    sel.innerHTML = '';
+    if (typeof rawData !== 'undefined') {
+      Object.values(rawData).filter(e => e.data.length > 0).forEach(e => {
+        const opt = document.createElement('option');
+        opt.value = e.kwId;
+        opt.textContent = e.keyword + (e.geo ? ` (${e.geo})` : '');
+        sel.appendChild(opt);
+      });
+    }
+    document.getElementById('pf-freq-list').innerHTML = '';
+    document.getElementById('pf-status').textContent = '';
+    document.getElementById('btn-pf-apply').disabled = true;
+    document.getElementById('btn-pf-reset').disabled = !_pfApplied;
+  }
+
+  function closePf() {
+    document.getElementById('pf-overlay').style.display = 'none';
+  }
+
+  // ── Filter anwenden → Chart aktualisieren ───────────────────────
+  function applyFilter() {
+    if (!_fftResult || !_pfKwId) return;
+
+    const cbs = document.querySelectorAll('#pf-freq-list input[type=checkbox]:checked');
+    const ksToRemove = new Set([...cbs].map(cb => parseInt(cb.dataset.k, 10)));
+    if (!ksToRemove.size) {
+      document.getElementById('pf-status').textContent = 'Keine Frequenzen zum Filtern ausgewaehlt.';
+      return;
+    }
+
+    const filtered = applyBandstop(_fftResult, ksToRemove);
+
+    // Gefilterte Daten im Chart anwenden
+    if (window._mainChart) {
+      const chart = window._mainChart;
+      const ds = chart.data.datasets.find(d => d._kwId === _pfKwId && !d._isDecomp);
+      if (ds) {
+        // Original sichern
+        if (!ds._origData) ds._origData = ds.data.map(p => ({ ...p }));
+
+        // Gefilterte Werte einsetzen (Mittelwert zurueckaddieren)
+        const mean = _fftResult.mean;
+        for (let i = 0; i < Math.min(ds.data.length, _pfOriginalLen); i++) {
+          ds.data[i].y = Math.max(0, Math.round((filtered[i] + mean) * 100) / 100);
+        }
+        chart.update('none');
+      }
+    }
+
+    const removedLabels = _pfFreqs.filter(f => ksToRemove.has(f.k)).map(f =>
+      f.periodDays >= 1 ? `${f.periodDays.toFixed(1)}d` : `${(f.periodDays * 24).toFixed(0)}h`
+    );
+    document.getElementById('pf-status').textContent =
+      `Filter aktiv: ${ksToRemove.size} Frequenzen entfernt (${removedLabels.join(', ')})`;
+
+    _pfApplied = true;
+    _pfFilteredData = { kwId: _pfKwId, removedKs: [...ksToRemove], removedLabels };
+    document.getElementById('btn-pf-reset').disabled = false;
+
+    // Korrelation neu berechnen
+    if (typeof buildCorrelation === 'function') buildCorrelation();
+  }
+
+  // ── Filter zuruecksetzen ────────────────────────────────────────
+  function resetFilter() {
+    if (window._mainChart) {
+      const chart = window._mainChart;
+      for (const ds of chart.data.datasets) {
+        if (ds._origData) {
+          ds.data = ds._origData.map(p => ({ ...p }));
+          delete ds._origData;
+        }
+      }
+      chart.update('none');
+    }
+    _pfApplied = false;
+    _pfFilteredData = null;
+    document.getElementById('pf-status').textContent = 'Filter zurueckgesetzt.';
+    document.getElementById('btn-pf-reset').disabled = true;
+    if (typeof buildCorrelation === 'function') buildCorrelation();
+  }
+
+  // ── Event Listeners ─────────────────────────────────────────────
+  if (document.getElementById('btn-period-filter')) document.getElementById('btn-period-filter').addEventListener('click', () => {
+    document.getElementById('lab-menu-dd').style.display = 'none';
+    openPf();
+  });
+  document.getElementById('btn-pf-close').addEventListener('click', closePf);
+  document.getElementById('pf-overlay').addEventListener('click', e => {
+    if (e.target.id === 'pf-overlay') closePf();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('pf-overlay').style.display === 'flex') closePf();
+  });
+  document.getElementById('btn-pf-run').addEventListener('click', runSpectrum);
+  document.getElementById('btn-pf-apply').addEventListener('click', applyFilter);
+  document.getElementById('btn-pf-reset').addEventListener('click', resetFilter);
+
+  // KI-Interpretation
+  if (document.getElementById('btn-pf-ai')) document.getElementById('btn-pf-ai').addEventListener('click', () => {
+    if (!_pfFreqs.length) { alert('Zuerst Spektrum berechnen.'); return; }
+    const series = window._collectSeries ? window._collectSeries(_pfKwId) : [];
+    if (!series.length) { alert('Keine Datenpunkte.'); return; }
+
+    const techFreqs = _pfFreqs.filter(f => f.tech);
+    const nonTechFreqs = _pfFreqs.filter(f => !f.tech).slice(0, 5);
+    const context = `Periodizitaets-Analyse (Fourier): ${_pfFreqs.length} dominante Frequenzen identifiziert. `
+      + `${techFreqs.length} davon sind technische Google-Trends-Artefakte. `
+      + (_pfApplied ? `Filter aktiv: ${_pfFilteredData.removedLabels.join(', ')} entfernt.` : 'Filter nicht angewendet.');
+
+    const extras = {
+      periodicity: {
+        total_frequencies: _pfFreqs.length,
+        technical: techFreqs.map(f => ({
+          period_days: f.periodDays.toFixed(2),
+          label: f.tech.label,
+          relative_power: f.relPower.toFixed(3),
+        })),
+        natural: nonTechFreqs.map(f => ({
+          period_days: f.periodDays.toFixed(2),
+          relative_power: f.relPower.toFixed(3),
+        })),
+        filter_applied: _pfApplied,
+        removed: _pfApplied ? _pfFilteredData.removedLabels : [],
+      }
+    };
+
+    if (window._openAiWithContext) {
+      window._openAiWithContext(series, context, 'Periodizitaets-Filter - KI-Analyse', 'pf', extras);
+    }
+  });
+})();
+</script>
+

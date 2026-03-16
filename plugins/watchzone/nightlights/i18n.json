@@ -1,0 +1,50 @@
+{
+  "de": {
+    "wz_sidebar_nightlights": "Nachtlichter",
+    "wz_nightlights_title": "Nachtlichter",
+    "wz_nightlights_source": "Quelle: NASA VIIRS Day/Night Band (GIBS)",
+    "wz_nightlights_desc": "Analysiert nächtliche Lichtemissionen aus NASA-Satellitendaten (VIIRS). Veränderungen können auf wirtschaftliche Aktivität, Infrastrukturentwicklung oder Konflikte hinweisen. Die Zeitreihe erscheint in der Analyse-Zeitleiste.",
+    "wz_nightlights_hint": "Beobachtungsgebiete auf der Karte einzeichnen. VIIRS-Nachtlichtdaten (NASA) zeigen die Lichtintensität und ihre Veränderung über Zeit in der Analyse-Zeitleiste.",
+    "wz_nightlights_intensity": "Lichtintensität",
+    "wz_nightlights_brightness": "Mittlere Helligkeit:",
+    "wz_nightlights_note": "Höhere Werte = mehr künstliches Licht.<br>Veränderungen können Urbanisierung, Konflikte oder Stromausfälle anzeigen.",
+    "wz_nightlights_zone": "Zone:",
+    "wz_nightlights_download": "Bild herunterladen"
+  },
+  "en": {
+    "wz_sidebar_nightlights": "Nighttime Lights",
+    "wz_nightlights_title": "Nighttime Lights",
+    "wz_nightlights_source": "Source: NASA VIIRS Day/Night Band (GIBS)",
+    "wz_nightlights_desc": "Analyses nocturnal light emissions from NASA satellite data (VIIRS). Changes can indicate economic activity, infrastructure development or conflicts. The time series appears in the analysis timeline.",
+    "wz_nightlights_hint": "Draw observation areas on the map. VIIRS nighttime light data (NASA) shows light intensity and its change over time in the analysis timeline.",
+    "wz_nightlights_intensity": "Light Intensity",
+    "wz_nightlights_brightness": "Mean Brightness:",
+    "wz_nightlights_note": "Brighter values = more artificial light.<br>Changes may indicate urbanisation, conflicts or power outages.",
+    "wz_nightlights_zone": "Zone:",
+    "wz_nightlights_download": "Download Image"
+  },
+  "fr": {
+    "wz_sidebar_nightlights": "Lumières nocturnes",
+    "wz_nightlights_title": "Lumières nocturnes",
+    "wz_nightlights_source": "Source : NASA VIIRS Day/Night Band (GIBS)",
+    "wz_nightlights_desc": "Analyse les émissions de lumière nocturne à partir des données satellites NASA (VIIRS). Les changements peuvent indiquer une activité économique, un développement d’infrastructure ou des conflits. La série chronologique apparaît dans la chronologie d’analyse.",
+    "wz_nightlights_hint": "Dessinez des zones d’observation sur la carte. Les données VIIRS de lumière nocturne (NASA) montrent l’intensité lumineuse et son évolution dans le temps.",
+    "wz_nightlights_intensity": "Intensité lumineuse",
+    "wz_nightlights_brightness": "Luminosité moyenne :",
+    "wz_nightlights_note": "Valeurs plus élevées = plus de lumière artificielle.<br>Les changements peuvent indiquer une urbanisation, des conflits ou des pannes de courant.",
+    "wz_nightlights_zone": "Zone :",
+    "wz_nightlights_download": "Télécharger l'image"
+  },
+  "es": {
+    "wz_sidebar_nightlights": "Luces nocturnas",
+    "wz_nightlights_title": "Luces nocturnas",
+    "wz_nightlights_source": "Fuente: NASA VIIRS Day/Night Band (GIBS)",
+    "wz_nightlights_desc": "Analiza las emisiones de luz nocturna de los datos satelitales de la NASA (VIIRS). Los cambios pueden indicar actividad económica, desarrollo de infraestructura o conflictos. La serie temporal aparece en la línea de tiempo de análisis.",
+    "wz_nightlights_hint": "Dibuje áreas de observación en el mapa. Los datos de luz nocturna VIIRS (NASA) muestran la intensidad luminos y su cambio en el tiempo.",
+    "wz_nightlights_intensity": "Intensidad luminos",
+    "wz_nightlights_brightness": "Brillo medio:",
+    "wz_nightlights_note": "Valores más altos = más luz artificial.<br>Los cambios pueden indicar urbanización, conflictos o apagones.",
+    "wz_nightlights_zone": "Zona:",
+    "wz_nightlights_download": "Descargar imagen"
+  }
+}

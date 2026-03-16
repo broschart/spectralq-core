@@ -1,0 +1,22 @@
+{
+  "de": {
+    "analysis_spike_coin_label": "Spike-Koinzidenz",
+    "analysis_spike_coin_desc": "Erkennung gleichzeitiger Spitzen über mehrere Keywords hinweg.",
+    "an_spike_coinc": "⚡ Spike-Koinzidenz"
+  },
+  "en": {
+    "analysis_spike_coin_label": "Spike Coincidence",
+    "analysis_spike_coin_desc": "Detection of simultaneous spikes across multiple keywords.",
+    "an_spike_coinc": "⚡ Spike coincidence"
+  },
+  "fr": {
+    "analysis_spike_coin_label": "Coïncidence de pics",
+    "analysis_spike_coin_desc": "Détection de pics simultanés sur plusieurs mots-clés.",
+    "an_spike_coinc": "⚡ Coïncidence de pics"
+  },
+  "es": {
+    "analysis_spike_coin_label": "Coincidencia de picos",
+    "analysis_spike_coin_desc": "Detección de picos simultáneos en múltiples palabras clave.",
+    "an_spike_coinc": "⚡ Coincidencia de picos"
+  }
+}

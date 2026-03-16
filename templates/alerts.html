@@ -1,0 +1,1045 @@
+{% extends "base.html" %}
+
+{% block title %}Alerts – spectralQ{% endblock %}
+
+{% block head %}
+<style>
+  .alert-row { transition: background .12s; }
+
+  .type-badge {
+    display: inline-block; padding: 2px 9px; border-radius: 10px;
+    font-size: 11px; font-weight: 600; white-space: nowrap;
+  }
+  .tb-occ { background: var(--badge-blue-bg); color: var(--accent); }
+  .tb-dis { background: var(--badge-red-bg); color: var(--danger); }
+  .tb-spk { background: var(--badge-orange-bg); color: #f97316; }
+  .tb-vup { background: var(--badge-teal-bg); color: #22c55e; }
+  .tb-vdn { background: var(--badge-purple-bg); color: #a78bfa; }
+
+  .status-dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-right: 5px;
+  }
+  .dot-on  { background: var(--success); }
+  .dot-off { background: var(--muted); }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.6); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px; width: 520px; max-width: 95vw;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal h3 { font-size: 15px; font-weight: 700; margin-bottom: 20px; }
+
+  .form-row  { margin-bottom: 14px; }
+  .form-row label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .form-row input, .form-row select, .form-row textarea {
+    width: 100%; padding: 7px 10px; border-radius: 6px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-size: 13px;
+  }
+  .form-row input:focus, .form-row select:focus {
+    outline: none; border-color: var(--accent);
+  }
+
+  .kw-scope-toggle {
+    display: flex; gap: 8px; margin-bottom: 8px;
+  }
+  .scope-btn {
+    padding: 4px 14px; border-radius: 14px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--muted); font-size: 12px;
+    cursor: pointer; transition: all .12s;
+  }
+  .scope-btn.active {
+    border-color: var(--accent); color: var(--text); background: var(--surface);
+  }
+
+  #kw-checkboxes {
+    max-height: 160px; overflow-y: auto;
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 10px; background: var(--surface2);
+  }
+  #kw-checkboxes label {
+    display: flex; align-items: center; gap: 8px;
+    padding: 3px 0; font-size: 12px; color: var(--text); cursor: pointer;
+  }
+  #kw-checkboxes input[type=checkbox] { accent-color: var(--accent); }
+
+  .spike-fields { /* shown only for spike type */ }
+
+  .inline-row { display: flex; gap: 10px; }
+  .inline-row .form-row { flex: 1; }
+
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+  .unseen-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--danger); color: #fff; border-radius: 10px;
+    font-size: 10px; font-weight: 700; min-width: 18px; height: 18px;
+    padding: 0 4px; margin-left: 4px;
+  }
+
+  /* ── Sub-Tabs ── */
+  .al-tab-bar {
+    display: flex; gap: 0;
+    border-bottom: 2px solid var(--border); margin-bottom: 28px;
+  }
+  .al-tab-btn {
+    padding: 10px 32px; font-size: 14px; font-weight: 600;
+    background: none; border: none; border-bottom: 2px solid transparent;
+    margin-bottom: -2px; cursor: pointer; color: var(--muted);
+    transition: color .12s, border-color .12s; white-space: nowrap;
+  }
+  .al-tab-btn:hover { color: var(--text); }
+  .al-tab-btn.active { color: var(--text); border-bottom-color: var(--accent1); }
+  .al-tab-panel { display: none; }
+  .al-tab-panel.active { display: block; padding-top: 4px; }
+
+  /* ── Meldungen-Tab: von Dashboard übernommen ── */
+  .summary-grid { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 0; }
+  .summary-box {
+    background: var(--surface2); border-radius: 8px; padding: 14px 20px;
+    border-left: 3px solid var(--accent); min-width: 120px;
+  }
+  .summary-box .num { font-size: 26px; font-weight: 700; color: var(--text); }
+  .summary-box .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .summary-box.warn { border-left-color: #f97316; }
+  .summary-box.warn .num { color: #f97316; }
+  .filter-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .flt-btn {
+    padding: 4px 12px; border-radius: 14px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--muted); font-size: 12px;
+    cursor: pointer; transition: all .12s;
+  }
+  .flt-btn.active, .flt-btn:hover { border-color: var(--accent); color: var(--text); background: var(--surface); }
+  .ev-row { transition: background .12s; }
+  .ev-row.unseen td:first-child { border-left: 3px solid var(--accent); }
+  .ev-row.seen { opacity: .6; }
+  .detail-text { font-size: 11px; color: var(--muted); max-width: 300px;
+                 white-space: pre-wrap; word-break: break-word; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 data-i18n="al_page_title">Alerts</h1>
+
+{% if not current_user.is_superadmin and user_project_count == 0 %}
+<div style="max-width:640px;margin:40px auto;text-align:center;">
+  <div style="padding:24px;background:rgba(124,92,191,.08);border:1px solid rgba(124,92,191,.25);border-radius:10px;">
+    <strong style="font-size:16px;color:var(--accent1);display:block;margin-bottom:8px;" data-i18n="kw_no_project_msg">Bitte zuerst ein Projekt anlegen.</strong>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;" data-i18n="kw_no_project_desc">Um mit der Analyse zu starten, wird ein Projekt benötigt. Dort werden alle Keywords und Ergebnisse organisiert.</p>
+    <a href="/projects" style="display:inline-block;padding:10px 24px;background:var(--accent1);color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;" data-i18n="kw_no_project_btn">Projekt anlegen</a>
+  </div>
+</div>
+{% else %}
+
+<!-- ── Sub-Tab-Bar ── -->
+<div class="al-tab-bar">
+  <button class="al-tab-btn active" id="al-tab-meldungen" onclick="alSwitchTab('meldungen')" data-i18n="al_tab_events">Meldungen</button>
+  <button class="al-tab-btn"        id="al-tab-konfig"    onclick="alSwitchTab('konfig')" data-i18n="al_tab_config">Konfiguration</button>
+</div>
+
+<!-- ══ Tab: Meldungen ══ -->
+<div class="al-tab-panel active" id="al-panel-meldungen">
+  <!-- ── Zusammenfassung ── -->
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <h2 style="margin:0;" data-i18n="al_overview">Übersicht</h2>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button id="btn-evaluate" class="btn btn-ghost btn-sm" data-i18n="al_btn_check">Jetzt prüfen</button>
+        <button id="btn-seen-all" class="btn btn-ghost btn-sm" data-i18n="al_btn_seen_all">Alle gelesen</button>
+      </div>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-box warn">
+        <div class="num" id="sum-unseen">–</div>
+        <div class="lbl" data-i18n="al_unseen">Ungelesen</div>
+      </div>
+      <div class="summary-box">
+        <div class="num" id="sum-total">–</div>
+        <div class="lbl" data-i18n="al_total">Gesamt</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Ereignisse ── -->
+  <div class="card">
+    <div style="display:flex;align-items:center;margin-bottom:14px;gap:10px;">
+      <h2 style="margin:0;" data-i18n="al_events_title">Ereignisse</h2>
+      <button id="btn-refresh" class="btn btn-ghost btn-sm" style="margin-left:auto;" data-i18n="al_btn_refresh">Aktualisieren</button>
+    </div>
+    <div class="filter-bar">
+      <button class="flt-btn active" data-filter="all" data-i18n="al_flt_all">Alle</button>
+      <button class="flt-btn" data-filter="unseen" data-i18n="al_flt_unseen">Ungelesen</button>
+      <button class="flt-btn" data-filter="occurrence" data-i18n="al_type_occurrence">Auftreten</button>
+      <button class="flt-btn" data-filter="disappearance" data-i18n="al_type_disappearance">Verschwinden</button>
+      <button class="flt-btn" data-filter="spike" data-i18n="al_type_spike">Anstieg</button>
+      <button class="flt-btn" data-filter="volume_rise" data-i18n="al_type_vol_rise">Vol. aufkommt</button>
+      <button class="flt-btn" data-filter="volume_drop" data-i18n="al_type_vol_drop">Vol. verschwindet</button>
+    </div>
+    <table id="ev-table">
+      <thead>
+        <tr>
+          <th data-i18n="al_th_time">Zeit</th>
+          <th data-i18n="al_page_title">Alert</th>
+          <th data-i18n="al_th_type">Typ</th>
+          <th data-i18n="kw_th_keyword">Keyword</th>
+          <th data-i18n="al_th_details">Details</th>
+          <th style="width:40px;"></th>
+        </tr>
+      </thead>
+      <tbody id="ev-body">
+        <tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px;" data-i18n="kw_loading">Lade…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div><!-- /al-panel-meldungen -->
+
+<!-- ══ Tab: Konfiguration ══ -->
+<div class="al-tab-panel" id="al-panel-konfig">
+  <p style="color:var(--muted);font-size:13px;margin-bottom:20px;" data-i18n="al_config_desc">Lass dich automatisch über Veränderungen im Suchverhalten informieren – z.&thinsp;B. bei plötzlichen Spikes, neuen oder verschwindenden Begriffen.</p>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;margin-bottom:16px;">
+      <h2 style="margin:0;" data-i18n="al_configured_title">Konfigurierte Alerts</h2>
+      <button id="btn-new-alert" class="btn btn-sm" style="margin-left:auto;background:var(--accent1);color:#fff;" data-i18n="al_btn_new">+ Neuer Alert</button>
+    </div>
+    <table id="alert-table">
+      <thead>
+        <tr>
+          <th data-i18n="al_th_name">Name</th>
+          <th data-i18n="al_th_type">Typ</th>
+          <th data-i18n="al_th_watch_term">Suchbegriff</th>
+          <th data-i18n="nav_keywords">Keywords</th>
+          <th data-i18n="al_th_comment">Kommentar</th>
+          <th data-i18n="al_th_status">Status</th>
+          <th data-i18n="al_th_last_triggered">Letzte Auslösung</th>
+          <th style="text-align:center;" data-i18n="al_th_unseen">Ungesehen</th>
+          <th style="width:80px;"></th>
+        </tr>
+      </thead>
+      <tbody id="alert-body">
+        <tr><td colspan="8" class="text-muted" style="text-align:center;padding:24px;" data-i18n="kw_loading">Lade…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div><!-- /al-panel-konfig -->
+
+<!-- ── Modal ── -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title" data-i18n="al_modal_new_title">Neuer Alert</h3>
+
+    <div class="form-row">
+      <label data-i18n="al_th_name">Name</label>
+      <input id="f-name" type="text" data-i18n-placeholder="al_ph_name" placeholder="z.B. Überwachung XYZ" />
+    </div>
+
+    <div class="form-row">
+      <label data-i18n="al_th_type">Typ</label>
+      <select id="f-type">
+        <option value="occurrence" data-i18n="al_opt_occurrence">Auftreten – Begriff taucht in Verwandten Anfragen auf</option>
+        <option value="disappearance" data-i18n="al_opt_disappearance">Verschwinden – Begriff verschwindet aus Verwandten Anfragen</option>
+        <option value="spike" data-i18n="al_opt_spike">Anstieg – Trend-Wert steigt stark</option>
+        <option value="volume_rise" data-i18n="al_opt_vol_rise">Volumen aufkommt – Suchvolumen war null, steigt jetzt an</option>
+        <option value="volume_drop" data-i18n="al_opt_vol_drop">Volumen verschwindet – Suchvolumen bricht von Wert auf null ein</option>
+      </select>
+    </div>
+
+    <div class="form-row" id="row-watch-term">
+      <label id="lbl-watch-term" data-i18n="al_lbl_watch_term">Suchbegriff / Wort</label>
+      <input id="f-watch-term" type="text" data-i18n-placeholder="al_ph_watch_term" placeholder="z.B. krise (auch Teilwort von zusammengesetzten Begriffen)" />
+    </div>
+
+    <!-- Keyword-Scope -->
+    <div class="form-row">
+      <label data-i18n="al_lbl_scope">Gilt für Keywords</label>
+      <div class="kw-scope-toggle">
+        <button class="scope-btn active" data-scope="all" data-i18n="al_flt_all">Alle</button>
+        <button class="scope-btn" data-scope="selected" data-i18n="al_scope_selected">Ausgewählte</button>
+      </div>
+      <div id="kw-checkboxes" style="display:none;">
+        <span style="font-size:12px;color:var(--muted);" data-i18n="al_kw_loading">Lade Keywords…</span>
+      </div>
+    </div>
+
+    <!-- Spike-spezifisch -->
+    <div id="spike-fields" style="display:none;">
+      <div class="inline-row">
+        <div class="form-row">
+          <label data-i18n="al_lbl_threshold_type">Schwellwert-Typ</label>
+          <select id="f-threshold-type">
+            <option value="percent" data-i18n="al_opt_percent">Prozentualer Anstieg</option>
+            <option value="value" data-i18n="al_opt_abs_value">Absoluter Mindestwert</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label id="lbl-threshold" data-i18n="al_lbl_threshold_pct">Schwellwert (%)</label>
+          <input id="f-threshold" type="number" min="1" value="50" />
+        </div>
+      </div>
+      <div class="form-row" id="row-hours">
+        <label data-i18n="al_lbl_compare_hours">Vergleichszeitraum (Stunden)</label>
+        <input id="f-hours" type="number" min="1" value="24" />
+      </div>
+    </div>
+
+    <!-- Volumen-spezifisch -->
+    <div id="volume-fields" style="display:none;">
+      <div class="inline-row">
+        <div class="form-row">
+          <label id="lbl-vol-threshold" data-i18n="al_lbl_vol_threshold">Mindestwert für „vorhanden" (0–100)</label>
+          <input id="f-vol-threshold" type="number" min="1" max="100" value="5" />
+        </div>
+        <div class="form-row">
+          <label data-i18n="al_lbl_vol_hours">Zeitfenster (Stunden)</label>
+          <input id="f-vol-hours" type="number" min="1" value="24" />
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label><span data-i18n="al_th_comment">Kommentar</span> <span style="color:var(--muted);font-weight:400;" data-i18n="al_optional">(optional)</span></label>
+      <textarea id="f-comment" rows="2" data-i18n-placeholder="al_ph_comment"
+        placeholder="Interne Notiz zum Alert …"
+        style="resize:vertical;"></textarea>
+    </div>
+
+    <div class="form-row">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input id="f-active" type="checkbox" checked style="accent-color:var(--accent);width:auto;" />
+        <span data-i18n="al_lbl_active">Alert aktiv</span>
+      </label>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="btn-cancel" data-i18n="kw_btn_cancel">Abbrechen</button>
+      <button class="btn btn-sm" id="btn-save" data-i18n="kw_btn_save">Speichern</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+window._mergeI18n({
+  de: {
+    al_page_title: 'Alerts',
+    al_tab_events: 'Meldungen',
+    al_tab_config: 'Konfiguration',
+    al_overview: '\u00dcbersicht',
+    al_btn_check: 'Jetzt pr\u00fcfen',
+    al_btn_seen_all: 'Alle gelesen',
+    al_unseen: 'Ungelesen',
+    al_total: 'Gesamt',
+    al_events_title: 'Ereignisse',
+    al_btn_refresh: 'Aktualisieren',
+    al_flt_all: 'Alle',
+    al_flt_unseen: 'Ungelesen',
+    al_type_occurrence: 'Auftreten',
+    al_type_disappearance: 'Verschwinden',
+    al_type_spike: 'Anstieg',
+    al_type_vol_rise: 'Vol. aufkommt',
+    al_type_vol_drop: 'Vol. verschwindet',
+    al_th_time: 'Zeit',
+    al_th_type: 'Typ',
+    al_th_details: 'Details',
+    al_th_name: 'Name',
+    al_th_watch_term: 'Suchbegriff',
+    al_th_comment: 'Kommentar',
+    al_th_status: 'Status',
+    al_th_last_triggered: 'Letzte Ausl\u00f6sung',
+    al_th_unseen: 'Ungesehen',
+    al_no_events: 'Keine Ereignisse',
+    al_config_desc: 'Lass dich automatisch \u00fcber Ver\u00e4nderungen im Suchverhalten informieren \u2013 z.\u202fB. bei pl\u00f6tzlichen Spikes, neuen oder verschwindenden Begriffen.',
+    al_configured_title: 'Konfigurierte Alerts',
+    al_btn_new: '+ Neuer Alert',
+    al_no_alerts: 'Noch keine Alerts konfiguriert',
+    al_modal_new_title: 'Neuer Alert',
+    al_modal_edit_title: 'Alert bearbeiten',
+    al_ph_name: 'z.B. \u00dcberwachung XYZ',
+    al_opt_occurrence: 'Auftreten \u2013 Begriff taucht in Verwandten Anfragen auf',
+    al_opt_disappearance: 'Verschwinden \u2013 Begriff verschwindet aus Verwandten Anfragen',
+    al_opt_spike: 'Anstieg \u2013 Trend-Wert steigt stark',
+    al_opt_vol_rise: 'Volumen aufkommt \u2013 Suchvolumen war null, steigt jetzt an',
+    al_opt_vol_drop: 'Volumen verschwindet \u2013 Suchvolumen bricht von Wert auf null ein',
+    al_lbl_watch_term: 'Suchbegriff / Wort',
+    al_ph_watch_term: 'z.B. krise (auch Teilwort von zusammengesetzten Begriffen)',
+    al_lbl_scope: 'Gilt f\u00fcr Keywords',
+    al_scope_selected: 'Ausgew\u00e4hlte',
+    al_kw_loading: 'Lade Keywords\u2026',
+    al_kw_none: 'Keine Keywords vorhanden',
+    al_lbl_threshold_type: 'Schwellwert-Typ',
+    al_opt_percent: 'Prozentualer Anstieg',
+    al_opt_abs_value: 'Absoluter Mindestwert',
+    al_lbl_threshold_pct: 'Schwellwert (%)',
+    al_lbl_threshold_abs: 'Mindestwert (0\u2013100)',
+    al_lbl_compare_hours: 'Vergleichszeitraum (Stunden)',
+    al_lbl_vol_threshold: 'Mindestwert f\u00fcr \u201evorhanden\u201c (0\u2013100)',
+    al_lbl_vol_hours: 'Zeitfenster (Stunden)',
+    al_optional: '(optional)',
+    al_lbl_active: 'Alert aktiv',
+    al_lbl_all_kws: 'Alle',
+    al_lbl_n_kws: '{n} Keyword(s)',
+    al_status_active: 'Aktiv',
+    al_status_paused: 'Pausiert',
+    al_lbl_watch_occ: 'Suchbegriff / Wort (taucht auf in Verwandten Anfragen)',
+    al_lbl_watch_dis: 'Suchbegriff / Wort (verschwindet aus Verwandten Anfragen)',
+    al_lbl_watch_vol: 'Begriff(e), kommasepariert (Teilwort-Suche im Keyword-Text; leer = alle)',
+    al_lbl_watch_spike: 'Keyword-Filter (leer = alle, sonst Teilstring des Keyword-Textes)',
+    al_ph_vol: 'z.B. krieg, konflikt',
+    al_ph_spike: 'z.B. krise (leer = alle Keywords)',
+    al_toast_seen_all: 'Alle als gelesen markiert',
+    al_toast_evaluated: 'Alerts ausgewertet',
+    al_toast_updated: 'Alert aktualisiert',
+    al_toast_created: 'Alert erstellt',
+    al_toast_deleted: 'Alert gel\u00f6scht',
+    al_confirm_delete: 'Alert "{name}" l\u00f6schen?',
+    al_det_occ: '"{q}" in Verw. Anfragen ({qt}, {v})',
+    al_det_dis: '"{q}" nicht mehr in Verw. Anfragen (zuletzt: {ts})',
+    al_det_spike_pct: '+{pct}% in {h}h (aktuell: {cur}, alt: {old})',
+    al_det_spike_val: 'Wert {cur} \u2265 {thr}',
+    al_det_vol_rise: 'Volumen aufgekommen: {cur} (vorher: {old}, Schwelle: {thr}, Fenster: {h}h)',
+    al_det_vol_drop: 'Volumen verschwunden: {cur} (vorher: {old}, Schwelle: {thr}, Fenster: {h}h)',
+    al_ph_comment: 'Interne Notiz zum Alert \u2026',
+  },
+  en: {
+    al_page_title: 'Alerts',
+    al_tab_events: 'Notifications',
+    al_tab_config: 'Configuration',
+    al_overview: 'Overview',
+    al_btn_check: 'Check now',
+    al_btn_seen_all: 'Mark all read',
+    al_unseen: 'Unread',
+    al_total: 'Total',
+    al_events_title: 'Events',
+    al_btn_refresh: 'Refresh',
+    al_flt_all: 'All',
+    al_flt_unseen: 'Unread',
+    al_type_occurrence: 'Occurrence',
+    al_type_disappearance: 'Disappearance',
+    al_type_spike: 'Spike',
+    al_type_vol_rise: 'Vol. rising',
+    al_type_vol_drop: 'Vol. dropping',
+    al_th_time: 'Time',
+    al_th_type: 'Type',
+    al_th_details: 'Details',
+    al_th_name: 'Name',
+    al_th_watch_term: 'Search term',
+    al_th_comment: 'Comment',
+    al_th_status: 'Status',
+    al_th_last_triggered: 'Last triggered',
+    al_th_unseen: 'Unseen',
+    al_no_events: 'No events',
+    al_config_desc: 'Get automatically notified about changes in search behaviour \u2013 e.g. sudden spikes, new or disappearing terms.',
+    al_configured_title: 'Configured alerts',
+    al_btn_new: '+ New alert',
+    al_no_alerts: 'No alerts configured yet',
+    al_modal_new_title: 'New alert',
+    al_modal_edit_title: 'Edit alert',
+    al_ph_name: 'e.g. Monitor XYZ',
+    al_opt_occurrence: 'Occurrence \u2013 term appears in Related Queries',
+    al_opt_disappearance: 'Disappearance \u2013 term disappears from Related Queries',
+    al_opt_spike: 'Spike \u2013 trend value rises sharply',
+    al_opt_vol_rise: 'Volume rising \u2013 search volume was zero, now rising',
+    al_opt_vol_drop: 'Volume dropping \u2013 search volume falls from value to zero',
+    al_lbl_watch_term: 'Search term / word',
+    al_ph_watch_term: 'e.g. crisis (also partial match)',
+    al_lbl_scope: 'Applies to keywords',
+    al_scope_selected: 'Selected',
+    al_kw_loading: 'Loading keywords\u2026',
+    al_kw_none: 'No keywords available',
+    al_lbl_threshold_type: 'Threshold type',
+    al_opt_percent: 'Percentage rise',
+    al_opt_abs_value: 'Absolute minimum value',
+    al_lbl_threshold_pct: 'Threshold (%)',
+    al_lbl_threshold_abs: 'Minimum value (0\u2013100)',
+    al_lbl_compare_hours: 'Comparison window (hours)',
+    al_lbl_vol_threshold: 'Minimum value for "present" (0\u2013100)',
+    al_lbl_vol_hours: 'Time window (hours)',
+    al_optional: '(optional)',
+    al_lbl_active: 'Alert active',
+    al_lbl_all_kws: 'All',
+    al_lbl_n_kws: '{n} keyword(s)',
+    al_status_active: 'Active',
+    al_status_paused: 'Paused',
+    al_lbl_watch_occ: 'Search term / word (appears in Related Queries)',
+    al_lbl_watch_dis: 'Search term / word (disappears from Related Queries)',
+    al_lbl_watch_vol: 'Term(s), comma-separated (partial match on keyword text; empty = all)',
+    al_lbl_watch_spike: 'Keyword filter (empty = all, otherwise substring of keyword text)',
+    al_ph_vol: 'e.g. war, conflict',
+    al_ph_spike: 'e.g. crisis (empty = all keywords)',
+    al_toast_seen_all: 'All marked as read',
+    al_toast_evaluated: 'Alerts evaluated',
+    al_toast_updated: 'Alert updated',
+    al_toast_created: 'Alert created',
+    al_toast_deleted: 'Alert deleted',
+    al_confirm_delete: 'Delete alert "{name}"?',
+    al_det_occ: '"{q}" in Related Queries ({qt}, {v})',
+    al_det_dis: '"{q}" no longer in Related Queries (last seen: {ts})',
+    al_det_spike_pct: '+{pct}% in {h}h (current: {cur}, prev: {old})',
+    al_det_spike_val: 'Value {cur} \u2265 {thr}',
+    al_det_vol_rise: 'Volume appeared: {cur} (prev: {old}, threshold: {thr}, window: {h}h)',
+    al_det_vol_drop: 'Volume disappeared: {cur} (prev: {old}, threshold: {thr}, window: {h}h)',
+    al_ph_comment: 'Internal note for this alert \u2026',
+  },
+  fr: {
+    al_page_title: 'Alertes',
+    al_tab_events: 'Notifications',
+    al_tab_config: 'Configuration',
+    al_overview: 'Vue d\u2019ensemble',
+    al_btn_check: 'V\u00e9rifier maintenant',
+    al_btn_seen_all: 'Tout marquer comme lu',
+    al_unseen: 'Non lus',
+    al_total: 'Total',
+    al_events_title: '\u00c9v\u00e9nements',
+    al_btn_refresh: 'Actualiser',
+    al_flt_all: 'Tous',
+    al_flt_unseen: 'Non lus',
+    al_type_occurrence: 'Apparition',
+    al_type_disappearance: 'Disparition',
+    al_type_spike: 'Pic',
+    al_type_vol_rise: 'Vol. en hausse',
+    al_type_vol_drop: 'Vol. en baisse',
+    al_th_time: 'Heure',
+    al_th_type: 'Type',
+    al_th_details: 'D\u00e9tails',
+    al_th_name: 'Nom',
+    al_th_watch_term: 'Terme surveill\u00e9',
+    al_th_comment: 'Commentaire',
+    al_th_status: 'Statut',
+    al_th_last_triggered: 'Derni\u00e8re activation',
+    al_th_unseen: 'Non vus',
+    al_no_events: 'Aucun \u00e9v\u00e9nement',
+    al_config_desc: 'Soyez averti automatiquement des changements de comportement de recherche \u2013 pics soudains, nouveaux termes ou disparitions.',
+    al_configured_title: 'Alertes configur\u00e9es',
+    al_btn_new: '+ Nouvelle alerte',
+    al_no_alerts: 'Aucune alerte configur\u00e9e',
+    al_modal_new_title: 'Nouvelle alerte',
+    al_modal_edit_title: 'Modifier l\u2019alerte',
+    al_ph_name: 'ex. Surveillance XYZ',
+    al_opt_occurrence: 'Apparition \u2013 terme appara\u00eet dans les requ\u00eates associ\u00e9es',
+    al_opt_disappearance: 'Disparition \u2013 terme dispara\u00eet des requ\u00eates associ\u00e9es',
+    al_opt_spike: 'Pic \u2013 la valeur de tendance monte fortement',
+    al_opt_vol_rise: 'Volume en hausse \u2013 le volume \u00e9tait nul, il augmente maintenant',
+    al_opt_vol_drop: 'Volume en baisse \u2013 le volume chute de sa valeur \u00e0 z\u00e9ro',
+    al_lbl_watch_term: 'Terme / mot surveill\u00e9',
+    al_ph_watch_term: 'ex. crise (correspondance partielle accept\u00e9e)',
+    al_lbl_scope: 'S\u2019applique aux mots-cl\u00e9s',
+    al_scope_selected: 'S\u00e9lectionn\u00e9s',
+    al_kw_loading: 'Chargement des mots-cl\u00e9s\u2026',
+    al_kw_none: 'Aucun mot-cl\u00e9 disponible',
+    al_lbl_threshold_type: 'Type de seuil',
+    al_opt_percent: 'Hausse en pourcentage',
+    al_opt_abs_value: 'Valeur minimale absolue',
+    al_lbl_threshold_pct: 'Seuil (%)',
+    al_lbl_threshold_abs: 'Valeur minimale (0\u2013100)',
+    al_lbl_compare_hours: 'Fen\u00eatre de comparaison (heures)',
+    al_lbl_vol_threshold: 'Valeur minimale pour \u00ab\u00a0pr\u00e9sent\u00a0\u00bb (0\u2013100)',
+    al_lbl_vol_hours: 'Fen\u00eatre temporelle (heures)',
+    al_optional: '(optionnel)',
+    al_lbl_active: 'Alerte active',
+    al_lbl_all_kws: 'Tous',
+    al_lbl_n_kws: '{n} mot(s)-cl\u00e9',
+    al_status_active: 'Actif',
+    al_status_paused: 'En pause',
+    al_lbl_watch_occ: 'Terme / mot (appara\u00eet dans les requ\u00eates associ\u00e9es)',
+    al_lbl_watch_dis: 'Terme / mot (dispara\u00eet des requ\u00eates associ\u00e9es)',
+    al_lbl_watch_vol: 'Terme(s), s\u00e9par\u00e9s par des virgules (recherche partielle\u00a0; vide = tous)',
+    al_lbl_watch_spike: 'Filtre mot-cl\u00e9 (vide = tous, sinon sous-cha\u00eene du texte)',
+    al_ph_vol: 'ex. guerre, conflit',
+    al_ph_spike: 'ex. crise (vide = tous les mots-cl\u00e9s)',
+    al_toast_seen_all: 'Tout marqu\u00e9 comme lu',
+    al_toast_evaluated: 'Alertes \u00e9valu\u00e9es',
+    al_toast_updated: 'Alerte mise \u00e0 jour',
+    al_toast_created: 'Alerte cr\u00e9\u00e9e',
+    al_toast_deleted: 'Alerte supprim\u00e9e',
+    al_confirm_delete: 'Supprimer l\u2019alerte\u00a0\u00ab\u00a0{name}\u00a0\u00bb\u00a0?',
+    al_det_occ: '"{q}" dans Requ\u00eates associ\u00e9es ({qt}, {v})',
+    al_det_dis: '"{q}" plus dans Requ\u00eates associ\u00e9es (vu pour la derni\u00e8re fois\u00a0: {ts})',
+    al_det_spike_pct: '+{pct}% en {h}h (actuel\u00a0: {cur}, pr\u00e9c.\u00a0: {old})',
+    al_det_spike_val: 'Valeur {cur} \u2265 {thr}',
+    al_det_vol_rise: 'Volume apparu\u00a0: {cur} (pr\u00e9c.\u00a0: {old}, seuil\u00a0: {thr}, fen.\u00a0: {h}h)',
+    al_det_vol_drop: 'Volume disparu\u00a0: {cur} (pr\u00e9c.\u00a0: {old}, seuil\u00a0: {thr}, fen.\u00a0: {h}h)',
+    al_ph_comment: 'Note interne pour cette alerte \u2026',
+  },
+  es: {
+    al_page_title: 'Alertas',
+    al_tab_events: 'Notificaciones',
+    al_tab_config: 'Configuraci\u00f3n',
+    al_overview: 'Resumen',
+    al_btn_check: 'Comprobar ahora',
+    al_btn_seen_all: 'Marcar todo como le\u00eddo',
+    al_unseen: 'No le\u00eddos',
+    al_total: 'Total',
+    al_events_title: 'Eventos',
+    al_btn_refresh: 'Actualizar',
+    al_flt_all: 'Todos',
+    al_flt_unseen: 'No le\u00eddos',
+    al_type_occurrence: 'Aparici\u00f3n',
+    al_type_disappearance: 'Desaparici\u00f3n',
+    al_type_spike: 'Pico',
+    al_type_vol_rise: 'Vol. sube',
+    al_type_vol_drop: 'Vol. baja',
+    al_th_time: 'Hora',
+    al_th_type: 'Tipo',
+    al_th_details: 'Detalles',
+    al_th_name: 'Nombre',
+    al_th_watch_term: 'T\u00e9rmino vigilado',
+    al_th_comment: 'Comentario',
+    al_th_status: 'Estado',
+    al_th_last_triggered: '\u00daltima activaci\u00f3n',
+    al_th_unseen: 'No vistos',
+    al_no_events: 'Sin eventos',
+    al_config_desc: 'Rec\u00edbe notificaciones autom\u00e1ticas sobre cambios en el comportamiento de b\u00fasqueda \u2013 picos repentinos, nuevos t\u00e9rminos o desapariciones.',
+    al_configured_title: 'Alertas configuradas',
+    al_btn_new: '+ Nueva alerta',
+    al_no_alerts: 'A\u00fan no hay alertas configuradas',
+    al_modal_new_title: 'Nueva alerta',
+    al_modal_edit_title: 'Editar alerta',
+    al_ph_name: 'ej. Seguimiento XYZ',
+    al_opt_occurrence: 'Aparici\u00f3n \u2013 t\u00e9rmino aparece en consultas relacionadas',
+    al_opt_disappearance: 'Desaparici\u00f3n \u2013 t\u00e9rmino desaparece de consultas relacionadas',
+    al_opt_spike: 'Pico \u2013 el valor de tendencia sube bruscamente',
+    al_opt_vol_rise: 'Volumen sube \u2013 el volumen era cero, ahora aumenta',
+    al_opt_vol_drop: 'Volumen baja \u2013 el volumen cae de un valor a cero',
+    al_lbl_watch_term: 'T\u00e9rmino / palabra vigilada',
+    al_ph_watch_term: 'ej. crisis (coincidencia parcial aceptada)',
+    al_lbl_scope: 'Se aplica a palabras clave',
+    al_scope_selected: 'Seleccionadas',
+    al_kw_loading: 'Cargando palabras clave\u2026',
+    al_kw_none: 'No hay palabras clave disponibles',
+    al_lbl_threshold_type: 'Tipo de umbral',
+    al_opt_percent: 'Subida porcentual',
+    al_opt_abs_value: 'Valor m\u00ednimo absoluto',
+    al_lbl_threshold_pct: 'Umbral (%)',
+    al_lbl_threshold_abs: 'Valor m\u00ednimo (0\u2013100)',
+    al_lbl_compare_hours: 'Ventana de comparaci\u00f3n (horas)',
+    al_lbl_vol_threshold: 'Valor m\u00ednimo para \u00abpresente\u00bb (0\u2013100)',
+    al_lbl_vol_hours: 'Ventana temporal (horas)',
+    al_optional: '(opcional)',
+    al_lbl_active: 'Alerta activa',
+    al_lbl_all_kws: 'Todas',
+    al_lbl_n_kws: '{n} palabra(s) clave',
+    al_status_active: 'Activo',
+    al_status_paused: 'Pausado',
+    al_lbl_watch_occ: 'T\u00e9rmino / palabra (aparece en consultas relacionadas)',
+    al_lbl_watch_dis: 'T\u00e9rmino / palabra (desaparece de consultas relacionadas)',
+    al_lbl_watch_vol: 'T\u00e9rmino(s), separados por comas (coincidencia parcial; vac\u00edo = todos)',
+    al_lbl_watch_spike: 'Filtro de palabra clave (vac\u00edo = todas, si no subcadena del texto)',
+    al_ph_vol: 'ej. guerra, conflicto',
+    al_ph_spike: 'ej. crisis (vac\u00edo = todas las palabras clave)',
+    al_toast_seen_all: 'Todo marcado como le\u00eddo',
+    al_toast_evaluated: 'Alertas evaluadas',
+    al_toast_updated: 'Alerta actualizada',
+    al_toast_created: 'Alerta creada',
+    al_toast_deleted: 'Alerta eliminada',
+    al_confirm_delete: '\u00bfEliminar la alerta \u00ab{name}\u00bb?',
+    al_det_occ: '"{q}" en Consultas relacionadas ({qt}, {v})',
+    al_det_dis: '"{q}" ya no en Consultas relacionadas (\u00faltima vez: {ts})',
+    al_det_spike_pct: '+{pct}% en {h}h (actual: {cur}, ant.: {old})',
+    al_det_spike_val: 'Valor {cur} \u2265 {thr}',
+    al_det_vol_rise: 'Volumen aparecido: {cur} (ant.: {old}, umbral: {thr}, ventana: {h}h)',
+    al_det_vol_drop: 'Volumen desaparecido: {cur} (ant.: {old}, umbral: {thr}, ventana: {h}h)',
+    al_ph_comment: 'Nota interna para esta alerta \u2026',
+  },
+});
+window._applyI18n();
+
+  // ── Sub-Tab-Switching ─────────────────────────────────────────────────────
+  function alSwitchTab(tab) {
+    ['meldungen', 'konfig'].forEach(t => {
+      document.getElementById('al-panel-' + t).classList.toggle('active', t === tab);
+      document.getElementById('al-tab-' + t).classList.toggle('active', t === tab);
+    });
+    try { localStorage.setItem('al_active_tab', tab); } catch(_) {}
+  }
+  (function() {
+    try {
+      const saved = localStorage.getItem('al_active_tab');
+      if (saved === 'konfig') alSwitchTab('konfig');
+    } catch(_) {}
+  })();
+
+  // ── Meldungen: Zusammenfassung ────────────────────────────────────────────
+  let allEvents  = [];
+  let activeFilter = "all";
+
+  async function loadSummary() {
+    try {
+      const s = await api("/api/dashboard/summary");
+      document.getElementById("sum-unseen").textContent = s.unseen;
+      document.getElementById("sum-total").textContent  = s.total;
+      const badge = document.getElementById("nav-alert-badge");
+      if (badge) { badge.textContent = s.unseen > 0 ? s.unseen : ""; badge.style.display = s.unseen > 0 ? "inline" : "none"; }
+    } catch(_) {}
+  }
+
+  async function loadEvents() {
+    const tbody = document.getElementById("ev-body");
+    try {
+      allEvents = await api("/api/alerts/events?limit=200");
+      renderEvents();
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-muted">Fehler: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  function renderEvents() {
+    const tbody = document.getElementById("ev-body");
+    let rows = allEvents;
+    if (activeFilter === "unseen")        rows = rows.filter(e => !e.seen);
+    if (activeFilter === "occurrence")    rows = rows.filter(e => e.alert_type === "occurrence");
+    if (activeFilter === "disappearance") rows = rows.filter(e => e.alert_type === "disappearance");
+    if (activeFilter === "spike")         rows = rows.filter(e => e.alert_type === "spike");
+    if (activeFilter === "volume_rise")   rows = rows.filter(e => e.alert_type === "volume_rise");
+    if (activeFilter === "volume_drop")   rows = rows.filter(e => e.alert_type === "volume_drop");
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px;">${window.t('al_no_events','Keine Ereignisse')}</td></tr>`;
+      return;
+    }
+    const typeLabel = {
+      occurrence:    window.t('al_type_occurrence','Auftreten'),
+      disappearance: window.t('al_type_disappearance','Verschwinden'),
+      spike:         window.t('al_type_spike','Anstieg'),
+      volume_rise:   window.t('al_type_vol_rise','Vol. aufkommt'),
+      volume_drop:   window.t('al_type_vol_drop','Vol. verschwindet'),
+    };
+    const typeClass = { occurrence:"tb-occ", disappearance:"tb-dis", spike:"tb-spk",
+                        volume_rise:"tb-vup", volume_drop:"tb-vdn" };
+    tbody.innerHTML = rows.map(ev => {
+      const detail   = fmtDetail(ev.alert_type, ev.details);
+      const rowClass = ev.seen ? "ev-row seen" : "ev-row unseen";
+      return `<tr class="${rowClass}" data-id="${ev.id}">
+        <td class="text-sm">${fmtDate(ev.triggered_at)}</td>
+        <td style="font-size:13px;">${esc(ev.alert_name)}</td>
+        <td><span class="type-badge ${typeClass[ev.alert_type]||'tb-occ'}">${typeLabel[ev.alert_type]||ev.alert_type}</span></td>
+        <td class="text-sm">${esc(ev.keyword_text || "\u2013")}</td>
+        <td><div class="detail-text">${esc(detail)}</div></td>
+        <td>${ev.seen ? "" : `<button class="btn btn-ghost btn-sm" onclick="markSeen(${ev.id})">✓</button>`}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  function fmtDetail(type, d) {
+    if (!d) return "\u2013";
+    const ts = d.last_seen ? fmtDate(d.last_seen) : "?";
+    if (type === "occurrence")
+      return window.t('al_det_occ','"{q}" in Verw. Anfragen ({qt}, {v})')
+        .replace('{q}',d.query||'').replace('{qt}',d.query_type||'').replace('{v}',d.value||'');
+    if (type === "disappearance")
+      return window.t('al_det_dis','"{q}" nicht mehr in Verw. Anfragen (zuletzt: {ts})')
+        .replace('{q}',d.query||'').replace('{ts}',ts);
+    if (type === "spike")
+      return d.threshold_type === "percent"
+        ? window.t('al_det_spike_pct','+{pct}% in {h}h (aktuell: {cur}, alt: {old})')
+            .replace('{pct}',d.rise_pct).replace('{h}',d.hours).replace('{cur}',d.current_value).replace('{old}',d.old_value)
+        : window.t('al_det_spike_val','Wert {cur} \u2265 {thr}')
+            .replace('{cur}',d.current_value).replace('{thr}',d.threshold);
+    if (type === "volume_rise")
+      return window.t('al_det_vol_rise','Volumen aufgekommen: {cur} (vorher: {old}, Schwelle: {thr}, Fenster: {h}h)')
+        .replace('{cur}',d.current_value).replace('{old}',d.old_value).replace('{thr}',d.threshold).replace('{h}',d.hours);
+    if (type === "volume_drop")
+      return window.t('al_det_vol_drop','Volumen verschwunden: {cur} (vorher: {old}, Schwelle: {thr}, Fenster: {h}h)')
+        .replace('{cur}',d.current_value).replace('{old}',d.old_value).replace('{thr}',d.threshold).replace('{h}',d.hours);
+    return JSON.stringify(d);
+  }
+
+  async function markSeen(id) {
+    try {
+      await api(`/api/alerts/events/${id}/seen`, { method: "POST" });
+      const ev = allEvents.find(e => e.id === id);
+      if (ev) ev.seen = true;
+      renderEvents();
+      loadSummary();
+    } catch(e) { toast("Fehler: " + e.message, "error"); }
+  }
+
+  document.getElementById("btn-seen-all").addEventListener("click", async () => {
+    try {
+      await api("/api/alerts/events/seen-all", { method: "POST" });
+      allEvents.forEach(e => e.seen = true);
+      renderEvents();
+      loadSummary();
+      toast(window.t('al_toast_seen_all','Alle als gelesen markiert'), "ok");
+    } catch(e) { toast("Fehler: " + e.message, "error"); }
+  });
+
+  document.getElementById("btn-evaluate").addEventListener("click", async () => {
+    const btn = document.getElementById("btn-evaluate");
+    btn.disabled = true; btn.textContent = "\u2026";
+    try {
+      await api("/api/alerts/evaluate", { method: "POST" });
+      await Promise.all([loadSummary(), loadEvents()]);
+      toast(window.t('al_toast_evaluated','Alerts ausgewertet'), "ok");
+    } catch(e) { toast("Fehler: " + e.message, "error"); }
+    finally { btn.disabled = false; btn.textContent = window.t('al_btn_check','Jetzt prüfen'); }
+  });
+
+  document.getElementById("btn-refresh").addEventListener("click", async () => {
+    await Promise.all([loadSummary(), loadEvents()]);
+  });
+
+  document.querySelectorAll(".flt-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".flt-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeFilter = btn.dataset.filter;
+      renderEvents();
+    });
+  });
+
+  // ── Konfiguration: Alerts ─────────────────────────────────────────────────
+  let allAlerts  = [];
+  let allKeywords = [];
+  let editingId  = null;
+  let kwScope    = "all";
+
+  async function loadAlerts() {
+    const tbody = document.getElementById("alert-body");
+    try {
+      allAlerts = await api("/api/alerts");
+      renderAlerts();
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="8" class="text-muted">Fehler: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  function renderAlerts() {
+    const tbody = document.getElementById("alert-body");
+    if (!allAlerts.length) {
+      tbody.innerHTML = `<tr><td colspan="9" class="text-muted" style="text-align:center;padding:24px;">${window.t('al_no_alerts','Noch keine Alerts konfiguriert')}</td></tr>`;
+      return;
+    }
+    const typeLabel = {
+      occurrence:    window.t('al_type_occurrence','Auftreten'),
+      disappearance: window.t('al_type_disappearance','Verschwinden'),
+      spike:         window.t('al_type_spike','Anstieg'),
+      volume_rise:   window.t('al_type_vol_rise','Vol. aufkommt'),
+      volume_drop:   window.t('al_type_vol_drop','Vol. verschwindet'),
+    };
+    const typeClass = { occurrence:"tb-occ", disappearance:"tb-dis", spike:"tb-spk",
+                        volume_rise:"tb-vup", volume_drop:"tb-vdn" };
+    tbody.innerHTML = allAlerts.map(a => {
+      const kwScopeText = a.keyword_ids && a.keyword_ids.length
+        ? window.t('al_lbl_n_kws','{n} Keyword(s)').replace('{n}', a.keyword_ids.length)
+        : window.t('al_lbl_all_kws','Alle');
+      const last = a.last_triggered ? fmtDate(a.last_triggered) : "\u2013";
+      const unseen = a.unseen_count > 0
+        ? `<span class="unseen-badge">${a.unseen_count}</span>`
+        : `<span style="color:var(--muted);">0</span>`;
+      const dotCls = a.active ? "dot-on" : "dot-off";
+      const statusTxt = a.active ? window.t('al_status_active','Aktiv') : window.t('al_status_paused','Pausiert');
+      return `
+        <tr class="alert-row" data-id="${a.id}">
+          <td style="font-size:13px;font-weight:600;">${esc(a.name)}</td>
+          <td><span class="type-badge ${typeClass[a.alert_type]||'tb-occ'}">${typeLabel[a.alert_type]||a.alert_type}</span></td>
+          <td class="text-sm">${esc(a.watch_term || "\u2013")}</td>
+          <td class="text-sm">${esc(kwScopeText)}</td>
+          <td class="text-sm" style="color:var(--muted);max-width:180px;white-space:pre-wrap;word-break:break-word;">${esc(a.comment || "")}</td>
+          <td class="text-sm"><span class="status-dot ${dotCls}"></span>${statusTxt}</td>
+          <td class="text-sm">${last}</td>
+          <td style="text-align:center;">${unseen}</td>
+          <td>
+            <button data-tip="${window.t('al_modal_edit_title','Bearbeiten')}" onclick="openEdit(${a.id})" style="cursor:pointer;background:none;border:none;color:var(--muted);padding:5px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;transition:background .1s,color .1s;" onmouseover="this.style.background='var(--surface2)';this.style.color='var(--text)'" onmouseout="this.style.background='none';this.style.color='var(--muted)'"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5l2.5 2.5-7.5 7.5H3.5V10L11 2.5z"/></svg></button>
+            <button data-tip="${window.t('kw_btn_delete_sel','Löschen')}" onclick="deleteAlert(${a.id})" style="cursor:pointer;background:none;border:none;color:rgba(239,68,68,.6);padding:5px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;transition:background .1s,color .1s;" onmouseover="this.style.background='rgba(239,68,68,.1)';this.style.color='#ef4444'" onmouseout="this.style.background='none';this.style.color='rgba(239,68,68,.6)'"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,4.5 13,4.5"/><path d="M6.5 4.5V3h3v1.5"/><rect x="4.5" y="4.5" width="7" height="9" rx="1"/><line x1="6.5" y1="7" x2="6.5" y2="11"/><line x1="9.5" y1="7" x2="9.5" y2="11"/></svg></button>
+          </td>
+        </tr>`;
+    }).join("");
+  }
+
+  async function loadKeywords() {
+    try {
+      allKeywords = await api("/api/keywords");
+    } catch(e) { allKeywords = []; }
+  }
+
+  function renderKwCheckboxes(selectedIds) {
+    const container = document.getElementById("kw-checkboxes");
+    if (!allKeywords.length) {
+      container.innerHTML = `<span style="font-size:12px;color:var(--muted);">${window.t('al_kw_none','Keine Keywords vorhanden')}</span>`;
+      return;
+    }
+    container.innerHTML = allKeywords
+      .filter(k => k.active)
+      .map(k => {
+        const checked = selectedIds.includes(k.id) ? "checked" : "";
+        const tfNote = k.timeframe ? ` <span style="color:var(--muted);font-size:10px;">[${k.timeframe}]</span>` : "";
+        return `<label>
+          <input type="checkbox" value="${k.id}" ${checked} />
+          ${esc(k.keyword)}${tfNote}
+        </label>`;
+      }).join("");
+  }
+
+  function getCheckedKwIds() {
+    return [...document.querySelectorAll("#kw-checkboxes input:checked")]
+      .map(cb => parseInt(cb.value));
+  }
+
+  function openNew() {
+    editingId = null;
+    document.getElementById("modal-title").textContent = window.t('al_modal_new_title','Neuer Alert');
+    document.getElementById("f-name").value = "";
+    document.getElementById("f-type").value = "occurrence";
+    document.getElementById("f-watch-term").value = "";
+    document.getElementById("f-threshold-type").value = "percent";
+    document.getElementById("f-threshold").value = "50";
+    document.getElementById("f-hours").value = "24";
+    document.getElementById("f-vol-threshold").value = "5";
+    document.getElementById("f-vol-hours").value = "24";
+    document.getElementById("f-comment").value = "";
+    document.getElementById("f-active").checked = true;
+    setScope("all");
+    renderKwCheckboxes([]);
+    syncTypeFields();
+    document.getElementById("modal-overlay").classList.add("open");
+  }
+
+  function openEdit(id) {
+    const a = allAlerts.find(x => x.id === id);
+    if (!a) return;
+    editingId = id;
+    document.getElementById("modal-title").textContent = window.t('al_modal_edit_title','Alert bearbeiten');
+    document.getElementById("f-name").value = a.name;
+    document.getElementById("f-type").value = a.alert_type;
+    document.getElementById("f-watch-term").value = a.watch_term || "";
+    document.getElementById("f-threshold-type").value = a.spike_threshold_type || "percent";
+    document.getElementById("f-threshold").value = a.spike_threshold ?? 50;
+    document.getElementById("f-hours").value = a.spike_hours ?? 24;
+    document.getElementById("f-vol-threshold").value = a.spike_threshold ?? 5;
+    document.getElementById("f-vol-hours").value = a.spike_hours ?? 24;
+    document.getElementById("f-comment").value = a.comment || "";
+    document.getElementById("f-active").checked = a.active;
+    const hasSelected = a.keyword_ids && a.keyword_ids.length > 0;
+    setScope(hasSelected ? "selected" : "all");
+    renderKwCheckboxes(a.keyword_ids || []);
+    syncTypeFields();
+    document.getElementById("modal-overlay").classList.add("open");
+  }
+
+  function closeModal() {
+    document.getElementById("modal-overlay").classList.remove("open");
+  }
+
+  function setScope(scope) {
+    kwScope = scope;
+    document.querySelectorAll(".scope-btn").forEach(b => {
+      b.classList.toggle("active", b.dataset.scope === scope);
+    });
+    document.getElementById("kw-checkboxes").style.display = scope === "selected" ? "block" : "none";
+  }
+
+  document.querySelectorAll(".scope-btn").forEach(b => {
+    b.addEventListener("click", () => setScope(b.dataset.scope));
+  });
+
+  function syncTypeFields() {
+    const type = document.getElementById("f-type").value;
+    const isSpike  = type === "spike";
+    const isVolume = type === "volume_rise" || type === "volume_drop";
+
+    document.getElementById("spike-fields").style.display  = isSpike  ? "block" : "none";
+    document.getElementById("volume-fields").style.display = isVolume ? "block" : "none";
+    document.getElementById("row-watch-term").style.display = "block";
+
+    const lbl = document.getElementById("lbl-watch-term");
+    if (type === "occurrence")
+      lbl.textContent = window.t('al_lbl_watch_occ','Suchbegriff / Wort (taucht auf in Verwandten Anfragen)');
+    else if (type === "disappearance")
+      lbl.textContent = window.t('al_lbl_watch_dis','Suchbegriff / Wort (verschwindet aus Verwandten Anfragen)');
+    else if (isVolume)
+      lbl.textContent = window.t('al_lbl_watch_vol','Begriff(e), kommasepariert (Teilwort-Suche im Keyword-Text; leer = alle)');
+    else
+      lbl.textContent = window.t('al_lbl_watch_spike','Keyword-Filter (leer = alle, sonst Teilstring des Keyword-Textes)');
+
+    const input = document.getElementById("f-watch-term");
+    if (isVolume)
+      input.placeholder = window.t('al_ph_vol','z.B. krieg, konflikt');
+    else if (type === "spike")
+      input.placeholder = window.t('al_ph_spike','z.B. krise (leer = alle Keywords)');
+    else
+      input.placeholder = window.t('al_ph_watch_term','z.B. krise (auch Teilwort von zusammengesetzten Begriffen)');
+  }
+
+  document.getElementById("f-type").addEventListener("change", syncTypeFields);
+
+  document.getElementById("f-threshold-type").addEventListener("change", () => {
+    const type = document.getElementById("f-threshold-type").value;
+    document.getElementById("lbl-threshold").textContent =
+      type === "percent"
+        ? window.t('al_lbl_threshold_pct','Schwellwert (%)')
+        : window.t('al_lbl_threshold_abs','Mindestwert (0–100)');
+    document.getElementById("row-hours").style.display =
+      type === "percent" ? "block" : "none";
+  });
+
+  document.getElementById("btn-save").addEventListener("click", async () => {
+    const name  = document.getElementById("f-name").value.trim();
+    const type  = document.getElementById("f-type").value;
+    const term  = document.getElementById("f-watch-term").value.trim();
+    const active = document.getElementById("f-active").checked;
+    const kwIds  = kwScope === "selected" ? getCheckedKwIds() : [];
+
+    const isVolume = type === "volume_rise" || type === "volume_drop";
+    const body = {
+      name, alert_type: type, watch_term: term, active,
+      keyword_ids: kwIds,
+      comment: document.getElementById("f-comment").value.trim(),
+      spike_threshold: isVolume
+        ? (parseInt(document.getElementById("f-vol-threshold").value) || 5)
+        : (parseInt(document.getElementById("f-threshold").value) || 50),
+      spike_threshold_type: isVolume ? "value" : document.getElementById("f-threshold-type").value,
+      spike_hours: isVolume
+        ? (parseInt(document.getElementById("f-vol-hours").value) || 24)
+        : (parseInt(document.getElementById("f-hours").value) || 24),
+    };
+
+    try {
+      if (editingId) {
+        await api(`/api/alerts/${editingId}`, { method: "PUT", body: JSON.stringify(body) });
+        toast(window.t('al_toast_updated','Alert aktualisiert'), "ok");
+      } else {
+        await api("/api/alerts", { method: "POST", body: JSON.stringify(body) });
+        toast(window.t('al_toast_created','Alert erstellt'), "ok");
+      }
+      closeModal();
+      loadAlerts();
+    } catch(e) { toast("Fehler: " + e.message, "error"); }
+  });
+
+  async function deleteAlert(id) {
+    const a = allAlerts.find(x => x.id === id);
+    if (!confirm(window.t('al_confirm_delete','Alert "{name}" löschen?').replace('{name}', a ? a.name : id))) return;
+    try {
+      await api(`/api/alerts/${id}`, { method: "DELETE" });
+      toast(window.t('al_toast_deleted','Alert gelöscht'), "ok");
+      loadAlerts();
+    } catch(e) { toast("Fehler: " + e.message, "error"); }
+  }
+
+  document.getElementById("btn-new-alert").addEventListener("click", openNew);
+  document.getElementById("btn-cancel").addEventListener("click", closeModal);
+  document.getElementById("modal-overlay").addEventListener("click", e => {
+    if (e.target === document.getElementById("modal-overlay")) closeModal();
+  });
+
+  function esc(s) {
+    return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;")
+                          .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function fmtDate(iso) {
+    if (!iso) return "\u2013";
+    return window.fmtDate ? window.fmtDate(iso) : new Date(iso).toLocaleString("de-DE", { dateStyle:"short", timeStyle:"short" });
+  }
+
+  Promise.all([loadAlerts(), loadKeywords(), loadSummary(), loadEvents()]);
+</script>
+{% endblock %}

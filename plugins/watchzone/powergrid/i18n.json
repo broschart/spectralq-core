@@ -1,0 +1,62 @@
+{
+  "de": {
+    "wz_sidebar_powergrid": "Stromnetz",
+    "wz_pg_title": "Stromnetz & Lastdaten",
+    "wz_pg_source": "Quelle: ENTSO-E Transparency Platform",
+    "wz_pg_desc": "Ueberwacht die Stromnetz-Auslastung in europaeischen Laendern. Ploetzliche Lasteinbrueche deuten auf Blackouts, Infrastrukturschaeden oder gezielte Abschaltungen hin — besonders relevant in Konfliktregionen.",
+    "wz_pg_hint": "Beobachtungsgebiete auf der Karte einzeichnen. ENTSO-E-Lastdaten werden automatisch fuer das betreffende Land abgerufen.",
+    "wz_pg_load": "Netzlast",
+    "wz_pg_current": "Aktuell",
+    "wz_pg_avg": "Durchschnitt (24h)",
+    "wz_pg_min": "Minimum",
+    "wz_pg_max": "Maximum",
+    "wz_pg_drop": "Abfall",
+    "wz_pg_country": "Land",
+    "wz_pg_unit": "MW",
+    "wz_pg_empty": "Keine Lastdaten verfuegbar.",
+    "wz_pg_chart_title": "Netzlast 48h",
+    "wz_pg_no_key": "ENTSO-E Token fehlt. Kostenlos beantragen auf transparency.entsoe.eu."
+  },
+  "en": {
+    "wz_sidebar_powergrid": "Power Grid",
+    "wz_pg_title": "Power Grid & Load Data",
+    "wz_pg_source": "Source: ENTSO-E Transparency Platform",
+    "wz_pg_desc": "Monitors power grid load across European countries. Sudden load drops indicate blackouts, infrastructure damage or targeted shutdowns — especially relevant in conflict regions.",
+    "wz_pg_hint": "Draw observation areas on the map. ENTSO-E load data will be fetched automatically for the respective country.",
+    "wz_pg_load": "Grid Load",
+    "wz_pg_current": "Current",
+    "wz_pg_avg": "Average (24h)",
+    "wz_pg_min": "Minimum",
+    "wz_pg_max": "Maximum",
+    "wz_pg_drop": "Drop",
+    "wz_pg_country": "Country",
+    "wz_pg_unit": "MW",
+    "wz_pg_empty": "No load data available.",
+    "wz_pg_chart_title": "Grid Load 48h",
+    "wz_pg_no_key": "ENTSO-E token missing. Free registration at transparency.entsoe.eu."
+  },
+  "fr": {
+    "wz_sidebar_powergrid": "Reseau electrique",
+    "wz_pg_title": "Reseau electrique & donnees de charge",
+    "wz_pg_source": "Source : ENTSO-E Transparency Platform",
+    "wz_pg_desc": "Surveille la charge du reseau electrique dans les pays europeens.",
+    "wz_pg_hint": "Dessinez des zones d'observation sur la carte.",
+    "wz_pg_load": "Charge reseau",
+    "wz_pg_current": "Actuel",
+    "wz_pg_avg": "Moyenne (24h)",
+    "wz_pg_empty": "Aucune donnee disponible.",
+    "wz_pg_no_key": "Token ENTSO-E manquant."
+  },
+  "es": {
+    "wz_sidebar_powergrid": "Red electrica",
+    "wz_pg_title": "Red electrica & datos de carga",
+    "wz_pg_source": "Fuente: ENTSO-E Transparency Platform",
+    "wz_pg_desc": "Monitorea la carga de la red electrica en paises europeos.",
+    "wz_pg_hint": "Dibuje areas de observacion en el mapa.",
+    "wz_pg_load": "Carga de red",
+    "wz_pg_current": "Actual",
+    "wz_pg_avg": "Promedio (24h)",
+    "wz_pg_empty": "No hay datos disponibles.",
+    "wz_pg_no_key": "Falta el token ENTSO-E."
+  }
+}

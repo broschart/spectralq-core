@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <title>{% block title %}spectralQ{% endblock %}</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+  <script>
+    /* Theme sofort setzen (vor CSS) um Flash zu vermeiden */
+    (function(){var t=localStorage.getItem("ui_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();
+  </script>
+  <style>
+    :root, [data-theme="dark"] {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #252836;
+      --border: #2e3147;
+      --accent1: #7c5cbf;
+      --accent2: #4f8ef7;
+      --accent: var(--accent2);
+      --text: #e2e4ef;
+      --muted: #6b7280;
+      --success: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --radius: 8px;
+      --font: "Ubuntu", system-ui, sans-serif;
+      --badge-green-bg: #16301e;
+      --badge-red-bg: #2d1515;
+      --badge-yellow-bg: #2d2010;
+      --badge-blue-bg: #152040;
+      --badge-orange-bg: #2d1505;
+      --badge-teal-bg: #0d2a1a;
+      --badge-purple-bg: #1e1230;
+      --ai-bubble-bg: rgba(79,142,247,.1);
+      --ai-bubble-border: rgba(79,142,247,.2);
+    }
+    [data-theme="light"] {
+      --bg: #f4f5f7;
+      --surface: #ffffff;
+      --surface2: #e9ebf0;
+      --border: #d1d5db;
+      --accent1: #7c3aed;
+      --accent2: #2563eb;
+      --accent: var(--accent2);
+      --text: #1f2937;
+      --muted: #6b7280;
+      --success: #16a34a;
+      --warn: #d97706;
+      --danger: #dc2626;
+      --badge-green-bg: #dcfce7;
+      --badge-red-bg: #fee2e2;
+      --badge-yellow-bg: #fef3c7;
+      --badge-blue-bg: #dbeafe;
+      --badge-orange-bg: #fff7ed;
+      --badge-teal-bg: #dcfce7;
+      --badge-purple-bg: #ede9fe;
+      --ai-bubble-bg: rgba(37,99,235,.08);
+      --ai-bubble-border: rgba(37,99,235,.18);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ── Nav ── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      padding: 0 24px;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    nav .brand {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      padding: 4px 0;
+      border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s;
+    }
+    nav a:hover, nav a.active {
+      color: var(--text);
+      border-bottom-color: var(--accent1);
+    }
+    #nav-user-dropdown a {
+      border-bottom: none !important;
+    }
+
+    /* ── Layout ── */
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 24px; }
+    h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: var(--accent1); color: #fff; }
+    .btn-danger  { background: var(--danger); color: #fff; }
+    .btn-ghost   { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-sm      { padding: 4px 10px; font-size: 12px; }
+
+    /* ── Forms ── */
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 7px 10px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+    label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-green  { background: var(--badge-green-bg); color: var(--success); }
+    .badge-red    { background: var(--badge-red-bg); color: var(--danger); }
+    .badge-yellow { background: var(--badge-yellow-bg); color: var(--warn); }
+    .badge-blue   { background: var(--badge-blue-bg); color: var(--accent); }
+
+    /* ── Toast ── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 1000;
+    }
+    .toast {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 13px;
+      animation: slide-in .2s ease;
+      max-width: 320px;
+    }
+    .toast.ok     { border-left: 3px solid var(--success); }
+    .toast.error  { border-left: 3px solid var(--danger); }
+    @keyframes slide-in { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid color-mix(in srgb, var(--text) 20%, transparent);
+      border-top-color: var(--accent1);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Utilities ── */
+    .flex         { display: flex; }
+    .items-center { align-items: center; }
+    .gap-2        { gap: 8px; }
+    .gap-3        { gap: 12px; }
+    .gap-4        { gap: 16px; }
+    .mt-2         { margin-top: 8px; }
+    .mt-4         { margin-top: 16px; }
+    .text-muted   { color: var(--muted); }
+    .text-sm      { font-size: 12px; }
+    .ml-auto      { margin-left: auto; }
+    .w-full       { width: 100%; }
+
+  /* ── Markdown body (shared) ── */
+  .tb-md-body { font-size:13px; line-height:1.65; color:var(--text); }
+  .tb-md-body h2 { font-size:15px; font-weight:700; margin:14px 0 5px;
+                   padding-bottom:3px; border-bottom:1px solid var(--border); }
+  .tb-md-body h3 { font-size:14px; font-weight:700; margin:10px 0 3px; }
+  .tb-md-body h4 { font-size:13px; font-weight:600; margin:8px 0 2px; color:var(--muted); }
+  .tb-md-body p  { margin:4px 0; }
+  .tb-md-body ul { margin:4px 0 6px 18px; padding:0; }
+  .tb-md-body li { margin:2px 0; }
+  .tb-md-body strong { font-weight:700; }
+  .tb-md-body em { font-style:italic; }
+  .tb-md-body hr { border:none; border-top:1px solid var(--border); margin:10px 0; }
+  .tb-md-body table { border-collapse:collapse; width:100%; font-size:12px; margin:8px 0; }
+  .tb-md-body th, .tb-md-body td { border:1px solid var(--border); padding:4px 8px; text-align:left; }
+  .tb-md-body th { background:rgba(79,142,247,.08); font-weight:700; }
+
+  /* ── AI Chat ── */
+  .ai-chat-wrap { border-top:1px solid var(--border); margin-top:16px; padding-top:14px;
+    display:flex; flex-direction:column; gap:10px; }
+  .ai-chat-history { display:flex; flex-direction:column; gap:8px;
+    max-height:260px; overflow-y:auto; }
+  .ai-chat-msg { display:flex; flex-direction:column; gap:2px; }
+  .ai-chat-msg.user { align-items:flex-end; }
+  .ai-chat-msg.ai   { align-items:flex-start; }
+  .ai-chat-bubble { max-width:85%; padding:8px 12px; border-radius:10px;
+    font-size:13px; line-height:1.5; }
+  .ai-chat-msg.user .ai-chat-bubble { background:var(--surface2); color:var(--text);
+    border-bottom-right-radius:3px; }
+  .ai-chat-msg.ai .ai-chat-bubble { background:var(--ai-bubble-bg);
+    border:1px solid var(--ai-bubble-border); color:var(--text); border-bottom-left-radius:3px; }
+  .ai-chat-input-row { display:flex; gap:8px; }
+  .ai-chat-input-row input { flex:1; font-size:13px; }
+  .ai-chat-input-row button { padding:7px 14px; border-radius:6px; border:none;
+    background:var(--accent1); color:#fff; font-size:13px; cursor:pointer;
+    white-space:nowrap; transition:opacity .15s; }
+  .ai-chat-input-row button:hover { opacity:.85; }
+  .ai-chat-input-row button:disabled { opacity:.45; cursor:default; }
+
+  /* ── data-tip Tooltip ── */
+  #data-tip-el {
+    position: fixed;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid rgba(79,142,247,.55);
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 99999;
+    transition: opacity .12s;
+    opacity: 0;
+  }
+
+  /* ── Globale Bildschirmlupe ── */
+  #global-lupe-panel {
+    display: none; position: fixed; left: 0; top: 56px; bottom: 0;
+    width: 580px; z-index: 45;
+    background: var(--bg); border-right: 2px solid var(--border);
+    overflow: hidden;
+  }
+  #global-lupe-panel.open { display: block; }
+  #global-lupe-panel canvas {
+    display: block; width: 100%; height: 100%;
+  }
+  body.global-lupe-active main {
+    max-width: none;
+    margin-left: 596px;
+    margin-right: 16px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  body.global-wide-active main {
+    max-width: none;
+    margin-left: 16px;
+    margin-right: 16px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  #global-wide-btn.active {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    background: rgba(79,142,247,.12) !important;
+  }
+  #global-lupe-info {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; color: var(--muted); opacity: .5;
+    pointer-events: none; white-space: nowrap;
+  }
+  #global-lupe-btn.active {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    background: rgba(79,142,247,.12) !important;
+  }
+  #global-lupe-crosshair {
+    position: absolute; inset: 0; pointer-events: none;
+  }
+  #global-lupe-crosshair .gl-v {
+    position: absolute; left: 50%; top: 0; bottom: 0; width: 1px;
+    background: rgba(239,68,68,.35); transform: translateX(-50%);
+  }
+  #global-lupe-crosshair .gl-h {
+    position: absolute; top: 50%; left: 0; right: 0; height: 1px;
+    background: rgba(239,68,68,.35); transform: translateY(-50%);
+  }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<nav>
+  <span class="brand">
+    {% if site_logo_url %}
+      <img src="{{ site_logo_url }}" alt="Logo" style="height:32px;width:auto;display:block;" />
+    {% else %}
+      <img class="theme-logo" src="/static/sq3.png" data-dark="/static/sq3.png" data-light="/static/sq1.png" alt="spectralQ" style="height:32px;width:auto;display:block;" />
+    {% endif %}
+  </span>
+  <a href="/start" id="nav-dashboard"><span data-i18n="nav_start">Start</span><sup id="nav-alert-badge" style="display:none;background:var(--danger);color:#fff;border-radius:8px;font-size:10px;font-weight:700;padding:1px 5px;margin-left:3px;"></sup></a>
+  <a href="/projects" id="nav-projects"><span data-i18n="nav_projects">Projekte</span><sup id="nav-proj-quota" style="display:none;color:var(--muted);font-size:10px;margin-left:2px;"></sup></a>
+  <a href="/analysis" id="nav-analysis" data-i18n="nav_analysis">Analyse</a>
+  <a href="/events" id="nav-events" data-i18n="nav_events">Ereignisse</a>
+  <a href="/alerts" id="nav-alerts" data-i18n="nav_alerts">Alerts</a>
+  <a href="/" id="nav-keywords"><span data-i18n="nav_keywords">Keywords</span><sup id="nav-kw-quota" style="display:none;color:var(--muted);font-size:10px;margin-left:2px;"></sup></a>
+  <a href="/statistik" id="nav-statistik" style="margin-left:auto;position:relative;padding-bottom:6px;" data-tip=""><span data-i18n="nav_statistik">Statistik</span>
+    <span id="nav-llm-bar" style="position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:2px;background:var(--border);overflow:hidden;">
+      <span id="nav-llm-fill" style="display:block;height:100%;border-radius:2px;transition:width .4s,background .4s;width:0;background:var(--accent1);"></span>
+    </span>
+  </a>
+  <button id="global-wide-btn" title="Breitbildmodus"
+          style="width:26px;height:26px;border-radius:50%;display:inline-flex;
+                 align-items:center;justify-content:center;
+                 background:none;border:1px solid var(--border);color:var(--muted);
+                 cursor:pointer;margin-left:4px;flex-shrink:0;font-size:14px;
+                 transition:background .12s,color .12s,border-color .12s;"
+          onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+          onmouseout="if(!this.classList.contains('active')){this.style.borderColor='var(--border)';this.style.color='var(--muted)'}">
+    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
+         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="1" y="3" width="14" height="10" rx="1.5"/>
+      <polyline points="4,7 1.5,8 4,9"/><polyline points="12,7 14.5,8 12,9"/>
+    </svg>
+  </button>
+  <button id="global-lupe-btn" title="Bildschirmlupe"
+          style="width:26px;height:26px;border-radius:50%;display:inline-flex;
+                 align-items:center;justify-content:center;
+                 background:none;border:1px solid var(--border);color:var(--muted);
+                 cursor:pointer;margin-left:4px;flex-shrink:0;font-size:14px;
+                 transition:background .12s,color .12s,border-color .12s;"
+          onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+          onmouseout="if(!_globalLupe){this.style.borderColor='var(--border)';this.style.color='var(--muted)'}">
+    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
+         stroke-width="1.5" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14.5" y2="14.5"/></svg>
+  </button>
+  {% if current_user.is_authenticated %}
+  <div id="nav-user-menu" style="position:relative;margin-left:6px;flex-shrink:0;">
+    <button id="nav-user-btn"
+            style="background:none;border:1px solid transparent;cursor:pointer;display:flex;align-items:center;gap:5px;
+                   color:var(--muted);font-size:12px;padding:4px 8px;border-radius:6px;
+                   transition:background .12s,border-color .12s,color .12s;"
+            onmouseover="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text)'"
+            onmouseout="if(!document.getElementById('nav-user-dropdown').classList.contains('open')){this.style.background='none';this.style.borderColor='transparent';this.style.color='var(--muted)'}">
+      <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <circle cx="8" cy="5.5" r="2.5"/><path d="M2.5 13.5c0-2.761 2.462-5 5.5-5s5.5 2.239 5.5 5"/>
+      </svg>
+      <span>{{ current_user.display_name or current_user.username }}</span>
+      <svg id="nav-user-chevron" viewBox="0 0 10 6" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .15s;">
+        <polyline points="1,1 5,5 9,1"/>
+      </svg>
+    </button>
+    <div id="nav-user-dropdown"
+         style="display:none;position:absolute;right:0;top:calc(100% + 4px);min-width:160px;
+                background:var(--surface);border:1px solid var(--border);border-radius:8px;
+                box-shadow:0 4px 20px rgba(0,0,0,.18);z-index:200;overflow:hidden;">
+      <a href="/admin" id="nav-admin"
+         style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;
+                color:var(--text);text-decoration:none;border-bottom:none;
+                transition:background .1s;"
+         onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg>
+        <span data-i18n="nav_admin">Admin</span>
+      </a>
+      <a href="/audit" id="nav-audit"
+         style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;
+                color:var(--text);text-decoration:none;border-bottom:none;
+                {% if not audit_trail_enabled %}display:none!important;{% endif %}
+                transition:background .1s;"
+         onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="1" width="10" height="14" rx="1.5"/><line x1="6" y1="5" x2="10" y2="5"/><line x1="6" y1="8" x2="10" y2="8"/><line x1="6" y1="11" x2="9" y2="11"/></svg>
+        <span data-i18n="nav_audit">Audit Trail</span>
+      </a>
+      {% if MULTI_USER and current_user.is_superadmin %}
+      <a href="/users" id="nav-users"
+         style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;
+                color:var(--text);text-decoration:none;border-bottom:none;
+                transition:background .1s;"
+         onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="5.5" cy="5.5" r="2.5"/><path d="M1 13c0-2.485 2.015-4.5 4.5-4.5S10 10.515 10 13"/><circle cx="12" cy="5" r="2"/><path d="M14.5 12c0-2.071-1.343-3.5-2.5-3.5"/></svg>
+        <span data-i18n="nav_users">Benutzer</span>
+      </a>
+      {% endif %}
+      <a href="/plugins" id="nav-plugins"
+         style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;
+                color:var(--text);text-decoration:none;border-bottom:none;
+                transition:background .1s;"
+         onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+        <span data-i18n="nav_plugins">Plugins</span>
+      </a>
+      <a href="/help" id="nav-help" onclick="this.href='/help?lang='+(localStorage.getItem('vt_ui_lang')||'de')"
+         style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;
+                color:var(--text);text-decoration:none;border-bottom:none;
+                transition:background .1s;"
+         onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6.5"/><path d="M6.5 6.5a1.5 1.5 0 0 1 3 .5c0 1-1.5 1.5-1.5 2.5"/><circle cx="8" cy="12" r=".5" fill="currentColor"/></svg>
+        <span data-i18n="nav_help">Hilfe</span>
+      </a>
+      {% if MULTI_USER %}
+      <div style="border-top:1px solid var(--border);margin:3px 0;"></div>
+      <a href="/logout"
+         style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;
+                color:var(--accent1);text-decoration:none;border-bottom:none;
+                transition:background .1s;"
+         onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/><polyline points="10,11 14,8 10,5"/><line x1="14" y1="8" x2="6" y2="8"/></svg>
+        <span data-i18n="nav_logout">Logout</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</nav>
+
+<div id="global-lupe-panel">
+  <canvas id="global-lupe-canvas"></canvas>
+  <div id="global-lupe-crosshair"><div class="gl-v"></div><div class="gl-h"></div></div>
+  <span id="global-lupe-info">Lupe 3×</span>
+</div>
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<footer style="margin-top:48px;padding:16px 24px 20px;text-align:center;">
+  <hr style="border:none;border-top:1px solid var(--border);margin-bottom:14px;max-width:360px;margin-left:auto;margin-right:auto;" />
+  <img class="theme-logo" src="/static/sq3.png" data-dark="/static/sq3.png" data-light="/static/sq1.png" alt="spectralQ" style="height:48px;width:auto;opacity:.5;margin-bottom:6px;" />
+  <div style="font-size:10px;color:var(--muted);letter-spacing:.04em;">&copy; {{ current_year | default(2026) }} Steven Broschart. Alle Rechte vorbehalten.</div>
+</footer>
+
+<div id="toast-container"></div>
+
+<script>
+  // Theme-Logos umschalten
+  function applyThemeLogos() {
+    const t = document.documentElement.getAttribute("data-theme") || "dark";
+    document.querySelectorAll(".theme-logo").forEach(img => {
+      const src = t === "light" ? img.dataset.light : img.dataset.dark;
+      if (src && img.src !== src) img.src = src;
+    });
+  }
+  applyThemeLogos();
+
+  // User dropdown toggle
+  (function() {
+    var btn = document.getElementById('nav-user-btn');
+    var dd  = document.getElementById('nav-user-dropdown');
+    var chev = document.getElementById('nav-user-chevron');
+    if (!btn || !dd) return;
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var open = dd.classList.toggle('open');
+      dd.style.display = open ? 'block' : 'none';
+      if (chev) chev.style.transform = open ? 'rotate(180deg)' : '';
+      if (open) {
+        btn.style.background = 'var(--surface2)';
+        btn.style.borderColor = 'var(--border)';
+        btn.style.color = 'var(--text)';
+      } else {
+        btn.style.background = 'none';
+        btn.style.borderColor = 'transparent';
+        btn.style.color = 'var(--muted)';
+      }
+    });
+    document.addEventListener('click', function() {
+      if (dd.classList.contains('open')) {
+        dd.classList.remove('open');
+        dd.style.display = 'none';
+        if (chev) chev.style.transform = '';
+        btn.style.background = 'none';
+        btn.style.borderColor = 'transparent';
+        btn.style.color = 'var(--muted)';
+      }
+    });
+  })();
+
+  // Active nav link
+  const path = location.pathname;
+  document.querySelectorAll("nav a[id^='nav-']").forEach(a => {
+    if ((path === "/" && a.id === "nav-keywords") ||
+        (path.startsWith("/analysis") && a.id === "nav-analysis") ||
+        (path.startsWith("/events") && a.id === "nav-events") ||
+        (path.startsWith("/statistik") && a.id === "nav-statistik") ||
+        (path.startsWith("/projects") && a.id === "nav-projects") ||
+        (path.startsWith("/alerts") && a.id === "nav-alerts") ||
+        ((path.startsWith("/start") || path.startsWith("/dashboard")) && a.id === "nav-dashboard") ||
+        (path.startsWith("/admin") && a.id === "nav-admin") ||
+        (path.startsWith("/help") && a.id === "nav-help")) {
+      a.classList.add("active");
+    }
+  });
+
+  // Quota-Badge im Nav (Projekte / Keywords)
+  async function refreshQuotaBadges() {
+    try {
+      const me = await fetch("/api/me").then(r => r.json());
+      const pq = document.getElementById("nav-proj-quota");
+      if (pq && me.max_projects > 0) {
+        pq.textContent = `${me.project_count}/${me.max_projects}`;
+        pq.style.display = "inline";
+      }
+      const kq = document.getElementById("nav-kw-quota");
+      if (kq && me.max_keywords > 0) {
+        kq.textContent = `${me.keyword_count}/${me.max_keywords}`;
+        kq.style.display = "inline";
+      }
+      // LLM-Verbrauch im Nav (ausblenden bei eigenem Key)
+      const bar  = document.getElementById("nav-llm-bar");
+      const fill = document.getElementById("nav-llm-fill");
+      const link = document.getElementById("nav-statistik");
+      if (me.uses_own_llm) {
+        if (bar) bar.style.display = "none";
+      } else if (bar && fill && me.llm_limit > 0) {
+        const pct = Math.min(100, Math.round(me.llm_used / me.llm_limit * 100));
+        const remaining = Math.max(0, me.llm_limit - me.llm_used);
+        fill.style.width = pct + "%";
+        fill.style.background = pct >= 98 ? "var(--danger)" : "var(--accent1)";
+        link.dataset.tip = `KI: ${me.llm_used}/${me.llm_limit} (${remaining} \u00fcbrig)`;
+      }
+    } catch(e) { /* ignore */ }
+  }
+  refreshQuotaBadges();
+
+  // Unseen-Badge im Nav aktualisieren
+  async function refreshAlertBadge() {
+    try {
+      const s = await fetch("/api/dashboard/summary").then(r => r.json());
+      const badge = document.getElementById("nav-alert-badge");
+      if (!badge) return;
+      if (s.unseen > 0) {
+        badge.textContent = s.unseen;
+        badge.style.display = "inline";
+      } else {
+        badge.style.display = "none";
+      }
+    } catch(e) { /* ignore */ }
+  }
+  refreshAlertBadge();
+
+  // Toast helper
+  function toast(msg, type = "ok", ms = 3500) {
+    const t = document.createElement("div");
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    document.getElementById("toast-container").appendChild(t);
+    setTimeout(() => t.remove(), ms);
+  }
+
+  // Fetch wrapper
+  async function api(url, opts = {}) {
+    const res = await fetch(url, {
+      headers: { "Content-Type": "application/json" },
+      ...opts,
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+    return json;
+  }
+
+  // AI Chat helpers
+  function _aiChatRender(historyId, history) {
+    const el = document.getElementById(historyId);
+    if (!el) return;
+    const renderMd = typeof _mdToHtml === 'function' ? _mdToHtml
+                   : typeof mdToHtml  === 'function' ? mdToHtml
+                   : s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    const aiIcon  = `<svg viewBox="0 0 20 16" width="12" height="10" fill="currentColor" style="vertical-align:middle;margin-right:2px;"><text x="1" y="12" font-family="system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="0.5">AI</text></svg>`;
+    const userIcon = `<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="vertical-align:middle;margin-right:2px;"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.314 2.686-5 6-5s6 1.686 6 5"/></svg>`;
+    el.innerHTML = history.map(m => {
+      const cls  = m.role === 'user' ? 'user' : 'ai';
+      const body = m.role === 'user'
+        ? m.content.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        : renderMd(m.content);
+      const bubbleCls = cls === 'ai' ? 'ai-chat-bubble tb-md-body' : 'ai-chat-bubble';
+      const label = cls === 'ai'
+        ? `<div style="font-size:10px;color:rgba(79,142,247,.7);margin-bottom:2px;padding-left:2px;">${aiIcon} KI</div>`
+        : `<div style="font-size:10px;color:var(--muted);margin-bottom:2px;padding-right:2px;">${userIcon} Sie</div>`;
+      return `<div class="ai-chat-msg ${cls}">${label}<div class="${bubbleCls}">${body}</div></div>`;
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  async function aiChatSend(cfg) {
+    const input = document.getElementById(cfg.inputId);
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    const btn = document.getElementById(cfg.sendBtnId);
+    btn.disabled = true;
+
+    cfg.history.push({ role: 'user', content: question });
+    _aiChatRender(cfg.historyId, cfg.history);
+
+    // Lade-Platzhalter
+    const loadId = 'aicl-' + Date.now();
+    const hist = document.getElementById(cfg.historyId);
+    const loader = document.createElement('div');
+    loader.id = loadId;
+    loader.className = 'ai-chat-msg ai';
+    loader.innerHTML = '<div class="ai-chat-bubble" style="color:var(--muted)">…</div>';
+    hist.appendChild(loader);
+    hist.scrollTop = hist.scrollHeight;
+
+    try {
+      const res = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: cfg.history.slice(),
+          analysis_context: cfg.analysisCtx || '',
+          project_id: cfg.projectId || null,
+        }),
+      });
+      const json = await res.json();
+      document.getElementById(loadId)?.remove();
+      cfg.history.push({ role: 'assistant', content: json.ok ? json.reply : ('⚠️ ' + (json.error || 'Fehler')) });
+    } catch (e) {
+      document.getElementById(loadId)?.remove();
+      cfg.history.push({ role: 'assistant', content: '⚠️ Verbindungsfehler' });
+    }
+
+    _aiChatRender(cfg.historyId, cfg.history);
+    btn.disabled = false;
+    input.focus();
+  }
+
+  // Global data-tip tooltip
+  (function() {
+    const el = document.createElement('div');
+    el.id = 'data-tip-el';
+    document.body.appendChild(el);
+    let tid;
+    document.addEventListener('mouseover', e => {
+      const t = e.target.closest('[data-tip]');
+      if (!t) return;
+      clearTimeout(tid);
+      el.textContent = t.dataset.tip;
+      if (!el.textContent) return;
+      el.style.opacity = '0';
+      const r = t.getBoundingClientRect();
+      const inNav = !!t.closest('nav');
+      el.style.left = (r.left + r.width / 2) + 'px';
+      if (inNav) {
+        el.style.top = (r.bottom + 6) + 'px';
+        el.style.transform = 'translate(-50%, 0)';
+      } else {
+        el.style.top = (r.top - 8) + 'px';
+        el.style.transform = 'translate(-50%, -100%)';
+      }
+      tid = setTimeout(() => el.style.opacity = '1', 50);
+    });
+    document.addEventListener('mouseout', e => {
+      if (!e.target.closest('[data-tip]')) return;
+      clearTimeout(tid);
+      el.style.opacity = '0';
+    });
+  })();
+
+  // ── Breitbildmodus ─────────────────────────────────────────────────────────
+  var _globalWide = false;
+  document.getElementById("global-wide-btn").addEventListener("click", function() {
+    _globalWide = !_globalWide;
+    document.body.classList.toggle("global-wide-active", _globalWide);
+    this.classList.toggle("active", _globalWide);
+    // Lupe deaktivieren falls aktiv
+    if (_globalWide && _globalLupe) {
+      _globalLupe = false;
+      document.getElementById("global-lupe-panel").classList.remove("open");
+      document.body.classList.remove("global-lupe-active");
+      document.getElementById("global-lupe-btn").classList.remove("active");
+      var lb = document.getElementById("global-lupe-btn");
+      lb.style.borderColor = "var(--border)"; lb.style.color = "var(--muted)";
+      _glScreenshot = null; _glClearCanvas();
+    }
+    setTimeout(function() { window.dispatchEvent(new Event("resize")); }, 100);
+  });
+
+  // ── Globale Bildschirmlupe ──────────────────────────────────────────────────
+  var _globalLupe = false;
+  var _glZoom = 3;
+  var _glScreenshot = null;   // letzter html2canvas-Screenshot
+  var _glBusy = false;        // Screenshot wird gerade erstellt
+  var _glMouseX = 0, _glMouseY = 0;
+
+  document.getElementById("global-lupe-btn").addEventListener("click", function() {
+    _globalLupe = !_globalLupe;
+    document.getElementById("global-lupe-panel").classList.toggle("open", _globalLupe);
+    document.body.classList.toggle("global-lupe-active", _globalLupe);
+    this.classList.toggle("active", _globalLupe);
+    // Breitbild deaktivieren falls aktiv
+    if (_globalLupe && _globalWide) {
+      _globalWide = false;
+      document.body.classList.remove("global-wide-active");
+      var wb = document.getElementById("global-wide-btn");
+      wb.classList.remove("active");
+      wb.style.borderColor = "var(--border)"; wb.style.color = "var(--muted)";
+    }
+    // Charts/Layout anpassen lassen
+    setTimeout(function() { window.dispatchEvent(new Event("resize")); }, 100);
+    if (_globalLupe) _glCapture();
+    else { _glScreenshot = null; _glClearCanvas(); }
+  });
+
+  function _glClearCanvas() {
+    var c = document.getElementById("global-lupe-canvas");
+    c.getContext("2d").clearRect(0, 0, c.width, c.height);
+  }
+
+  function _glCapture() {
+    if (_glBusy || !_globalLupe) return;
+    if (typeof html2canvas === "undefined") return;
+    _glBusy = true;
+    html2canvas(document.body, {
+      backgroundColor: null,
+      scale: 1,
+      logging: false,
+      useCORS: true,
+      ignoreElements: function(el) { return el.id === "global-lupe-panel"; },
+    }).then(function(canvas) {
+      _glScreenshot = canvas;
+      _glBusy = false;
+      _glDraw();
+    }).catch(function() {
+      _glBusy = false;
+    });
+  }
+
+  // Periodisch aktualisieren
+  setInterval(function() { if (_globalLupe) _glCapture(); }, 1500);
+
+  var _glLastPw = 0, _glLastPh = 0;
+
+  function _glDraw() {
+    if (!_globalLupe || !_glScreenshot) return;
+    var dst = document.getElementById("global-lupe-canvas");
+    var panel = document.getElementById("global-lupe-panel");
+    var pw = panel.clientWidth;
+    var ph = panel.clientHeight;
+    if (!pw || !ph) return;
+    var dpr = window.devicePixelRatio || 1;
+
+    // Canvas-Größe nur setzen wenn sich Panel-Größe geändert hat (verhindert Flicker)
+    var needPw = pw * dpr, needPh = ph * dpr;
+    if (dst.width !== needPw || dst.height !== needPh) {
+      dst.width  = needPw;
+      dst.height = needPh;
+    }
+
+    var ctx = dst.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Quellbereich um Mausposition
+    var srcW = pw / _glZoom;
+    var srcH = ph / _glZoom;
+    var sx = _glMouseX + window.scrollX - srcW / 2;
+    var sy = _glMouseY + window.scrollY - srcH / 2;
+
+    ctx.clearRect(0, 0, pw, ph);
+    ctx.imageSmoothingEnabled = false;
+    try {
+      ctx.drawImage(_glScreenshot,
+        sx, sy, srcW, srcH,
+        0, 0, pw, ph
+      );
+    } catch(e) {}
+  }
+
+  document.addEventListener("mousemove", function(e) {
+    _glMouseX = e.clientX;
+    _glMouseY = e.clientY;
+    if (_globalLupe && _glScreenshot) _glDraw();
+  });
+</script>
+
+<!-- Quota-Popup -->
+<div id="quota-popup" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;">
+  <div style="background:var(--surface,#1a1d27);border:1px solid var(--border,#2e3147);border-radius:12px;padding:32px 36px;max-width:420px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.4);">
+    <div style="font-size:36px;margin-bottom:12px;">⚠️</div>
+    <h3 style="color:var(--text,#e2e4ef);font-size:18px;margin-bottom:8px;">KI-Kontingent erschöpft</h3>
+    <p id="quota-popup-msg" style="color:var(--muted,#6b7280);font-size:14px;line-height:1.5;margin-bottom:20px;"></p>
+    <button onclick="document.getElementById('quota-popup').style.display='none'" style="padding:8px 28px;background:var(--accent,#4f8ef7);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;">Verstanden</button>
+  </div>
+</div>
+<script>
+(function(){
+  const _origFetch = window.fetch;
+  window.fetch = function() {
+    return _origFetch.apply(this, arguments).then(function(response) {
+      if (response.status === 429) {
+        response.clone().json().then(function(d) {
+          const popup = document.getElementById('quota-popup');
+          const msg = document.getElementById('quota-popup-msg');
+          if (popup && msg) {
+            msg.textContent = d.error || 'Das KI-Kontingent für diesen Monat ist erschöpft. Bitte nächsten Monat erneut versuchen.';
+            popup.style.display = 'flex';
+          }
+        }).catch(function(){});
+      }
+      return response;
+    });
+  };
+})();
+</script>
+
+<script>
+/* ── UI-Sprache ──────────────────────────────────────────────────────────── */
+window._VT_LANG = localStorage.getItem('vt_ui_lang') || 'de';
+/* Akzentfarben: gespeicherte Werte aus localStorage anwenden */
+(function() {
+  var a1 = localStorage.getItem('vt_accent1');
+  var a2 = localStorage.getItem('vt_accent2');
+  if (a1) document.documentElement.style.setProperty('--accent1', a1);
+  if (a2) document.documentElement.style.setProperty('--accent2', a2);
+})();
+/* Akzentfarben als JS-Werte (für Canvas/SVG-Kontexte wo CSS-Variablen nicht greifen) */
+window._VT_ACCENT1 = getComputedStyle(document.documentElement).getPropertyValue('--accent1').trim() || '#7c5cbf';
+window._VT_ACCENT2 = getComputedStyle(document.documentElement).getPropertyValue('--accent2').trim() || '#4f8ef7';
+window._VT_I18N = {};
+window.t = function(key, fallback) {
+  var d = window._VT_I18N[window._VT_LANG] || window._VT_I18N['de'] || {};
+  return (d[key] !== undefined ? d[key] : (fallback !== undefined ? fallback : key));
+};
+window._mergeI18n = function(dict) {
+  Object.keys(dict).forEach(function(lang) {
+    window._VT_I18N[lang] = Object.assign(window._VT_I18N[lang] || {}, dict[lang]);
+  });
+};
+window._applyI18n = function() {
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var k = el.getAttribute('data-i18n'), v = window.t(k);
+    if (v !== k) el.textContent = v;
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(function(el) {
+    var k = el.getAttribute('data-i18n-html'), v = window.t(k);
+    if (v !== k) el.innerHTML = v;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+    var k = el.getAttribute('data-i18n-placeholder'), v = window.t(k);
+    if (v !== k) el.placeholder = v;
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(function(el) {
+    var k = el.getAttribute('data-i18n-title'), v = window.t(k);
+    if (v !== k) el.title = v;
+  });
+};
+
+/* ── Basis-Übersetzungen (Navigation) ───────────────────────────────────── */
+window._mergeI18n({
+  de: {
+    nav_start: 'Start', nav_projects: 'Projekte', nav_analysis: 'Analyse',
+    nav_events: 'Ereignisse', nav_alerts: 'Alerts', nav_keywords: 'Keywords',
+    nav_statistik: 'Statistik', nav_admin: 'Admin', nav_audit: 'Audit Trail',
+    nav_users: 'Benutzer', nav_help: 'Hilfe', nav_plugins: 'Plugins', nav_logout: 'Abmelden',
+    kw_loading: 'Lade\u2026', kw_btn_cancel: 'Abbrechen', kw_btn_save: 'Speichern',
+    kw_th_keyword: 'Keyword',
+    kw_no_project_msg: 'Bitte zuerst ein Projekt anlegen.',
+    kw_no_project_desc: 'Um mit der Analyse zu starten, wird ein Projekt ben\u00f6tigt. Dort werden alle Keywords und Ergebnisse organisiert.',
+    kw_no_project_btn: 'Projekt anlegen',
+  },
+  en: {
+    nav_start: 'Start', nav_projects: 'Projects', nav_analysis: 'Analysis',
+    nav_events: 'Events', nav_alerts: 'Alerts', nav_keywords: 'Keywords',
+    nav_statistik: 'Statistics', nav_admin: 'Admin', nav_audit: 'Audit Trail',
+    nav_users: 'Users', nav_help: 'Help', nav_plugins: 'Plugins', nav_logout: 'Log out',
+    kw_loading: 'Loading\u2026', kw_btn_cancel: 'Cancel', kw_btn_save: 'Save',
+    kw_th_keyword: 'Keyword',
+    kw_no_project_msg: 'Please create a project first.',
+    kw_no_project_desc: 'A project is required to start analysing. All keywords and results are organised there.',
+    kw_no_project_btn: 'Create project',
+  },
+  fr: {
+    nav_start: 'Start', nav_projects: 'Projets', nav_analysis: 'Analyse',
+    nav_events: '\u00c9v\u00e9nements', nav_alerts: 'Alertes', nav_keywords: 'Mots-cl\u00e9s',
+    nav_statistik: 'Statistiques', nav_admin: 'Admin', nav_audit: 'Journal d\u2019audit',
+    nav_users: 'Utilisateurs', nav_help: 'Aide', nav_plugins: 'Plugins', nav_logout: 'D\u00e9connexion',
+    kw_loading: 'Chargement\u2026', kw_btn_cancel: 'Annuler', kw_btn_save: 'Enregistrer',
+    kw_th_keyword: 'Mot-cl\u00e9',
+    kw_no_project_msg: 'Veuillez d\u2019abord cr\u00e9er un projet.',
+    kw_no_project_desc: 'Un projet est n\u00e9cessaire pour commencer l\u2019analyse. Tous les mots-cl\u00e9s et r\u00e9sultats y sont organis\u00e9s.',
+    kw_no_project_btn: 'Cr\u00e9er un projet',
+  },
+  es: {
+    nav_start: 'Start', nav_projects: 'Proyectos', nav_analysis: 'An\u00e1lisis',
+    nav_events: 'Eventos', nav_alerts: 'Alertas', nav_keywords: 'Palabras clave',
+    nav_statistik: 'Estad\u00edsticas', nav_admin: 'Admin', nav_audit: 'Registro de auditor\u00eda',
+    nav_users: 'Usuarios', nav_help: 'Ayuda', nav_plugins: 'Plugins', nav_logout: 'Cerrar sesi\u00f3n',
+    kw_loading: 'Cargando\u2026', kw_btn_cancel: 'Cancelar', kw_btn_save: 'Guardar',
+    kw_th_keyword: 'Palabra clave',
+    kw_no_project_msg: 'Por favor, crea primero un proyecto.',
+    kw_no_project_desc: 'Se necesita un proyecto para empezar el an\u00e1lisis. All\u00ed se organizan todas las palabras clave y resultados.',
+    kw_no_project_btn: 'Crear proyecto',
+  }
+});
+window._mergeI18n({{ plugin_i18n_json | safe }});
+window._applyI18n();
+</script>
+
+{% block scripts %}{% endblock %}
+
+<script>
+
+/* ── Globales Datums-/Zeitformat ─────────────────────────────────────────── */
+(function() {
+  var _df = localStorage.getItem('vt_date_format') || 'DD.MM.YY';
+  var _tf = localStorage.getItem('vt_time_format') || 'HH:mm';
+  var _p  = function(n) { return String(n).padStart(2, '0'); };
+
+  function _applyDate(d, fmt) {
+    var yy2 = String(d.getFullYear()).slice(-2);
+    return fmt.replace('YYYY', d.getFullYear())
+              .replace('YY',   yy2)
+              .replace('MM',   _p(d.getMonth() + 1))
+              .replace('DD',   _p(d.getDate()));
+  }
+  function _applyTime(d, fmt) {
+    var h    = d.getHours();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    var h12  = h % 12 || 12;
+    return fmt.replace('HH', _p(h))
+              .replace('hh', _p(h12))
+              .replace('mm', _p(d.getMinutes()))
+              .replace('ss', _p(d.getSeconds()))
+              .replace('A',  ampm);
+  }
+
+  window.fmtDate = function(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return iso || '';
+    return _applyDate(d, _df) + ' ' + _applyTime(d, _tf);
+  };
+  window.fmtDateOnly = function(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return iso || '';
+    return _applyDate(d, _df);
+  };
+  window.fmtTimeOnly = function(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return iso || '';
+    return _applyTime(d, _tf);
+  };
+
+  /* Server-Wert nachladen (aktualisiert localStorage + laufende Formatierung) */
+  window._vtSettingsReady = fetch('/api/system-settings').then(function(r) {
+    return r.ok ? r.json() : null;
+  }).then(function(data) {
+    if (!data) return;
+    if (data.date_format) { localStorage.setItem('vt_date_format', data.date_format); _df = data.date_format; }
+    if (data.time_format) { localStorage.setItem('vt_time_format', data.time_format); _tf = data.time_format; }
+    if (data.ui_language) {
+      localStorage.setItem('vt_ui_lang', data.ui_language);
+      if (data.ui_language !== window._VT_LANG) {
+        window._VT_LANG = data.ui_language;
+        window._applyI18n();
+      }
+    }
+    if (data.accent1) {
+      localStorage.setItem('vt_accent1', data.accent1);
+      document.documentElement.style.setProperty('--accent1', data.accent1);
+      window._VT_ACCENT1 = data.accent1;
+    }
+    if (data.accent2) {
+      localStorage.setItem('vt_accent2', data.accent2);
+      document.documentElement.style.setProperty('--accent2', data.accent2);
+      window._VT_ACCENT2 = data.accent2;
+    }
+  }).catch(function() {});
+})();
+</script>
+<script>window._applyI18n();</script>
+</body>
+</html>

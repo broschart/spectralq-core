@@ -1,0 +1,1420 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+  .help-layout {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+
+  /* ── Table of Contents ── */
+  .help-toc {
+    position: sticky;
+    top: 80px;
+    width: 210px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .help-toc h3 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .help-toc a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background .12s, color .12s;
+    line-height: 1.3;
+  }
+  .help-toc a:hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .help-toc a.active {
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .help-toc .toc-icon {
+    font-size: 14px;
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  /* ── Main Content ── */
+  .help-content {
+    flex: 1;
+    min-width: 0;
+  }
+  .help-content h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  .help-content .lead {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0 0 32px;
+    line-height: 1.6;
+  }
+
+  /* ── Section Cards ── */
+  .help-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    scroll-margin-top: 80px;
+  }
+  .help-section h2 {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .help-section .section-url {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 9px;
+    font-family: monospace;
+    letter-spacing: .03em;
+  }
+  .help-section .section-desc {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 16px;
+    line-height: 1.6;
+  }
+  .help-section ul {
+    margin: 0;
+    padding: 0 0 0 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .help-section ul li {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+  .help-section ul li strong {
+    color: var(--text);
+  }
+  .help-section ul li .dim {
+    color: var(--muted);
+  }
+  .help-section h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin: 20px 0 8px;
+  }
+
+  /* ── Info Boxes ── */
+  .help-tip {
+    display: flex;
+    gap: 10px;
+    background: rgba(79, 142, 247, .08);
+    border: 1px solid rgba(79, 142, 247, .22);
+    border-radius: 7px;
+    padding: 10px 14px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .help-tip .tip-icon {
+    font-size: 15px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .help-warn {
+    background: rgba(239, 68, 68, .07);
+    border-color: rgba(239, 68, 68, .22);
+  }
+
+  /* ── Kbd Tags ── */
+  kbd {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 11.5px;
+    font-family: monospace;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  /* ── Workflow Steps ── */
+  .help-flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 0;
+    align-items: center;
+  }
+  .help-flow-step {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .help-flow-arrow {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 800px) {
+    .help-toc { display: none; }
+    .help-layout { padding: 20px 16px 40px; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="help-layout">
+
+  <!-- ══════════════════════════════════
+       TABLE OF CONTENTS (Sidebar)
+  ══════════════════════════════════ -->
+  <div class="help-toc" id="help-toc">
+    <h3>Contents</h3>
+    <a href="#workflow">Analysis Workflow</a>
+    <a href="#intro">Overview</a>
+    <a href="#keywords">Keywords</a>
+    <a href="#analysis">Analysis</a>
+    <a href="#dashboard">Start</a>
+    <a href="#aipa">AI Project Assistance</a>
+    <a href="#events">Events</a>
+    <a href="#watchzones">Watch Zones</a>
+    <a href="#projects">Projects</a>
+    <a href="#alerts">Alerts</a>
+    <a href="#statistik">Statistics</a>
+    <a href="#labor">Lab Analyses</a>
+    <a href="#plugins">Plugins</a>
+    <a href="#audit">Audit Trail</a>
+    <a href="#admin">Admin</a>
+    <a href="#dev">Developer</a>
+  </div>
+
+  <!-- ══════════════════════════════════
+       MAIN CONTENT
+  ══════════════════════════════════ -->
+  <div class="help-content">
+
+    <h1>User Manual</h1>
+    <p class="lead">SpectralQ.ai is a digital investigation platform for search behavior, media dynamics, and geospatial signals. The platform overlays up to twelve independent data layers – from Google Trends to AIS vessel traffic to satellite image comparisons – on a common timeline. Only when multiple sources spike simultaneously does a hint become a finding. Analyses can be performed fully automatically via AI agents or entirely manually – or a combination of both.</p>
+
+    <!-- ── Practical Analysis Workflow ── -->
+    <div class="help-section" id="workflow" style="border-left:3px solid var(--accent);">
+      <h2>Practical Analysis Workflow</h2>
+      <p class="section-desc">
+        Recommended sequence for a complete analysis – from setup to finished presentation.
+      </p>
+
+      <h3>Step 1 – Create a Project</h3>
+      <ul>
+        <li>Under <strong>Projects</strong>, create a new project (name, color).</li>
+        <li>Optionally add a <strong>project briefing</strong>: topic, research question, target audience. This text is automatically sent as context with every AI assessment.</li>
+      </ul>
+
+      <h3>Step 2 – Create &amp; Assign Keywords</h3>
+      <ul>
+        <li>Under <strong>Keywords</strong>, create search terms – with geo, time range, and service (Web / News / YouTube …).</li>
+        <li>In project mode (dropdown at the top), newly created keywords are automatically assigned to the active project.</li>
+        <li>Assign existing keywords retroactively: select checkboxes → <strong>To Project…</strong>.</li>
+        <li>Keywords can be assigned to multiple projects simultaneously.</li>
+      </ul>
+
+      <h3>Step 3 – Fetch Data</h3>
+      <ul>
+        <li><strong>Manually:</strong> In the keyword list, click "Fetch All" or start individual fetches per keyword.</li>
+        <li><strong>Automatically:</strong> Under Admin, set up a daily fetch schedule (time in server time).</li>
+        <li>The status of the last fetch is available in the <em>Fetch Logs</em> (Admin).</li>
+      </ul>
+
+      <h3>Step 4 – Open Analysis &amp; Select Project</h3>
+      <ul>
+        <li>Navigate to the <strong>Analysis</strong> page.</li>
+        <li>In the header area on the right, select the desired project – the keyword list automatically filters to project keywords.</li>
+        <li>In <em>freestyle mode</em> (no project), all keywords are available for selection.</li>
+      </ul>
+
+      <h3>Step 5 – Configure Keywords &amp; Time Range</h3>
+      <ul>
+        <li>Activate/deactivate keyword chips (up to 7 simultaneously).</li>
+        <li>Optionally select a fetch version (run tag) via the menu below the chart.</li>
+        <li>Restrict the visible time range via the <strong>navigator</strong> (miniature bar) or zoom directly in the chart by <kbd>Ctrl</kbd>+dragging.</li>
+      </ul>
+
+      <h3>Step 6 – Analyze the Chart</h3>
+      <ul>
+        <li><strong>Crosshair:</strong> Move the mouse over the chart → tooltip with all values at the respective date.</li>
+        <li><strong>Correlation:</strong> Correlation matrix at the bottom left; shift lag with ‹ / ›, open CCF chart.</li>
+        <li><strong>Events</strong> appear as colored lines/areas and help to causally contextualize spikes.</li>
+        <li><strong>Distance Mode</strong> (<kbd>D</kbd>): Span a time interval → shows ranges for different modes of transport. <kbd>M</kbd> opens the range map with concentric rings.</li>
+        <li><strong>Decomposition:</strong> With one active keyword, activate decomposition into trend, seasonality, and noise directly in the chart (additive or multiplicative).</li>
+        <li><strong>Fullscreen:</strong> Two modes available – pure chart fullscreen or layout fullscreen (controls + chart side by side). Exit with <kbd>Esc</kbd>.</li>
+      </ul>
+
+      <h3>Step 7 – Use Analysis Panels</h3>
+      <ul>
+        <li><strong>Self-Similarity</strong> – detects repeating patterns in the time course of a keyword.</li>
+        <li><strong>Outlier Detection</strong> – marks statistical anomalies (Z-Score / IQR).</li>
+        <li><strong>Time Series Decomposition</strong> – separates trend, seasonality, and noise.</li>
+        <li><strong>Related Queries</strong> &amp; <strong>Regional Interest</strong> as complementary perspectives.</li>
+      </ul>
+
+      <h3>Step 7b – Lab Analyses (Test Tube Menu)</h3>
+      <ul>
+        <li><strong>Spike Coincidence</strong> – detects simultaneous spikes across multiple keywords.</li>
+        <li><strong>Change-Point Detection</strong> – finds structural breaks in time series (PELT algorithm).</li>
+        <li><strong>Rolling Correlation</strong> – rolling Pearson correlation with phase detection.</li>
+        <li><strong>Granger Causality</strong> – tests temporal predictive relationships between keywords.</li>
+        <li><strong>Forecasting</strong> – prediction via Prophet or ARIMA (accessible via keyword context menu).</li>
+        <li><strong>RQ Cluster Analysis</strong> – thematic clustering of related queries over time (accessible via keyword context menu).</li>
+      </ul>
+
+      <h3>Step 8 – Get AI Assessment</h3>
+      <ul>
+        <li><strong>🤖 AI Analysis</strong> opens an assessment of the visible data.</li>
+        <li>If a project is selected and contains a briefing, it is automatically sent as context.</li>
+        <li>Separate AI analysis buttons are also available for Self-Similarity, Outliers, Decomposition, and all lab analyses.</li>
+        <li>Each lab analysis automatically passes its specific computation results (changepoints, correlation phases, Granger results, etc.) to the AI.</li>
+      </ul>
+
+      <h3>Step 9 – Save Snapshot</h3>
+      <ul>
+        <li><strong>📸 Snapshot</strong> saves the current view (keywords, time range, zoom, correlations, statistics).</li>
+        <li>Assign to the active project, provide a title and comment.</li>
+        <li>Snapshots can be retrieved at any time and reproduced in the analysis.</li>
+      </ul>
+
+      <h3>Step 10 – Assemble &amp; Export Presentation</h3>
+      <ul>
+        <li>Under <strong>Projects</strong>, sort snapshots via drag &amp; drop.</li>
+        <li>Add text slides (title, section), map slides, project briefing slides, or other slide types via <strong>+ Page</strong>.</li>
+        <li>Map slides: set markers with optional distance rings; comment, timestamp, and radius are editable after placement.</li>
+        <li><strong>Start Presentation</strong> – fullscreen mode with keyboard navigation.</li>
+        <li><strong>Export PDF</strong> – renders all slides and generates a downloadable PDF file.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>For recurring analyses, you can start from step 3 – project, keywords, and settings are preserved and do not need to be recreated.</span>
+      </div>
+    </div>
+
+    <!-- ── Overview ── -->
+    <div class="help-section" id="intro">
+      <h2>Overview</h2>
+      <p class="section-desc">
+        SpectralQ.ai follows two parallel working principles: manual-forensic or fully automated via AI agents. Both paths lead to reproducible, hash-secured findings.
+      </p>
+      <div class="help-flow">
+        <span class="help-flow-step">1 · Create Keywords</span>
+        <span class="help-flow-arrow">→</span>
+        <span class="help-flow-step">2 · Fetch Data</span>
+        <span class="help-flow-arrow">→</span>
+        <span class="help-flow-step">3 · Triangulation &amp; Analysis</span>
+        <span class="help-flow-arrow">→</span>
+        <span class="help-flow-step">4 · Snapshots &amp; Report</span>
+        <span class="help-flow-arrow">→</span>
+        <span class="help-flow-step">5 · Alerts &amp; Monitoring</span>
+      </div>
+      <div class="help-flow" style="margin-top:8px;">
+        <span class="help-flow-step" style="border-color:var(--accent1);color:var(--accent1);">Alt. · Enter Briefing</span>
+        <span class="help-flow-arrow">→</span>
+        <span class="help-flow-step" style="border-color:var(--accent1);color:var(--accent1);">AI Agents Investigate</span>
+        <span class="help-flow-arrow">→</span>
+        <span class="help-flow-step" style="border-color:var(--accent1);color:var(--accent1);">Report &amp; Project Automatically</span>
+      </div>
+      <h3>Data Backends</h3>
+      <ul>
+        <li><strong>Playwright</strong> – Controls a real browser, optionally with cookies. Most reliable method.</li>
+        <li><strong>pytrends</strong> – Lightweight Python library without a browser. More susceptible to rate limiting.</li>
+        <li><strong>SerpAPI</strong> – External API that reliably delivers Google Trends data (100 free requests/month). Requires an API key.</li>
+      </ul>
+      <p class="section-desc" style="margin-top:12px;">
+        During fetching, SpectralQ.ai tries the backends sequentially (fallback principle). Order
+        and activation are configured in the <a href="#admin" style="color:var(--accent);">Admin</a> section.
+      </p>
+    </div>
+
+    <!-- ── Keywords ── -->
+    <div class="help-section" id="keywords">
+      <h2>Keywords <span class="section-url">/</span></h2>
+      <p class="section-desc">
+        The start page is the central management hub for all monitored search terms.
+        Keywords are created, configured, and data is fetched here.
+      </p>
+
+      <h3>Create Keyword</h3>
+      <ul>
+        <li><strong>Search Term</strong> – The term as it would be entered in Google Trends.</li>
+        <li><strong>Geo</strong> – Country or region code (e.g., <kbd>DE</kbd>, <kbd>US-CA</kbd>). Leave empty for worldwide data.</li>
+        <li><strong>Time Range</strong> – Preset time windows: last hour, 4 hours, 24 hours, 7 days, etc. Determines data granularity (hourly vs. daily).</li>
+        <li><strong>Service</strong> – Data category: Web Search, News, Images, YouTube, or Shopping.</li>
+        <li><strong>Note</strong> – Optional internal free-text field.</li>
+        <li><strong>Active/Inactive</strong> – Inactive keywords are skipped during automatic fetching.</li>
+      </ul>
+
+      <h3>Translator</h3>
+      <ul>
+        <li>The <strong>Translator button</strong> (🌐) automatically translates a term into EN, ES, FR, ZH, and RU and suggests matching countries.</li>
+        <li>Clicking a translation chip applies the term and country directly to the form.</li>
+      </ul>
+
+      <h3>Project Assignment</h3>
+      <ul>
+        <li><strong>Project Mode:</strong> Select a project in the dropdown at the top – the list filters to assigned keywords. Newly created keywords are automatically assigned to this project.</li>
+        <li><strong>Freestyle Mode:</strong> No project selected – all keywords visible, no automatic assignment.</li>
+        <li><strong>To Project…:</strong> Select checkboxes → "To Project…" – opens a modal for assigning or removing from any projects. Keywords can belong to multiple projects simultaneously.</li>
+        <li>Assigned projects are displayed as colored badges in the keyword row.</li>
+      </ul>
+
+      <h3>Table &amp; Actions</h3>
+      <ul>
+        <li><strong>Multi-select</strong> (up to 7 keywords): Select checkboxes, then "Open Analysis" – launches the analysis page with pre-selected keywords.</li>
+        <li><strong>Fetch Now</strong> – immediately triggers a data fetch for this keyword only.</li>
+        <li><strong>Related Queries</strong> – opens a modal with rising and top related search terms (saved during the last fetch).</li>
+        <li><strong>Regional Interest</strong> – opens a modal with a bar chart; switchable between state/province level and city level.</li>
+        <li><strong>Edit</strong> – modifies all keyword parameters retroactively.</li>
+        <li><strong>Delete</strong> – permanently removes the keyword and all associated trend data.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Using search and the "Active / Inactive" filter, even large keyword lists can be quickly browsed. The project selection is synchronized across pages with the analysis.</span>
+      </div>
+    </div>
+
+    <!-- ── Analysis ── -->
+    <div class="help-section" id="analysis">
+      <h2>Analysis <span class="section-url">/analysis</span></h2>
+      <p class="section-desc">
+        The core of the application: interactive time series visualization with comparison,
+        correlation analysis, temporal statistics, and regional evaluation.
+      </p>
+
+      <h3>Project &amp; Keyword Selection</h3>
+      <ul>
+        <li>In the <strong>header area on the right</strong>, a project can be selected – the keyword list automatically filters to keywords assigned to the project.</li>
+        <li>In <strong>freestyle mode</strong> (no project), all keywords are available.</li>
+        <li>The project selection is synchronized with the Keywords page (<kbd>localStorage</kbd>).</li>
+        <li>The page without a selected keyword shows a <strong>search field</strong> and the most recently used keywords as quick chips.</li>
+        <li>Up to <strong>7 keywords</strong> can be selected simultaneously. Each receives its own color.</li>
+        <li>URL parameter <kbd>?kw=id1,id2</kbd> loads keywords directly on page load.</li>
+      </ul>
+
+      <h3>Chart Interaction</h3>
+      <ul>
+        <li><strong>Crosshair Cursor</strong> – When moving the mouse, a vertical line is displayed and all values at the cursor date are shown as a tooltip.</li>
+        <li><kbd>Shift</kbd> <strong>+ Drag</strong> – Marks a time range (blue) as a time range event.</li>
+        <li><kbd>Drag</kbd> – Zoom box for direct zoom into an area.</li>
+        <li><strong>Navigator</strong> – Narrow overview bar below the main chart. The visible section can be shifted by dragging.</li>
+        <li><strong>Fetch Version</strong> – Multiple fetches of the same keyword (different run tags) can be displayed as separate curves.</li>
+      </ul>
+
+      <h3>Triangulation (External Data Overlay)</h3>
+      <p>The purple <strong>"Triangulation"</strong> button (to the right of AI Analysis in the chart toolbar) opens a centered panel with all external data sources. These are displayed as additional curves in the timeline graph to reveal correlations and anomalies. During loading, a pulsing colored indicator above the chart shows progress.</p>
+      <p>The sources are organized into three groups:</p>
+
+      <h4 style="color:#a78bfa;margin:14px 0 6px;">Text &amp; Media</h4>
+      <ul>
+        <li><strong>Wikipedia Pageviews/Edits</strong> – Daily view counts and edits of the associated Wikipedia articles. Separate right Y-axis (orange). The article title is resolved automatically. Clicking the article title opens the <strong>author and edit check</strong> with revision analysis and reputation assessment.</li>
+        <li><strong>GDELT Media Reports</strong> – Daily article count worldwide from the GDELT project. Separate Y-axis (light blue). Shows media intensity of a topic.</li>
+        <li><strong>Bluesky Posts</strong> – Posting volume on Bluesky for freely selectable keywords. Separate Y-axis (blue). Only appears if Bluesky credentials are configured in Admin (Handle + App Password).</li>
+        <li><strong>Telegram Messages</strong> – Message volume in public Telegram channels. Separate Y-axis (teal). Only appears if Telegram API credentials are configured in Admin and a session is authenticated.</li>
+      </ul>
+
+      <h4 style="color:#22d3ee;margin:14px 0 6px;">Financial Markets</h4>
+      <ul>
+        <li><strong>Yahoo Finance</strong> – Stock prices and/or trading volume for ticker symbols. Enter a company name or symbol in the search field – an <strong>autocomplete search</strong> suggests matching tickers (e.g., <kbd>TSLA</kbd>, <kbd>SAP.DE</kbd>, <kbd>BTC-USD</kbd>). Select by clicking, remove via × button or Backspace. Up to 5 tickers simultaneously. Dropdown selection: price, volume, or both. No API key required. Separate Y-axes for price (green) and volume.</li>
+      </ul>
+
+      <h4 style="color:#4ade80;margin:14px 0 6px;">Geospatial Sources</h4>
+      <p>Geospatial sources are based on <strong>Watch Zones</strong> – geographic monitoring regions drawn directly on the map as polygons or rectangles. Each Watch Zone has a type (satellite, weather, seismic, nightlights, etc.) and a geometry. If no matching Watch Zone exists, the checkbox is grayed out and the hint "Create Watch Zone first" appears. If zones exist, the first one is automatically preselected.</p>
+      <ul>
+        <li><strong>Sentinel-2 NDVI</strong> – Vegetation index from Sentinel-2 satellite imagery. Detects land changes (deforestation, construction, fires). Requires Copernicus credentials in Admin. Mark region via map picker.</li>
+        <li><strong>DWD / NOAA</strong> – Weather and gauge data. Four measurement types selectable: water levels, precipitation, weather warnings, storm tracks. Bar chart for precipitation/water levels, line for warnings/storms. Separate Y-axis (blue). Requires Watch Zone of type "weather".</li>
+        <li><strong>Satellite Observation</strong> – Marks available Sentinel-2 acquisition dates as vertical lines in the chart. Clicking a marker opens the satellite image with before/after comparison and NDVI analysis. Requires Watch Zone of type "satellite" and Copernicus credentials.</li>
+        <li><strong>Seismics (USGS)</strong> – Earthquake data from the US Geological Survey. Shows maximum magnitude per time slot as red dots (size proportional to strength). Separate Y-axis (red). Requires Watch Zone of type "seismic". No API key needed.</li>
+        <li><strong>Nighttime Lights (NASA VIIRS)</strong> – Mean brightness from NASA VIIRS nighttime light imagery. Detects changes in lighting and infrastructure (power outages, construction activity, conflict zones). Separate Y-axis (yellow). Requires Watch Zone of type "nightlights". No API key needed, uses NASA GIBS WMS.</li>
+      </ul>
+
+      <h4 style="margin:14px 0 6px;">General Notes</h4>
+      <ul>
+        <li>Text/media sources are displayed as dashed lines, geospatial sources as solid lines with their own Y-axis.</li>
+        <li>All data is cached – toggling on/off does not require a new API call.</li>
+        <li>Wikipedia, GDELT, Yahoo Finance, Seismics, and Nighttime Lights are available without an API key. Bluesky, Telegram, NDVI, and Satellite require credentials.</li>
+        <li>The Triangulation panel closes by clicking outside, the × button, or <kbd>Esc</kbd>.</li>
+      </ul>
+
+      <h3>Decomposition (Time Series Decomposition in Chart)</h3>
+      <ul>
+        <li>With <strong>exactly one active keyword</strong>, a <strong>Decomposition</strong> checkbox with algorithm selection appears to the left of "Normalize".</li>
+        <li>Two models are available: <strong>Additive</strong> (Y = T + S + R) and <strong>Multiplicative</strong> (Y = T × S × R).</li>
+        <li>Activation overlays three additional lines in the main chart: <strong>Trend</strong> (yellow), <strong>Seasonal</strong> (green), and <strong>Residual</strong> (purple).</li>
+        <li>Seasonality and noise are displayed on a separate right Y-axis.</li>
+        <li>Hover values are rounded to 2 decimal places in decomposition mode.</li>
+        <li>When decomposition mode is active, the decomposition data is automatically passed to the <strong>AI Analysis</strong>.</li>
+        <li>When a second keyword is activated, decomposition is automatically deactivated.</li>
+      </ul>
+
+      <h3>Fullscreen Modes &amp; Magnifier</h3>
+      <ul>
+        <li><strong>Chart Fullscreen</strong> (expand icon) – displays only the chart in fullscreen, including navigator. Optimized for large monitors and presentations.</li>
+        <li><strong>Layout Fullscreen</strong> (columns icon) – shows the control area (search, keywords, fetch runs, display area) on the left (25%) and the chart on the right (75%) side by side in fullscreen. Ideal for collaborative work and team presentations.</li>
+        <li><strong>Magnifier</strong> – Precisely enlarges any chart area: move the cursor over the area and activate the magnifier. Especially useful for detailed analysis of narrow time windows or during team presentations on large displays.</li>
+        <li>All modes are exited with <kbd>Esc</kbd> and are mutually exclusive.</li>
+      </ul>
+
+      <h3>Index Mode</h3>
+      <ul>
+        <li>Key <kbd>I</kbd> – activates <strong>Index Mode</strong>. All curves are normalized to the value at the cursor date (= 100), making relative changes directly comparable.</li>
+        <li>Moving the mouse shifts the reference point in real time.</li>
+        <li>Key <kbd>F</kbd> – <strong>fixes</strong> the current reference point. The normalization stays frozen even when the mouse moves further. Pressing <kbd>F</kbd> again releases the fix.</li>
+        <li>A blue badge "Index Mode · F = fix" or "Index fixed" appears at the top of the chart.</li>
+        <li>Pressing <kbd>I</kbd> again or <kbd>Escape</kbd> exits index mode and restores the original values.</li>
+      </ul>
+
+      <h3>Distance Mode</h3>
+      <ul>
+        <li>Key <kbd>D</kbd> (mouse must be over the chart) – activates <strong>Distance Mode</strong>. A start point is set; moving the mouse spans a time interval. A semi-transparent arrow visualizes the span.</li>
+        <li>The tooltip shows how far one could travel in that time with different modes of transportation (car, bicycle, on foot).</li>
+        <li>Pressing <kbd>D</kbd> again – fixes the arrow and values. Another <kbd>D</kbd> or <kbd>Escape</kbd> exits distance mode.</li>
+        <li>Key <kbd>M</kbd> or clicking on the chart in distance mode – opens the <strong>Map Mode</strong> (interactive map with concentric rings for each mode of transport).</li>
+        <li>In map mode: address search or 📍 geolocation sets the origin point. Clicking a transport mode button in the legend zooms to the corresponding ring.</li>
+        <li><strong>Map Snapshot</strong> – saves the current map view as a map slide in a project (select project in the dropdown next to the save button).</li>
+      </ul>
+
+      <h3>Correlations</h3>
+      <ul>
+        <li>For each keyword pair, the <strong>Pearson correlation coefficient r</strong> is automatically calculated.</li>
+        <li>Color coding: strongly negative (red) → no correlation (gray) → strongly positive (green).</li>
+        <li><strong>Time Shift (Lag)</strong>: With ‹ / › (±1 step) and « / » (±7 steps), curve B can be shifted in time against curve A. The correlation updates live; the shifted curve is displayed as dashed.</li>
+        <li>The value in the center shows the current shift in hours (h) or days (d). An ✕ resets to lag 0.</li>
+        <li><strong>CCF (Cross-Correlation Function)</strong>: The CCF button opens a layer with a bar chart of all correlation values for lags from −20 to +20. Clicking a bar applies that lag directly to the manual shift.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>A positive lag means: B lags behind A. A negative lag means: B leads A. The curve shifts in the chart accordingly to the left (−) or right (+).</span>
+      </div>
+
+      <h3>Temporal Statistics</h3>
+      <ul>
+        <li>Shows average trend values by <strong>day of week</strong> and <strong>time of day</strong> (only for hourly data).</li>
+        <li>Provides insight into recurring patterns in search interest (e.g., peaks on Mondays or in the evening).</li>
+      </ul>
+
+      <h3>AI Analysis</h3>
+      <ul>
+        <li><strong>🤖 AI Analysis</strong> – sends the visible time series data to the configured language model and delivers a structured assessment.</li>
+        <li>If a project with a <strong>project briefing</strong> is selected in the header, it is automatically sent as context – the AI can better contextualize the topic.</li>
+        <li>Separate AI buttons are also available in the Self-Similarity, Outlier Detection, Time Series Decomposition, and all lab analysis panels.</li>
+        <li>Each analysis passes its computed data (changepoints, correlation phases, Granger results, forecasts, etc.) automatically to the AI.</li>
+        <li>AI provider and model are configured under <a href="#admin" style="color:var(--accent);">Admin</a>.</li>
+        <li>Non-admin users automatically use the superadmin's API keys, unless their own API has been authorized.</li>
+      </ul>
+
+      <h3>Additional Panels</h3>
+      <ul>
+        <li><strong>Related Queries</strong> – shows rising and top terms related to the selected keyword.</li>
+        <li><strong>Regional Interest</strong> – bar chart at state/province or city level.</li>
+        <li><strong>Daily &amp; Weekly Statistics</strong> – average values visualized by time unit.</li>
+        <li><strong>Self-Similarity</strong> – detects repeating time windows in the course of a keyword.</li>
+        <li><strong>Outlier Detection</strong> – marks statistical anomalies via Z-Score or IQR method.</li>
+        <li><strong>Time Series Decomposition</strong> – separates trend, seasonality, and noise (additive or multiplicative). Alternatively usable directly in the main chart via the <em>Decomposition</em> checkbox.</li>
+      </ul>
+    </div>
+
+    <!-- ── Lab Analyses ── -->
+    <div class="help-section" id="labor">
+      <h2>Lab Analyses <span class="section-url">Test Tube Menu</span></h2>
+      <p class="section-desc">
+        Advanced statistical methods, accessible via the test tube dropdown in the toolbar
+        or via the context menu of individual keywords.
+      </p>
+
+      <h3>Spike Coincidence</h3>
+      <ul>
+        <li>Detects <strong>simultaneous spikes</strong> across multiple active keywords.</li>
+        <li>Coincidences are highlighted as vertical markers in the chart.</li>
+        <li>The results (coincident data points, involved keywords) are automatically passed to the AI.</li>
+      </ul>
+
+      <h3>Change-Point Detection</h3>
+      <ul>
+        <li>Finds <strong>structural breaks</strong> in time series using the PELT algorithm (Pruned Exact Linear Time).</li>
+        <li>The chart shows detected changepoints as vertical lines and segments with alternating backgrounds.</li>
+        <li>Segment statistics (mean, standard deviation, rate of change) are calculated and passed to the AI.</li>
+        <li>Accessible via the lab dropdown or the keyword context menu.</li>
+      </ul>
+
+      <h3>Rolling Correlation</h3>
+      <ul>
+        <li>Calculates the <strong>rolling Pearson correlation</strong> between keyword pairs over a configurable time window.</li>
+        <li>The chart shows the correlation trajectory (Y-axis −1 to +1) with color-coded zones (positive/negative/neutral).</li>
+        <li><strong>Phase detection</strong> identifies contiguous time periods of consistent correlation direction.</li>
+        <li>All pairs or a single pair can be selected.</li>
+        <li>Phases and average correlation are passed to the AI.</li>
+      </ul>
+
+      <h3>Periodicity Filter (FFT)</h3>
+      <ul>
+        <li>Detects <strong>recurring cycles</strong> in a time series using Fast Fourier Transform (FFT).</li>
+        <li>Shows the dominant frequencies and their period lengths (e.g., 7-day rhythm, 30-day cycle).</li>
+        <li>The results are automatically passed to the AI for interpretation.</li>
+      </ul>
+
+      <h3>Granger Causality</h3>
+      <ul>
+        <li>Tests <strong>temporal predictive relationships</strong> between all keyword pairs in both directions.</li>
+        <li>Results table with direction, optimal lag, F-statistic, p-value, and significance rating (★/★★/★★★).</li>
+        <li>Expandable lag details show all tested lags per pair.</li>
+        <li>Network hub summary: which keyword Granger-causes the most others.</li>
+        <li>Important: Granger causality ≠ true causality – it measures predictive power, not causal mechanisms.</li>
+      </ul>
+
+      <h3>Forecasting</h3>
+      <ul>
+        <li>Calculates a <strong>time series forecast</strong> for a single keyword.</li>
+        <li>Two models: <strong>Prophet</strong> (automatic seasonality and changepoint detection) or <strong>ARIMA</strong> (auto-configured order).</li>
+        <li>Configurable forecast horizon (number of steps).</li>
+        <li>The chart shows historical data, forecast line (green dashed), and confidence band.</li>
+        <li>Forecast results are passed to the AI for interpretation.</li>
+        <li>Accessible via the <strong>keyword context menu</strong> (not in the lab dropdown).</li>
+      </ul>
+
+      <h3>RQ Cluster Analysis</h3>
+      <ul>
+        <li>Analyzes <strong>related queries</strong> of a keyword across all fetch time points.</li>
+        <li>The AI groups all queries into <strong>thematic clusters</strong> and evaluates their temporal development.</li>
+        <li>Identifies emerging, stable, and disappearing clusters as well as breakout queries.</li>
+        <li>Includes chat function for follow-up questions about the cluster analysis.</li>
+        <li>Accessible via the <strong>keyword context menu</strong> (not in the lab dropdown).</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>All lab analyses automatically pass their computed data to the AI assessment. The AI receives a specialized prompt with an explanation task and the specific analysis results in each case.</span>
+      </div>
+    </div>
+
+    <!-- ── Dashboard ── -->
+    <div class="help-section" id="dashboard">
+      <h2>Start <span class="section-url">/start</span></h2>
+      <p class="section-desc">
+        Landing page with quick access, alert monitoring, and the fully automated AI Project Assistance.
+      </p>
+
+      <h3>Getting Started</h3>
+      <ul>
+        <li><strong>Quickstart Tiles</strong> – Four colored cards leading directly to the most important areas: create keyword, fetch data, start analysis, manage projects.</li>
+        <li>Below the tiles is the <strong>AI Project Assistance</strong> (see <a href="#aipa" style="color:var(--accent);">dedicated section</a>).</li>
+      </ul>
+
+      <h3>Alert Monitoring</h3>
+      <ul>
+        <li><strong>Count cards</strong> at the top show unseen and total events.</li>
+        <li><strong>Event table</strong> lists all triggered alerts with keyword, type, timestamp, and detail text.</li>
+        <li><strong>Type filter</strong> (All · Unread · Appearance · Disappearance · Spike · Vol. appears · Vol. disappears) narrows the view.</li>
+        <li><strong>Check Now</strong> – immediately triggers a manual evaluation of all active alert rules.</li>
+        <li><strong>Mark All as Read</strong> – resets the nav badge to 0.</li>
+        <li>The <strong>red badge</strong> in the nav updates automatically on each page load.</li>
+      </ul>
+    </div>
+
+    <!-- ── AI Project Assistance ── -->
+    <div class="help-section" id="aipa">
+      <h2>AI Project Assistance <span class="section-url">/start</span></h2>
+      <p class="section-desc">
+        Fully autonomous analysis with a 4-agent team: A search term or briefing is all it takes – the AI
+        independently creates a project, fetches data, creates snapshots, and delivers a forensically robust report
+        with confidence analysis and counter-thesis.
+      </p>
+
+      <h3>Input</h3>
+      <ul>
+        <li><strong>Search Term</strong> – The seed keyword from which the research starts. Automatically checked for language and appropriate geo context.</li>
+        <li><strong>Briefing</strong> – Optional free-text field for the research question or context. The briefing significantly steers the research strategy, e.g., it can influence the geo focus (question about Russia → search in RU with Russian keywords).</li>
+        <li><strong>Intensity</strong> – Slider (1–5). Higher values lead to more iterations, more keywords, and more intermediate snapshots.</li>
+      </ul>
+
+      <h3>4-Agent Architecture</h3>
+      <p>APA operates with four specialized AI agents that collaborate in each iteration:</p>
+      <ul>
+        <li><strong>Coordinator</strong> – Thinks strategically and is <strong>hypothesis-driven</strong>. Formulates an explicit hypothesis in each round, commissions its testing, and actively searches for counter-evidence. Recognizes that many questions can only be measured <em>indirectly</em>. Uses <strong>cross-project memory</strong> to incorporate findings from earlier analyses.</li>
+        <li><strong>Trend Researcher</strong> – Specialist for trend data. Analyzes time series for peaks, seasonal patterns, correlations, and anomalies. Reports to the coordinator with specific data values and time periods.</li>
+        <li><strong>RQ Researcher</strong> – Specialist for related queries. Identifies topic clusters, semantic connections, and rising trends. Suggests new, often lateral keywords to the coordinator.</li>
+        <li><strong>Critic</strong> – Devil's advocate. Activated after the iterations are complete and systematically questions all conclusions: Are correlations being interpreted as causation? Are there alternative explanations? Was only confirming data sought? Their feedback is incorporated into the final report.</li>
+      </ul>
+      <p>Trend and RQ Researcher work <strong>in parallel</strong>. The Critic works <strong>adversarially</strong> – they are the only agent that does not act cooperatively.</p>
+
+      <h3>Process</h3>
+      <ul>
+        <li>After starting, a <strong>log monitor</strong> opens showing progress in real time (SSE-based). Agent names appear in <span style="color:var(--accent1);font-weight:700;">purple/bold</span>.</li>
+        <li><strong>Phase 1 – Seed Fetch &amp; Memory:</strong> The seed keyword is fetched from Google Trends. The system checks whether overlapping keywords have already been analyzed in previous projects (cross-project memory).</li>
+        <li><strong>Phase 2 – Automatic News Scan:</strong> Immediately after the seed fetch, up to 15 current news articles about the seed keyword are automatically searched via Google News and their <strong>full texts scraped</strong> (with cleanup of cookie banners and boilerplate). The articles are <strong>created as events in the project</strong> and the contents are provided to the coordinator as context. This gives the AI access to the current news landscape on the topic from the very beginning.</li>
+        <li><strong>Phase 3 – Hypothesis-Driven Iteration:</strong> In each iteration, the coordinator formulates an <strong>explicit hypothesis</strong>, commissions targeted fetches and analyses to test it, and evaluates after the researcher reports: confirmed, refuted, or open? The research strategy actively seeks counter-evidence. The coordinator has access to the scraped news content and can use it for hypothesis formation.</li>
+        <li><strong>Phase 4 – Critic Review:</strong> After the iterations are complete, the <strong>critic agent</strong> analyzes all conclusions adversarially: logical errors, confirmation bias, alternative explanations, missing counter-evidence, over-interpretations.</li>
+        <li><strong>Phase 5 – Forensic Final Report:</strong> The report contains confidence values for each core statement, a mandatory section "What this analysis does not prove," historical pattern comparison, the critic's feedback, and the findings from the news scan.</li>
+        <li>When data is missing for a specific country, an automatic <strong>geo fallback</strong> to worldwide data is attempted.</li>
+      </ul>
+
+      <h3>Statistical Analyses &amp; Events</h3>
+      <ul>
+        <li>The coordinator can run <strong>statistical analyses</strong> on the fetched data – e.g., change-point detection, rolling correlation, spike coincidence, periodicity, outlier detection, time series decomposition, self-similarity, <strong>Auto Correlate</strong> (automatically finds the most strongly correlated keywords including optimal lag), and <strong>Forecasting</strong> (time series prediction via Prophet or ARIMA).</li>
+        <li>The results feed directly into the assessment and the final report.</li>
+        <li><strong>Stored events</strong> (manually created annotations) are automatically considered as context – the AI can thus correlate spikes with known events.</li>
+      </ul>
+
+      <h3>External Data Sources</h3>
+      <ul>
+        <li><strong>Automatic News Scan</strong> – Performed immediately after start: Up to 15 news articles about the seed keyword are found, scraped, and created as events. The coordinator can additionally trigger targeted <strong>news scans</strong> with different search terms or time ranges.</li>
+        <li><strong>Event Probe</strong> – Forensic short-window analysis (1 or 7 days) around a specific event date. The system pulls Google Trends data for a narrow time window and automatically analyzes:
+          <ul>
+            <li><strong>Foreknowledge Indicator</strong> – Significant search volume BEFORE the event → possible indication of foreknowledge or planning</li>
+            <li><strong>Reactive Pattern</strong> – Search volume only AFTER the event → normal reaction pattern</li>
+            <li><strong>Suspicious</strong> – Search volume ONLY BEFORE the event, not after → particularly worth investigating</li>
+          </ul>
+        </li>
+        <li><strong>Wikipedia Pageviews</strong> – Daily view counts of Wikipedia articles as an independent signal alongside Google Trends. Serves as cross-validation: Do search trends align with information interest on Wikipedia? Provides absolute numbers (in contrast to Google Trends' relative 0–100 scale). Spikes frequently correlate with news cycles.</li>
+        <li><strong>Wikipedia Edits</strong> – Edit history of Wikipedia articles: Who edits, when, how often? Detects edit spikes (PR campaigns, crisis management), analyzes author reputation and anonymous vs. registered edits. Forensically relevant for detecting whitewashing or coordinated article manipulation.</li>
+        <li><strong>GDELT Media Volume</strong> – Daily article count from the GDELT project, which monitors worldwide news media. Forensically relevant: Was there first searching or first reporting? Missing media coverage with high search volume is suspicious. Enables the distinction between organic and media-driven search interest.</li>
+        <li><strong>Yahoo Finance</strong> – Historical price data, volume, and volatility for stocks, ETFs, cryptocurrencies, and indices. Forensically relevant: Correlation between search interest and market movements, insider hints (was there first searching, then the price moved?), volume spikes during news events.</li>
+        <li><strong>NDVI Vegetation Analysis</strong> – Sentinel-2 satellite images provide the vegetation index (NDVI) for any region. Detects land changes: deforestation, construction projects, natural disasters, fires, renaturation. Requires Copernicus credentials.</li>
+        <li><strong>ACLED Conflicts</strong> – Armed conflicts and political violence as bar chart (events per day). Separate Y-axis (red). Requires Watch Zone of type "acled" and ACLED account.</li>
+        <li><strong>Air Quality (OpenAQ)</strong> – PM2.5 daily averages from monitoring stations in the zone. Separate Y-axis (green). Requires Watch Zone of type "airquality" and OpenAQ API key.</li>
+        <li><strong>Power Grid (ENTSO-E)</strong> – Daily average load of the power grid. Separate Y-axis (yellow). Requires Watch Zone of type "powergrid" and ENTSO-E token.</li>
+        <li><strong>Migration (UNHCR)</strong> – Refugee and asylum numbers per year. Dashed reference line for short time ranges, trend curve for multi-year views. Separate Y-axis (violet). Requires Watch Zone of type "migration". No API key needed.</li>
+        <li><strong>Telegram Monitor</strong> – Mention volume in public Telegram channels per day. Dashed line (teal). Requires Watch Zone of type "telegram_monitor" with configured keywords.</li>
+        <li><strong>Bluesky Monitor</strong> – Post volume on Bluesky per day. Separate Y-axis (blue). Requires Watch Zone of type "bluesky_monitor" with configured keywords.</li>
+        <li><strong>OSM Changes</strong> – Number of OSM edits per day as green bars. Separate Y-axis. Requires Watch Zone of type "osm_changes". No API key needed.</li>
+        <li><strong>Wayback Frequency</strong> – Snapshots/day of a URL as cyan bars. Peaks indicate media attention. Separate Y-axis. Requires Watch Zone of type "wayback_cdx". No API key needed.</li>
+        <li>All external sources are used autonomously by the coordinator – e.g., for triangulation of unexplained peaks or when the briefing suggests a forensic research question.</li>
+        <li>The triangulation menu includes a <strong>search field</strong> for quickly filtering available sources. Only plugins with stored credentials are shown.</li>
+      </ul>
+
+      <h3>Intelligent Search Strategy</h3>
+      <ul>
+        <li><strong>Indirect Measurement:</strong> Questions like "Who is more popular?" cannot be measured directly. The coordinator recognizes this and instead compares the individual entities (e.g., party names, politician names).</li>
+        <li><strong>Geo Adaptation:</strong> The briefing can influence the geo context. A question about Russia leads to searches in geo=RU with Russian keywords.</li>
+        <li><strong>Search Behavior:</strong> Keywords are formulated as people actually search – short, without filler words, in the language of the target geo.</li>
+        <li><strong>Duplicate Protection:</strong> Identical snapshot charts are automatically prevented. Each snapshot shows a targeted selection of 1–3 keywords.</li>
+      </ul>
+
+      <h3>Result</h3>
+      <ul>
+        <li>A <strong>new project</strong> is automatically created, bundling all keywords, snapshots, and the report.</li>
+        <li>The report appears in a <strong>report overlay</strong> and is saved as a slide in the project.</li>
+        <li>All snapshots contain Markdown-formatted comments with analytical assessments.</li>
+        <li>The report contains a <strong>confidence analysis</strong>: Each core statement is rated with a confidence value (High/Medium/Low) and justification (data density, time period, converging signals).</li>
+        <li><strong>Mandatory section "What this analysis does not prove"</strong>: Explicitly states which conclusions the data does not support, which alternative explanations exist, and which data gaps remain.</li>
+        <li><strong>Historical Pattern Comparison</strong>: Automatic comparison with earlier surveys – detects pattern repetitions, trend reversals, and level changes.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>The AI Project Assistance is particularly suited for getting started with a new topic – it quickly provides a data-based overview before a deeper manual analysis follows. Use the briefing field to specify the research question – the more specific the briefing, the more targeted the research.</span>
+      </div>
+    </div>
+
+    <!-- ── Events ── -->
+    <div class="help-section" id="events">
+      <h2>Events <span class="section-url">/events</span></h2>
+      <p class="section-desc">
+        Events are annotations in the trend chart – created manually or automatically detected from news analyses.
+        The page combines event management, news research, and AI-powered news briefing.
+      </p>
+
+      <h3>Manage Events</h3>
+      <ul>
+        <li><strong>Point Event</strong> – appears as a vertical line in the chart at a specific date.</li>
+        <li><strong>Range Event</strong> – appears as a colored area between two dates.</li>
+        <li><strong>Title &amp; Description</strong> – are displayed in the event's tooltip.</li>
+        <li><strong>Color</strong> – freely selectable via color picker; determines line or area color in the chart.</li>
+        <li>Events are displayed on all analysis charts and can be edited or deleted at any time.</li>
+        <li>Stored events are automatically passed to the <strong>AI Analysis</strong> and the <strong>AI Project Assistance</strong> as context.</li>
+      </ul>
+
+      <h3>Find News</h3>
+      <ul>
+        <li><strong>Search Term</strong> – Searches for current news articles via Google News RSS.</li>
+        <li><strong>Date Range</strong> – Optional from/to filter in date format (DD.MM.YYYY).</li>
+        <li>Found articles are displayed as cards with title, source, date, and link.</li>
+        <li><strong>Word Cloud</strong> – Shows the 20 most frequent terms from the search result headlines. Clicking a term filters the result list (OR combination for multiple active filters). Clicking again removes the filter.</li>
+      </ul>
+
+      <h3>News Briefing</h3>
+      <ul>
+        <li><strong>Analyze News</strong> – Scrapes the full texts of all found articles and sends them to the configured language model for analysis.</li>
+        <li>The result appears in a <strong>two-column modal</strong>: briefing on the left, sidebar with actions on the right.</li>
+      </ul>
+
+      <h3>Detected Events (Table)</h3>
+      <ul>
+        <li>Directly below the summary, a table shows all events detected by the LLM with <strong>date, time, message, source count, and location</strong>.</li>
+        <li>The LLM extracts the <strong>actual time of the occurrence</strong> from the article texts – not the publication date.</li>
+        <li>Each row has a <strong>checkbox</strong>. The "All" checkbox in the header selects all events at once.</li>
+        <li><strong>Import as Events</strong> – Saves the selected rows as point events in the database (with purple color), assigned to the active project.</li>
+      </ul>
+
+      <h3>Story Presentation</h3>
+      <ul>
+        <li><strong>Present as Story</strong> – Opens a fullscreen map view that navigates chronologically through all detected events.</li>
+        <li>Each event is displayed with <strong>date, time, description, sources, and location</strong> on an interactive map (CartoDB Voyager).</li>
+        <li>For <strong>multiple locations</strong> per event (e.g., "USA, Iran"), separate maps are shown side by side, each centered on the respective location.</li>
+        <li>The <strong>navigation buttons</strong> (left/right) show the time difference to the next event (e.g., "2 days ago", "in 3h 15m", "simultaneous") as well as the <strong>geographic distance in kilometers</strong> (straight line).</li>
+        <li>All event locations are geocoded in advance (Nominatim) and displayed as subtle dots on the map; the current location is highlighted.</li>
+        <li><strong>Progress bar</strong> at the top shows the position in the story.</li>
+        <li>Navigation via <strong>arrow keys</strong>, <strong>spacebar</strong> (forward), and <strong>Escape</strong> (close).</li>
+      </ul>
+
+      <h3>Sidebar: Export &amp; Actions</h3>
+      <ul>
+        <li><strong>Copy</strong> – Copies the briefing text to the clipboard.</li>
+        <li><strong>PDF</strong> – Exports the briefing as a PDF file (via WeasyPrint).</li>
+        <li><strong>DOCX</strong> – Exports the briefing as a Word document (via python-docx).</li>
+        <li><strong>To Project Slide</strong> – Saves the report as a text slide in a selectable project.</li>
+      </ul>
+
+      <h3>Sidebar: Frequent Terms</h3>
+      <ul>
+        <li>Shows the <strong>top 20 terms</strong> from all scraped article texts, sorted by frequency.</li>
+        <li>German and English stop words as well as web boilerplate (cookie banners, etc.) are filtered out.</li>
+        <li>Clicking a term <strong>closes the briefing modal</strong> and automatically starts a new news search with that term.</li>
+      </ul>
+
+      <h3>Sidebar: Follow-up Questions</h3>
+      <ul>
+        <li>Chat input field for <strong>follow-up questions about the briefing</strong>. The AI receives the briefing text as context and can provide deeper analysis, explanations, or assessments.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>The combination of automatic event detection, story presentation, and direct import into the database enables a fast workflow: search news → create briefing → detect events → visualize as story → import relevant events into trend analysis.</span>
+      </div>
+    </div>
+
+    <!-- ── Watch Zones ── -->
+    <div class="help-section" id="watchzones">
+      <h2>Watch Zones <span class="section-url">/events → Live View</span></h2>
+      <p class="section-desc">
+        Monitoring zones for real-time, satellite, and website data. Each zone has a type
+        and is opened via the map icon in the events view.
+      </p>
+
+      <h3>Zone Types</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:8px;">Only plugins with stored credentials appear in the sidebar and triangulation menu. The search bar in the sidebar filters when there are many plugins.</p>
+
+      <h4 style="margin-top:14px;">Geospatial Monitoring</h4>
+      <ul>
+        <li><strong>Satellite</strong> – Sentinel-2 acquisition data and NDVI vegetation analysis (requires Copernicus credentials).</li>
+        <li><strong>Weather</strong> – DWD / NOAA: water levels, precipitation, weather warnings, storm tracks.</li>
+        <li><strong>Seismics</strong> – USGS earthquake data, no API key needed. Triangulatable.</li>
+        <li><strong>Nightlights</strong> – NASA VIIRS nighttime light intensity (infrastructure, power outages). Triangulatable.</li>
+        <li><strong>Radioactivity</strong> – BfS ODL (Germany) + EURDEP (Europe): gamma dose rate, ~1,600 and ~37,000 monitoring stations respectively. Triangulatable.</li>
+        <li><strong>Aircraft</strong> – Live air traffic via OpenSky Network with anomaly score, 3D globe, and proximity analysis.</li>
+        <li><strong>Vessels</strong> – AIS vessel traffic via aisstream.io.</li>
+      </ul>
+
+      <h4>Infrastructure & Environment</h4>
+      <ul>
+        <li><strong>Traffic (TomTom)</strong> – Traffic incidents, congestion, accidents, closures in real time. Flow index compares current speed with normal value. 50,000 requests/day free. Requires TomTom API key.</li>
+        <li><strong>Cell Towers (OpenCelliD)</strong> – Cell tower inventory (GSM, UMTS, LTE, 5G NR) with range, signal strength, and LTE/5G coverage indicator. 1,000 requests/day free. Requires OpenCelliD API key.</li>
+        <li><strong>Air Quality (OpenAQ)</strong> – PM2.5, PM10, ozone, NO₂, SO₂, CO worldwide. Color-coded by EPA scale. Spikes indicate fires, explosions, or industrial accidents. Triangulatable. Requires OpenAQ API key (free).</li>
+        <li><strong>Power Grid (ENTSO-E)</strong> – Grid load in 30+ European countries. 48h load curve with anomaly detection (blackout indicator at &gt;30% load drop). Triangulatable. Requires ENTSO-E security token (free, request via email).</li>
+      </ul>
+
+      <h4>Conflicts & Migration</h4>
+      <ul>
+        <li><strong>ACLED Conflicts</strong> – Armed conflicts, political violence, protests, and unrest worldwide. Daily, georeferenced events with actors and fatalities. Triangulatable. Requires ACLED account (free for research/media).</li>
+        <li><strong>Migration (UNHCR)</strong> – Refugee numbers, asylum applications, and internal displacement for 40+ countries. 10-year time series with dual perspective (host and origin country). Triangulatable. No API key needed.</li>
+        <li><strong>OSM Changes</strong> – Recent OpenStreetMap edits in a region: new roads, buildings, military infrastructure, airports, barriers, energy infrastructure. Shows top mappers and tag breakdown. Triangulatable. No API key needed (Overpass API).</li>
+      </ul>
+
+      <h4>Social Media & Web</h4>
+      <ul>
+        <li><strong>Website</strong> – Monitors a URL via Wayback Machine: snapshot comparison, content changes, tracker detection, traceroute. No geo coordinates needed.</li>
+        <li><strong>Telegram Monitor</strong> – Keyword-based monitoring of public Telegram channels. Shows mention volume over 90 days with daily resolution. Triangulatable. Requires Telegram API credentials + authenticated session.</li>
+        <li><strong>Bluesky Monitor</strong> – Keyword-based monitoring on Bluesky (AT Protocol). Post volume over 180 days. Triangulatable. Requires Bluesky Handle + App Password.</li>
+        <li><strong>Wayback Frequency</strong> – How often was a URL cached by the Internet Archive? High frequency = media attention or coordinated archiving. Triangulatable. No API key needed.</li>
+        <li><strong>CertWatch</strong> – Certificate Transparency Log monitoring for domains.</li>
+        <li><strong>Wikipedia</strong> – Monitors Wikipedia articles for changes.</li>
+        <li><strong>Censys</strong> – Internet asset search (requires Censys credentials).</li>
+      </ul>
+
+      <h3>Manage Zones</h3>
+      <ul>
+        <li><strong>Draw Zone</strong> – Two buttons at the top left of the map: <em>Draw Polygon Zone</em> and <em>Draw Rectangle Zone</em>. While drawing, a crosshair with dashed lines in the accent color appears.</li>
+        <li><strong>Zone List</strong> – Below the map, all zones are listed (including global zones with 🌐 marker).</li>
+        <li><strong>Hover Zoom</strong> – Hovering over a zone in the list zooms the map to the zone. When leaving, the map snaps back.</li>
+        <li><strong>Click Anchor</strong> – Clicking a zone in the list anchors the zoom. Clicking again releases the anchor.</li>
+        <li><strong>Edit</strong> (pencil icon) – Makes the zone editable on the map: drag corner points to change the geometry. A save/cancel bar appears. Double-click the name to rename it.</li>
+        <li><strong>Delete</strong> (trash icon) – Removes the zone after confirmation.</li>
+        <li><strong>Global Zones</strong> – Appear in all categories but can only be edited or deleted under "Global Zones." In other panels, pencil and trash icons are grayed out with a hint.</li>
+        <li><strong>Zone names</strong> are displayed at the top left above the zone boundary on the map.</li>
+      </ul>
+
+      <h3>Add Website</h3>
+      <ul>
+        <li>Button <strong>+ Add Website</strong> opens a modal with URL input and zone name.</li>
+        <li>Below is a <strong>URL quick selection</strong> with prepared domains, organized by <strong>31 countries/regions</strong> (USA, Germany, Russia, China, Ukraine, …) and <strong>5 categories</strong>:
+          <ul>
+            <li>Military · Politics · News · Emergency Management · Medicine</li>
+          </ul>
+        </li>
+        <li>Clicking a domain chip applies the URL to the input field. The <strong>↗ icon</strong> on the right of the chip opens the website directly in a new tab.</li>
+        <li>The URL data is loaded from an external JSON file and cached on first opening.</li>
+      </ul>
+
+      <h3>Page Comparison (Diff Window)</h3>
+      <ul>
+        <li>Opens when clicking two Wayback snapshots of a website zone.</li>
+        <li>Tabs: <strong>Content New</strong>, <strong>Content Removed</strong>, <strong>Content Diff</strong>, <strong>Code New</strong>, <strong>Code Removed</strong>, <strong>Code Diff</strong>, <strong>Tracker</strong>.</li>
+        <li>The content tabs display content as <strong>tiles</strong> (one term / sentence per tile).</li>
+        <li>The <strong>Tracker tab</strong> automatically detects embedded tracking technologies (Google Analytics, Facebook Pixel, Matomo, etc.) and shows newly added, removed, and persisting trackers.</li>
+      </ul>
+
+      <h3>Translation in Page Comparison</h3>
+      <ul>
+        <li>Button <strong>🌐 Translate</strong> in the diff window toolbar – active only for content tabs (Content New / Removed / Diff).</li>
+        <li>Language selection: German, English, French, Spanish, Chinese, Russian.</li>
+        <li>For <strong>tile tabs</strong> (Content New / Removed): Each tile is translated individually. The translated text appears directly in the tile; the original remains visible as a small hint text below.</li>
+        <li>For <strong>Content Diff</strong>: Translation result appears as a panel below the tab bar.</li>
+        <li>All texts of a tab are translated in a single API request (line-by-line mapping).</li>
+        <li>Code tabs and Tracker are excluded from translation (button grayed out).</li>
+      </ul>
+
+      <h3>Traceroute (Server Live)</h3>
+      <ul>
+        <li>Button <strong>Server (Live)</strong> starts a traceroute to the target server of the website zone.</li>
+        <li>Results are streamed live via <strong>Server-Sent Events</strong>: hop by hop, IP, RTT, geodata (city, country, ASN), and rDNS appear.</li>
+        <li>The <strong>map</strong> and the <strong>hop list</strong> fully fill the available modal area.</li>
+        <li>Anomalies (e.g., unusual routing paths) are highlighted in color.</li>
+        <li>Results are saved and accessible via the traceroute history.</li>
+      </ul>
+
+      <h3>Aircraft Watch Zone – Live Table</h3>
+      <ul>
+        <li>Shows all aircraft in the bounding box with <strong>callsign, ICAO24, country of origin, altitude, speed, heading, and anomaly score</strong>.</li>
+        <li>The <strong>anomaly score</strong> (0–100) rates each aircraft for suspicious behavior (squawk 7500/7600/7700, unusual altitude, slow speed, etc.) and is highlighted in color.</li>
+        <li>Clicking a row opens the <strong>detail view</strong>.</li>
+      </ul>
+
+      <h3>Aircraft Watch Zone – Detail View</h3>
+      <ul>
+        <li>Shows all available parameters of the aircraft as well as a <strong>mini map</strong> with the current position.</li>
+        <li>The <strong>nearest aircraft</strong> is displayed as a dark aircraft icon on the mini map and blinks. A dashed line connects both aircraft.</li>
+        <li>Below the map, horizontal &amp; 3D distance and altitude difference to the nearest aircraft are shown.</li>
+      </ul>
+
+      <h3>Density Measurement &amp; Distance Measurement</h3>
+      <ul>
+        <li>Button <strong>🌡 Density Measurement</strong> overlays the map with circles based on minimum distance: <strong>Red</strong> &lt; 1 km · <strong>Orange</strong> 1–5 km · <strong>Yellow</strong> 5–30 km.</li>
+        <li>The <strong>Proximity Panel</strong> lists all critical pairs (&lt; 1 km). Clicking an entry zooms the map to the pair.</li>
+        <li><kbd>D</kbd> – Distance measurement: select first aircraft, then second → shows 2D and 3D distance including altitude difference.</li>
+      </ul>
+
+      <h3>3D Globe</h3>
+      <ul>
+        <li>Button <strong>⬡ 3D</strong> switches to an interactive <strong>Cesium.js 3D view</strong>.</li>
+        <li>Each aircraft appears as a colored icon with callsign label and vertical ground line.</li>
+        <li>Clicking <strong>⬡ 2D</strong> again returns to the Leaflet map.</li>
+      </ul>
+
+      <h3>APA Integration</h3>
+      <ul>
+        <li>The APA chat has direct access to all of the user's Watch Zones via the following tools:</li>
+        <ul>
+          <li><strong>list_watchzones</strong> – List all zones (name, type, ID, project).</li>
+          <li><strong>get_watchzone_details</strong> – Retrieve configuration and metadata of a zone.</li>
+          <li><strong>get_live_data</strong> – Fetch current data (website, weather, seismics).</li>
+          <li><strong>get_website_history</strong> – Query Wayback changes in a time range.</li>
+          <li><strong>get_traceroute_history</strong> – Retrieve saved traceroute results of a zone.</li>
+          <li><strong>create_watchzone</strong> – Create a new zone (website with URL; geo zones with lat/lon/radius).</li>
+          <li><strong>get_radiation_data</strong> – Gamma dose rate for a zone (BfS/EURDEP).</li>
+          <li><strong>acled_conflict_data</strong> – ACLED conflict events for region and time range.</li>
+          <li><strong>get_airquality_data</strong> – Air quality data (PM2.5, ozone, etc.) for a zone.</li>
+          <li><strong>get_powergrid_data</strong> – Power grid load data (ENTSO-E) for European zones.</li>
+          <li><strong>get_migration_data</strong> – UNHCR refugee and migration data.</li>
+          <li><strong>get_traffic_data</strong> – Traffic incidents and flow index (TomTom).</li>
+          <li><strong>get_celltower_data</strong> – Cell towers (OpenCelliD).</li>
+          <li><strong>telegram_keyword_search</strong> – Keyword search in Telegram channels.</li>
+          <li><strong>bluesky_keyword_search</strong> – Keyword search on Bluesky.</li>
+          <li><strong>get_osm_changes</strong> – Recent OpenStreetMap changes in a zone.</li>
+          <li><strong>wayback_url_frequency</strong> – Archiving frequency of a URL (Wayback CDX).</li>
+        </ul>
+        <li>The APA calls tools automatically and repeatedly as needed (up to 5 rounds) and then summarizes the results in natural language.</li>
+        <li>Example queries: <em>"What Watch Zones do I have?"</em> · <em>"Create a website zone for defense.gov"</em> · <em>"What changed on tagesschau.de last week?"</em> · <em>"Are there conflicts in the Ukraine zone?"</em> · <em>"What is the air quality in my zone?"</em></li>
+        <li>The APA coordinator can additionally use <strong>vessel_traffic</strong>, <strong>aircraft_traffic</strong>, and all of the above tools to incorporate data into ongoing analyses.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Website zone workflow: Create zone → Compare snapshots (diff window) → Translate tiles → Start traceroute → Ask APA in chat: <em>"What changed on this website?"</em></span>
+      </div>
+    </div>
+
+    <!-- ── Projects ── -->
+    <div class="help-section" id="projects">
+      <h2>Projects <span class="section-url">/projects</span></h2>
+      <p class="section-desc">
+        The presentation toolkit: Keywords and analyses are captured as snapshots
+        and bundled into projects – exportable as PDF.
+      </p>
+
+      <h3>Projects &amp; Snapshots</h3>
+      <ul>
+        <li><strong>Create Project</strong> – gives a collection of snapshots a name and a color. Directly accessible via "+ New Project" in the sidebar.</li>
+        <li><strong>Project Search</strong> – Search field above the project list filters entries live by name. <kbd>Escape</kbd> clears the search.</li>
+        <li>The name of the currently selected project is displayed as a large title above the slide list.</li>
+        <li><strong>Project Briefing</strong> – optional free text for the project (topic, research question, target audience). Automatically sent as context with AI assessments on the analysis page. Editable via "📋 Edit Briefing" in the project management.</li>
+        <li><strong>Assign Keywords</strong> – Keywords can belong to multiple projects simultaneously. Assignment via the Keywords page (project mode or "To Project…" modal).</li>
+        <li><strong>Create Snapshot</strong> – saves the current state of a chart (keywords, time range, zoom, correlations, temporal statistics) as a reproducible card.</li>
+        <li>Snapshots can be reordered within a project via drag &amp; drop.</li>
+        <li>Each snapshot has a title, description, and selectable resolution preset.</li>
+      </ul>
+
+      <h3>Slides</h3>
+      <ul>
+        <li>Various slide types can be added via <strong>+ Page</strong>: title page, section, map, website embed, and <strong>📋 Project Briefing</strong> (displays the briefing as its own slide).</li>
+        <li>Slides and snapshots together form the sequence of a presentation and can be sorted via drag &amp; drop.</li>
+      </ul>
+
+      <h3>Map Slides</h3>
+      <ul>
+        <li>Map slides (<strong>Map / Maps</strong>) show an interactive Leaflet map with any number of markers.</li>
+        <li><strong>Address Search</strong> – Search field above the map with Nominatim autocomplete. Results show type badges (country, city, street, …). When selecting, the map zooms to the location and a marker is placed.</li>
+        <li><strong>Country Borders</strong> – When a country is selected as a search result (identifiable by the "Country" badge), its <strong>borders are rendered as a GeoJSON polygon</strong> on the map. The border display is saved with the slide and shown in the presentation.</li>
+        <li><strong>Place Marker</strong> – Clicking on the map opens a popup; there you can enter a comment, timestamp, and an optional <strong>distance ring (km)</strong> directly.</li>
+        <li>Comment, date/time, and radius are editable at any time in the marker list after placement.</li>
+        <li>Markers can be reordered in the list via drag &amp; drop.</li>
+        <li>A distance ring &gt; 0 km draws a dashed circle on the map – useful for range and catchment area visualizations.</li>
+        <li><strong>Map Snapshot from Analysis Distance Mode</strong> – automatically creates a map slide with origin marker and rings (range corresponds to the selected time period).</li>
+      </ul>
+
+      <h3>Presentation Mode</h3>
+      <ul>
+        <li>Opens a <strong>fullscreen presentation</strong> for all contents of a project.</li>
+        <li><strong>Themes</strong>: All dark · Charts dark / text light · All light.</li>
+        <li><strong>Layouts</strong>: Image left · Image right · Image top – switchable via button.</li>
+        <li>Navigation with arrow keys or click; charts are calculated and rendered live.</li>
+        <li>Temporal statistics appear below the chart at the same width.</li>
+        <li><strong>Map slides</strong> in the presentation show markers, distance rings, connection arrows, and country borders (GeoJSON).</li>
+      </ul>
+
+      <h3>Export</h3>
+      <ul>
+        <li><strong>PDF Export</strong> – renders all slides of a project via html2canvas and generates a multi-page PDF file.</li>
+        <li><strong>Screenshot</strong> – saves individual chart views as images.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Logo and author name for the presentation are configured under <a href="#admin" style="color:var(--accent);">Admin → Presentation</a>.</span>
+      </div>
+    </div>
+
+    <!-- ── Alerts ── -->
+    <div class="help-section" id="alerts">
+      <h2>Alerts <span class="section-url">/alerts</span></h2>
+      <p class="section-desc">
+        Automatic notifications when relevant changes occur in the trend data.
+        Triggered events appear on the dashboard.
+      </p>
+
+      <h3>Alert Types</h3>
+      <ul>
+        <li><strong>Appearance</strong> – triggered when a keyword appears in the related queries that was not previously present.</li>
+        <li><strong>Disappearance</strong> – triggered when a keyword disappears from the related queries.</li>
+        <li><strong>Spike</strong> – triggered when the current trend value exceeds a threshold. Threshold definable as <em>absolute value</em> (0–100) or as <em>percentage increase</em> compared to the average.</li>
+        <li><strong>Volume Appears</strong> – Total volume in the defined time window increases significantly.</li>
+        <li><strong>Volume Disappears</strong> – Total volume in the defined time window drops significantly.</li>
+      </ul>
+
+      <h3>Configuration</h3>
+      <ul>
+        <li><strong>Keyword Scope</strong>: "All Keywords" or a manual selection of specific keywords.</li>
+        <li><strong>Threshold</strong>: For spike alerts, selectable as absolute value or percentage value.</li>
+        <li><strong>Time Window</strong>: For volume alerts, the window specifies over how many data points the average is calculated.</li>
+        <li>Alerts can be individually activated and deactivated.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Alerts are evaluated with every automatic fetch. Via "Check Now" on the dashboard, the evaluation can be triggered manually.</span>
+      </div>
+    </div>
+
+    <!-- ── Statistics ── -->
+    <div class="help-section" id="statistik">
+      <h2>Statistics <span class="section-url">/statistik</span></h2>
+      <p class="section-desc">
+        Overview of collected data volumes, backend fetch performance, and AI quota.
+      </p>
+
+      <h3>Data Retrieval</h3>
+      <ul>
+        <li><strong>Summary</strong> – Total number of stored trend data points, fetch sessions, and related queries.</li>
+        <li><strong>Backend Breakdown</strong> – Data points per backend (Playwright / pytrends / SerpAPI) with color coding.</li>
+        <li><strong>Fetch History</strong> – Bar chart: successful data points per fetch session, color-coded by backend.</li>
+        <li><strong>Data Point Timeline</strong> – Cumulative development of the data inventory over time.</li>
+        <li><strong>Fetch Logs</strong> – Tabular list of all fetch operations with status, backend, success rate, runtime, and error details (paginated, 50 entries per page).</li>
+      </ul>
+
+      <h3>AI Quota</h3>
+      <ul>
+        <li><strong>Usage</strong> – Shows the number of AI calls used in the current month relative to the assigned limit.</li>
+        <li><strong>Progress Bar</strong> – Color-coded: purple (under 70%), orange (70–90%), red (over 90%).</li>
+        <li><strong>Show Details</strong> – Expandable detail view with breakdown by source (Analysis, Project Analysis, Keyword Suggestions, Intro Generation, AI Chat, APA Translation, APA Coordinator, APA Trend Researcher, APA RQ Researcher, APA Critic, APA Report).</li>
+        <li>The detail table shows timestamp, source, and context of each individual call.</li>
+        <li>The quota is set monthly by the superadmin in user management.</li>
+      </ul>
+    </div>
+
+    <!-- ── Plugins ── -->
+    <div class="help-section" id="plugins">
+      <h2>Plugins <span class="section-url">/plugins</span></h2>
+      <p class="section-desc">
+        Central management of all modules: Watch Zones, AI modules, and analysis methods.
+        Here plugins are activated, credentials are stored, and AI providers are configured.
+        Accessible via the user menu (bottom right).
+      </p>
+
+      <h3>Plugin Cards</h3>
+      <ul>
+        <li>Each plugin is displayed as a <strong>card</strong> with icon, name, description, and status toggle.</li>
+        <li>The cards are grouped by plugin type: <strong>Watch Zones</strong>, <strong>AI Modules</strong>, <strong>Analysis Methods</strong>.</li>
+        <li>The <strong>toggle switch</strong> activates or deactivates a plugin. Deactivated plugins do not appear in the sidebar, AI chat, or triangulation.</li>
+      </ul>
+
+      <h3>Status Indicators</h3>
+      <ul>
+        <li><strong>Activated</strong> (green) – Plugin is ready for use.</li>
+        <li><strong>Deactivated</strong> (orange) – Plugin was deactivated by the user.</li>
+        <li><strong>Credentials Required</strong> (red) – Plugin requires API keys that have not yet been stored. The toggle is locked until the data is entered.</li>
+        <li><strong>Locked by Administrator</strong> (gray) – The superadmin has blocked access to this plugin for the current user. Toggle and credential input are disabled.</li>
+      </ul>
+
+      <h3>Credentials</h3>
+      <ul>
+        <li>Plugins with API requirements show an expandable <strong>credential panel</strong> below the card.</li>
+        <li>Colored dots show the status per key: <strong>green</strong> = present, <strong>orange</strong> = missing.</li>
+        <li>Password fields have a <strong>visibility toggle</strong> (eye icon).</li>
+        <li>After saving, the dots and placeholders are immediately updated.</li>
+        <li>If the <strong>API permission is set to "Superadmin API"</strong> (by the administrator in user management), no credential panel appears – the user automatically uses the admin keys.</li>
+      </ul>
+
+      <h3>AI Modules – Provider &amp; Model</h3>
+      <ul>
+        <li>AI plugins additionally show dropdown fields for <strong>AI provider</strong> (Anthropic, OpenAI, Gemini, Mistral) and <strong>model</strong>.</li>
+        <li>The model selection automatically adapts to the chosen provider.</li>
+        <li>After saving, you are asked whether the setting should be applied to <strong>all AI modules</strong>.</li>
+      </ul>
+
+      <h3>Analysis Methods – Visibility</h3>
+      <ul>
+        <li>Analysis plugins have an additional dropdown <strong>"Show in"</strong>: Lab, Keyword Popup, Both, or Nowhere.</li>
+        <li>This controls where the analysis appears in the interface – in the test tube menu, in the keyword context menu, or in both locations.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>Plugins without API requirements (Seismics, Weather, Nightlights, etc.) can be activated directly. Plugins with API keys show a notice when attempting activation that credentials must be entered first.</span>
+      </div>
+    </div>
+
+    <!-- ── Admin ── -->
+    <!-- ── Audit Trail ── -->
+    <div class="help-section" id="audit">
+      <h2>Audit Trail <span class="section-url">/audit</span></h2>
+      <p class="section-desc">
+        Hash-chained log of all project-relevant actions.
+        Enables forensic traceability and integrity verification of the entire analysis chain.
+      </p>
+
+      <h3>Activation</h3>
+      <ul>
+        <li>The Audit Trail is activated/deactivated in the <strong>Admin section</strong> via a toggle.</li>
+        <li>When activated, <strong>Audit Trail</strong> appears as its own menu item to the left of Statistics.</li>
+        <li>When the Audit Trail is deactivated, no entries are written and the menu item is hidden.</li>
+      </ul>
+
+      <h3>Logged Actions</h3>
+      <ul>
+        <li><strong>snapshot_create</strong> – Snapshot created (manually or via APA)</li>
+        <li><strong>snapshot_delete</strong> – Snapshot deleted</li>
+        <li><strong>analysis_run</strong> – AI analysis performed (with analysis mode and keywords)</li>
+        <li><strong>keyword_fetch</strong> – Manual data fetch started (bulk or individual)</li>
+        <li><strong>project_create</strong> / <strong>project_delete</strong> – Project created or deleted</li>
+        <li><strong>apa_start</strong> / <strong>apa_complete</strong> – APA analysis started or completed</li>
+        <li><strong>export_docx</strong> / <strong>export_pdf</strong> – Export as Word or PDF document</li>
+      </ul>
+
+      <h3>Hash Chaining</h3>
+      <ul>
+        <li>Each audit entry contains a <strong>SHA-256 hash</strong> computed from the entry data and the hash of the preceding entry.</li>
+        <li>This chaining forms a <strong>mini blockchain</strong>: Retroactive insertion, deletion, or modification of entries is detectable.</li>
+        <li>The first entry uses <code>GENESIS</code> as the predecessor hash.</li>
+      </ul>
+
+      <h3>Integrity Verification</h3>
+      <ul>
+        <li>Via the <strong>Verify Hash Chain</strong> button, the entire chain is verified.</li>
+        <li>Result: Green message if the chain is intact, red message if manipulation is detected.</li>
+      </ul>
+
+      <h3>Filter and Navigation</h3>
+      <ul>
+        <li><strong>Project Filter</strong> – Narrow entries by project.</li>
+        <li><strong>Action Filter</strong> – Filter entries by action type (e.g., only exports or only snapshots).</li>
+        <li>Paginated navigation with 50 entries per page.</li>
+      </ul>
+
+      <h3>Forensic Data Integrity</h3>
+      <ul>
+        <li>Snapshots receive a <strong>SHA-256 content hash</strong> upon creation that proves the data has not been altered.</li>
+        <li>The content hash is recorded in the audit trail and can be individually verified via <code>/api/snapshots/&lt;id&gt;/verify</code>.</li>
+        <li>In DOCX exports, the SHA-256 hash of the snapshot is displayed.</li>
+      </ul>
+    </div>
+
+    <!-- ── Admin ── -->
+    <div class="help-section" id="admin">
+      <h2>Admin <span class="section-url">/admin</span></h2>
+      <p class="section-desc">
+        System configuration: prioritize backends, store API keys,
+        set up automatic fetching, and maintain presentation metadata.
+      </p>
+
+      <p class="section-desc" style="margin-top:4px;">
+        All sections are collapsible – the state is saved per browser.
+      </p>
+
+      <h3>Color Scheme</h3>
+      <ul>
+        <li>Switch between <strong>light</strong> and <strong>dark</strong> color scheme via two buttons in the Admin section.</li>
+        <li>The setting is saved in the browser and server-side and applies to all pages.</li>
+      </ul>
+
+      <h3>Fetch Workflow</h3>
+      <ul>
+        <li>The three backends (Playwright · pytrends · SerpAPI) can be reordered in priority via <strong>arrow buttons</strong>.</li>
+        <li>Each backend can be individually <strong>activated or deactivated</strong>.</li>
+        <li>During fetching, the first active backend is tried; on error, the next one follows automatically (fallback).</li>
+      </ul>
+
+      <h3>API &amp; Configuration</h3>
+      <p class="section-desc" style="margin-top:4px;">System-wide API settings (superadmin). Plugin-specific credentials (Bluesky, Telegram, Copernicus, Censys, AISHub, etc.) are managed under <a href="#plugins" style="color:var(--accent);">Plugins</a>.</p>
+      <ul>
+        <li><strong>Trend Data Sources</strong> – SerpAPI key (100 free requests/month), cookies file (for Playwright backend), and NewsAPI key (for "Find News," 100 requests/day).</li>
+        <li><strong>Automation</strong> – Time (server time) for the scheduled daily fetch of all active keywords.</li>
+      </ul>
+
+      <h3>AI Analysis</h3>
+      <ul>
+        <li><strong>AI Provider &amp; Model</strong> – System-wide default setting. Users can select their own providers and models in the <a href="#plugins" style="color:var(--accent);">plugin settings</a>.</li>
+        <li><strong>API Key Fallback</strong> – Users use the superadmin keys by default. Only when "Own API" is enabled in <a href="#plugins" style="color:var(--accent);">user management</a> are own keys used.</li>
+        <li>Users with their own LLM key are <strong>not subject to any quota</strong> – the quota displays are automatically hidden.</li>
+      </ul>
+
+      <h3>Presentation</h3>
+      <ul>
+        <li><strong>Logo URL</strong> – displayed in the presentation header.</li>
+        <li><strong>Author</strong> – Author name for the presentation.</li>
+      </ul>
+
+      <h3>Audit Trail</h3>
+      <ul>
+        <li><strong>Toggle</strong> – Activates or deactivates the hash-chained Audit Trail (see <a href="#audit" style="color:var(--accent);">Audit Trail</a>).</li>
+      </ul>
+
+      <h3>User Management (Enterprise Only)</h3>
+      <ul>
+        <li>Only available in multi-user mode (<code>MULTI_USER=true</code>). Accessible via the user menu → <strong>Users</strong>. Visible to superadmins only.</li>
+        <li><strong>Plugin Access</strong> – Per user and plugin, the following can be configured:
+          <ul>
+            <li><strong>Superadmin API</strong> – User uses the administrator's keys (no credential panel for the user).</li>
+            <li><strong>Own API</strong> – User must store their own keys (credential panel visible).</li>
+            <li><strong>Disabled</strong> – Plugin is completely locked for the user.</li>
+          </ul>
+        </li>
+        <li>Plugins without API requirements show only <strong>Allowed</strong> or <strong>Disabled</strong>.</li>
+        <li><strong>Workflow Backends</strong> – Playwright, pytrends, and SerpAPI can be enabled per user.</li>
+        <li><strong>Limits</strong> – SerpAPI/LLM quota, maximum projects and keywords per user.</li>
+      </ul>
+
+      <h3>Fetch Logs</h3>
+      <ul>
+        <li>Tabular overview of all fetch operations (time, status, backend, success rate, errors, runtime).</li>
+        <li>Logs can be completely deleted (the data inventory remains unchanged).</li>
+      </ul>
+
+      <h3>Data Management</h3>
+      <ul>
+        <li><strong>Delete All Data</strong> – removes all trend data points, related queries, and fetch logs.</li>
+      </ul>
+      <div class="help-tip help-warn">
+        <span class="tip-icon">⚠</span>
+        <span>Deleting all data is <strong>irreversible</strong>. Keywords, events, and alert rules are preserved, but historical trend data is not.</span>
+      </div>
+    </div>
+
+    <!-- ── Developer ── -->
+    <div class="help-section" id="dev">
+      <h2>Developer Documentation</h2>
+      <p class="section-desc">
+        Technical reference for the plugin system, API architecture, and platform extension.
+        This section is intended for developers who want to create their own plugins or extend existing ones.
+      </p>
+
+      <h3>Plugin Architecture</h3>
+      <ul>
+        <li>All plugins inherit from <strong>BasePlugin</strong> (<kbd>plugins/base.py</kbd>). Type-specific classes (<strong>WatchZonePlugin</strong>, <strong>AIPlugin</strong>) extend this base.</li>
+        <li>The <strong>PluginManager</strong> (<kbd>plugins/__init__.py</kbd>) manages the central registry. Plugins are automatically discovered and registered on app start via <kbd>discover_all()</kbd>.</li>
+        <li>Each plugin defines <kbd>plugin_type</kbd> (e.g., <kbd>"watchzone"</kbd>, <kbd>"ai"</kbd>) and <kbd>plugin_id</kbd> (e.g., <kbd>"vessel"</kbd>, <kbd>"trend_analysis"</kbd>).</li>
+      </ul>
+
+      <h3>File Structure (Bundled Plugins)</h3>
+      <ul>
+        <li><kbd>plugins/base.py</kbd> – BasePlugin class with <kbd>meta</kbd> dict and <kbd>is_available()</kbd> check.</li>
+        <li><kbd>plugins/__init__.py</kbd> – PluginManager (registry, type handlers, enable/disable, discovery, bundle support).</li>
+        <li>Each plugin is its own folder with <kbd>__init__.py</kbd>, optionally <kbd>i18n.json</kbd>, <kbd>templates/</kbd>, and <kbd>static/</kbd>:
+          <pre style="font-size:11px;color:var(--muted);margin:6px 0;padding:8px 12px;background:var(--bg);border-radius:6px;">plugins/watchzone/vessel/
+├── __init__.py          # Plugin class
+├── i18n.json            # Translations (de/en/fr/es)
+├── templates/_panel.html # Jinja2 fragment
+└── static/vessel.js     # JavaScript</pre>
+        </li>
+        <li><kbd>plugins/watchzone/</kbd> – Watch zone plugins (geo, web, search).</li>
+        <li><kbd>plugins/ai/</kbd> – AI plugins (trend analysis, scientific paper, project assistant, etc.).</li>
+        <li><kbd>plugins/analysis/</kbd> – Analysis plugins (forecast, outlier, CPD, Granger, etc.).</li>
+      </ul>
+
+      <h3>Plugin Meta</h3>
+      <ul>
+        <li>Each plugin defines a <kbd>meta</kbd> dict with: <kbd>label</kbd>, <kbd>icon_svg</kbd>, <kbd>color</kbd>, <kbd>description</kbd>, <kbd>required_credentials</kbd>, <kbd>i18n</kbd>.</li>
+        <li><kbd>required_credentials</kbd> – List of required AppSetting keys (e.g., <kbd>["censys_api_id", "censys_api_secret"]</kbd>). The generic <kbd>is_available()</kbd> method automatically checks User → Global → Env fallback.</li>
+        <li><kbd>i18n</kbd> – Translations in 4 languages (<kbd>de</kbd>, <kbd>en</kbd>, <kbd>fr</kbd>, <kbd>es</kbd>), which are automatically merged into the frontend i18n system.</li>
+      </ul>
+
+      <h3>Create a New Watch Zone Plugin</h3>
+      <ul>
+        <li>Create a new folder under <kbd>plugins/watchzone/</kbd> (e.g., <kbd>plugins/watchzone/my_sensor/</kbd>).</li>
+        <li><kbd>__init__.py</kbd>: Inherit from <kbd>WatchZonePlugin</kbd>, set <kbd>plugin_id</kbd> and <kbd>meta</kbd>.</li>
+        <li>Override methods: <kbd>live_handler()</kbd> for live data, <kbd>history_routes()</kbd> for history API, <kbd>ai_tools()</kbd> + <kbd>ai_tool_handler()</kbd> for AI integration, <kbd>analysis_provider()</kbd> for triangulation.</li>
+        <li>Optional: <kbd>i18n.json</kbd> (translations), <kbd>templates/</kbd> (HTML fragments), <kbd>static/</kbd> (JS/CSS).</li>
+        <li>At the end of <kbd>__init__.py</kbd>: <kbd>PluginManager.register(MySensorPlugin())</kbd>.</li>
+        <li>The plugin is automatically discovered and registered on the next app start. i18n.json, templates, and static files are automatically included.</li>
+      </ul>
+
+      <h3>Create a New AI Plugin</h3>
+      <ul>
+        <li>Create a new folder under <kbd>plugins/ai/</kbd>.</li>
+        <li>Inherit from <kbd>AIPlugin</kbd>. Default: <kbd>required_credentials: ["anthropic_api_key"]</kbd>.</li>
+        <li>The <kbd>AIPlugin</kbd> base class provides <kbd>is_available()</kbd> with provider fallback (checks active LLM provider of the user).</li>
+        <li>API routes are defined via <kbd>api_routes()</kbd> and automatically registered on app start.</li>
+        <li>LLM call via <kbd>call_llm()</kbd> from <kbd>plugins/ai/_llm.py</kbd> — supports Anthropic, OpenAI, Gemini, Mistral automatically.</li>
+        <li>Quota check and guard via <kbd>_guard()</kbd>.</li>
+      </ul>
+
+      <h3>API Permission System</h3>
+      <ul>
+        <li>Core APIs (SerpAPI, NewsAPI, LLM providers) are mapped to groups via <kbd>_KEY_TO_API_GROUP</kbd>. Plugin-specific credentials (Bluesky, Telegram, Copernicus, Censys, AISHub, etc.) are managed via the plugin credential system.</li>
+        <li>Per user and API group, there are three permission levels: <kbd>admin_key</kbd> (use superadmin keys), <kbd>own_key</kbd> (own key), <kbd>disabled</kbd> (locked).</li>
+        <li><kbd>_resolve_api_key(key, user_id)</kbd> resolves automatically: user key → admin key → env variable, depending on the policy.</li>
+      </ul>
+
+      <h3>Plugin Access Control (Enterprise Only)</h3>
+      <ul>
+        <li>Only in multi-user mode. The superadmin controls access per user and plugin via user management (<kbd>/users</kbd>).</li>
+        <li>Three levels per plugin: <strong>Superadmin API</strong> (admin keys), <strong>Own API</strong> (user keys), <strong>Disabled</strong> (locked).</li>
+        <li>Stored as <kbd>plugin_access_&lt;type&gt;_&lt;id&gt;</kbd> in <kbd>AppSetting</kbd>. Missing entry = allowed (default).</li>
+        <li>Locked plugins appear on the plugin page as "Locked by Administrator" and cannot be activated or configured.</li>
+      </ul>
+
+      <h3>LLM Quota &amp; Own Key</h3>
+      <ul>
+        <li>Users with <kbd>own_key</kbd> permission for the active LLM provider are not subject to any quota.</li>
+        <li>In this case, quota displays (statistics page, navigation bar) are automatically hidden.</li>
+        <li><kbd>_user_uses_own_llm_key(user_id)</kbd> checks the active provider and its API permission.</li>
+      </ul>
+
+      <h3>REST API Endpoints (Plugins)</h3>
+      <ul>
+        <li><kbd>GET /api/plugins</kbd> – All plugins with status, credentials, API groups per user.</li>
+        <li><kbd>PUT /api/plugins/&lt;type&gt;/&lt;id&gt;/toggle</kbd> – Activate/deactivate plugin.</li>
+        <li><kbd>PUT /api/plugins/&lt;type&gt;/&lt;id&gt;/credentials</kbd> – Save credentials.</li>
+        <li><kbd>PUT /api/plugins/ai-settings</kbd> – Set AI provider and model.</li>
+      </ul>
+
+      <div class="help-tip">
+        <span class="tip-icon">💡</span>
+        <span>New plugins are automatically discovered on app start – no manual registration in <kbd>app.py</kbd> needed. Create a folder under <kbd>plugins/&lt;type&gt;/</kbd>, inherit from the appropriate base class, and call <kbd>PluginManager.register()</kbd>.</span>
+      </div>
+
+      <h3>Open-Core Architecture</h3>
+      <ul>
+        <li>The system supports two operating modes via <kbd>MULTI_USER</kbd> in the <kbd>.env</kbd> file:</li>
+        <li><strong>Community</strong> (<kbd>MULTI_USER=false</kbd>) – No login, single user, auto-login as phantom user. Admin, audit, and user management are omitted.</li>
+        <li><strong>Enterprise</strong> (<kbd>MULTI_USER=true</kbd>) – Multi-user with login, roles, quotas, and user management.</li>
+        <li>The auth abstraction resides in <kbd>auth.py</kbd>: In community mode, <kbd>login_required</kbd> and <kbd>superadmin_required</kbd> are no-ops.</li>
+        <li>User management (login, user CRUD, API policies) resides isolated in <kbd>enterprise.py</kbd> — only loaded in enterprise mode.</li>
+        <li>For GitHub open-core: omit <kbd>enterprise.py</kbd>, <kbd>templates/users.html</kbd>, and <kbd>templates/login.html</kbd>.</li>
+      </ul>
+    </div>
+
+  </div><!-- /help-content -->
+</div><!-- /help-layout -->
+
+<script>
+  // Highlight active TOC links on scroll
+  (function () {
+    const sections = document.querySelectorAll(".help-section[id]");
+    const tocLinks = document.querySelectorAll(".help-toc a");
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const id = e.target.id;
+          tocLinks.forEach(a => {
+            a.classList.toggle("active", a.getAttribute("href") === "#" + id);
+          });
+        }
+      });
+    }, { rootMargin: "-20% 0px -70% 0px" });
+    sections.forEach(s => observer.observe(s));
+  })();
+</script>
+{% endblock %}

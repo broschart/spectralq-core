@@ -1,0 +1,1161 @@
+{% extends "base.html" %}
+
+{% block title %}Start – spectralQ{% endblock %}
+
+{% block head %}
+<style>
+
+  /* ── Quickstart ── */
+  .qs-grid { display:flex; gap:14px; flex-wrap:wrap; margin-top:16px; }
+  .qs-tile {
+    flex:1; min-width:180px; padding:18px 20px; border-radius:10px;
+    border:1px solid transparent; border-left-width:3px;
+    cursor:pointer; transition:opacity .15s, box-shadow .15s;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .qs-tile:hover { opacity:.85; box-shadow:0 4px 20px rgba(0,0,0,.25); }
+  .qs-tile-title { font-size:16px; font-weight:800; color:var(--text); letter-spacing:-.01em; }
+  .qs-tile-desc  { font-size:12px; opacity:.65; line-height:1.5; flex:1; }
+  .qs-tile-cta {
+    margin-top:10px; align-self:flex-start;
+    padding:5px 14px; border-radius:6px; border:none;
+    font-size:12px; font-weight:600; cursor:pointer; pointer-events:none;
+  }
+  .qs-tile-1 { background:rgba(79,142,247,.12);  border-color:rgba(79,142,247,.25);  border-left-color:#4f8ef7; }
+  .qs-tile-2 { background:rgba(34,197,94,.10);   border-color:rgba(34,197,94,.22);   border-left-color:#22c55e; }
+  .qs-tile-3 { background:rgba(249,115,22,.10);  border-color:rgba(249,115,22,.22);  border-left-color:#f97316; }
+  .qs-tile-4 { background:rgba(167,139,250,.10); border-color:rgba(167,139,250,.22); border-left-color:#a78bfa; }
+  .qs-tile-1 .qs-tile-cta { background:#4f8ef7;  color:#fff; }
+  .qs-tile-2 .qs-tile-cta { background:#22c55e;  color:#fff; }
+  .qs-tile-3 .qs-tile-cta { background:#f97316;  color:#fff; }
+  .qs-tile-4 .qs-tile-cta { background:#a78bfa;  color:#fff; }
+
+  /* ── AI Project Assistance ── */
+  .aipa-section {
+    text-align: center;
+    max-width: 760px;
+    margin: 0 auto 72px;
+  }
+  .aipa-section #aipa-seed {
+    font-size: 18px;
+    padding: 12px 16px;
+    border-radius: 8px;
+  }
+  .aipa-form { display:flex; flex-direction:column; gap:14px; margin-top:14px; text-align:left; }
+  .aipa-row  { display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; }
+  .aipa-field { display:flex; flex-direction:column; gap:4px; }
+  .aipa-field label { font-size:12px; color:var(--muted); }
+  .aipa-field input, .aipa-field textarea {
+    width:100%; box-sizing:border-box;
+  }
+  .aipa-intensity { display:flex; align-items:center; gap:10px; }
+  .aipa-intensity input[type=range] { width:140px; accent-color:var(--accent1); }
+  .aipa-intensity .aipa-int-label {
+    min-width:18px; text-align:center; font-weight:700; color:#a78bfa; font-size:18px;
+  }
+  .aipa-log-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.75);
+    align-items:center; justify-content:center; z-index:940; padding:16px; box-sizing:border-box;
+  }
+  .aipa-log-overlay.open { display:flex; }
+  .aipa-log-dialog {
+    background:var(--surface); border:1px solid var(--border);
+    border-top:3px solid #a78bfa; border-radius:12px;
+    width:min(620px,96vw); max-height:80vh; display:flex; flex-direction:column;
+    position:relative; box-sizing:border-box;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  .aipa-log-header {
+    padding:16px 20px 12px; display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid var(--border);
+  }
+  .aipa-log-header h3 { margin:0; font-size:14px; font-weight:600; }
+  .aipa-log-close {
+    background:none; border:none; color:var(--muted); font-size:22px; cursor:pointer; line-height:1;
+  }
+  .aipa-log-close:hover { color:var(--text); }
+  .aipa-log {
+    padding:14px 20px; overflow-y:auto; flex:1;
+    font-size:12px; line-height:1.7; text-align:left;
+  }
+  .aipa-log .log-status { color:var(--text); font-weight:400; }
+  .aipa-log .log-data   { color:var(--muted); font-weight:400; }
+  .aipa-log .log-error  { color:var(--danger); font-weight:600; }
+  .aipa-log .log-pick   { color:#22c55e; font-size:11px; margin-left:16px; font-family:'SF Mono','Fira Code','Consolas',monospace; text-transform:lowercase; }
+  .aipa-report-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.75);
+    z-index:950; box-sizing:border-box;
+  }
+  .aipa-report-overlay.open { display:flex; }
+  .aipa-report-split {
+    display:flex; width:100%; height:100%;
+  }
+  /* ── Linke Seite: Bericht ── */
+  .aipa-report-left {
+    flex:1; min-width:0; overflow-y:auto; padding:32px 36px 40px;
+    background:var(--surface);
+    border-right:1px solid var(--border);
+    line-height:1.75; font-size:15px; text-align:left;
+    position:relative;
+  }
+  .aipa-report-left h1, .aipa-report-left h2, .aipa-report-left h3 { color:var(--text); margin:18px 0 10px; }
+  .aipa-report-left h1 { font-size:22px; } .aipa-report-left h2 { font-size:18px; } .aipa-report-left h3 { font-size:15px; }
+  .aipa-report-left p { margin:6px 0; }
+  .aipa-report-left ul, .aipa-report-left ol { margin:6px 0 6px 20px; }
+  .aipa-report-left strong { color:var(--text); }
+  /* Hover-Selektion auf Absätzen */
+  .aipa-report-left .report-block { position:relative; cursor:pointer; border-radius:6px; padding:2px 6px; margin:-2px -6px; transition:background .12s; }
+  .aipa-report-left .report-block:hover { background:rgba(124,92,191,.1); }
+  .aipa-report-left .report-block.selected { background:rgba(124,92,191,.18); outline:1px solid rgba(124,92,191,.35); }
+  .aipa-report-left .report-block .block-ask {
+    display:none; position:absolute; right:4px; top:50%; transform:translateY(-50%);
+    background:var(--accent1); color:#fff; border:none; border-radius:14px;
+    padding:3px 10px; font-size:10px; font-weight:600; cursor:pointer;
+    white-space:nowrap; z-index:2;
+  }
+  .aipa-report-left .report-block:hover .block-ask { display:inline-block; }
+  /* ── Rechte Seite: Chat ── */
+  .aipa-report-right {
+    width:380px; flex-shrink:0; display:flex; flex-direction:column;
+    background:var(--bg);
+  }
+  .aipa-chat-header {
+    padding:16px 20px 12px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .aipa-chat-header h3 { margin:0; font-size:14px; font-weight:700; color:var(--text); }
+  .aipa-report-close {
+    background:none; border:none;
+    color:var(--muted); font-size:22px; cursor:pointer; line-height:1;
+  }
+  .aipa-report-close:hover { color:var(--text); }
+  .aipa-export-bar {
+    display:flex; gap:6px; align-items:center;
+  }
+  .aipa-export-bar button {
+    background:none; border:1px solid var(--border); color:var(--muted); border-radius:6px;
+    padding:4px 10px; font-size:11px; cursor:pointer; transition:all .12s; white-space:nowrap;
+  }
+  .aipa-export-bar button:hover { color:var(--text); border-color:var(--text); }
+  .aipa-export-bar button.copied { color:#22c55e; border-color:#22c55e; }
+  .aipa-chat-messages {
+    flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:12px;
+  }
+  .aipa-chat-msg { max-width:92%; font-size:13px; line-height:1.6; padding:10px 14px; border-radius:12px; }
+  .aipa-chat-msg.user { align-self:flex-end; background:rgba(124,92,191,.18); color:var(--text); border-bottom-right-radius:4px; }
+  .aipa-chat-msg.assistant { align-self:flex-start; background:var(--surface); border:1px solid var(--border); color:var(--text); border-bottom-left-radius:4px; }
+  .aipa-chat-msg.assistant p { margin:4px 0; }
+  .aipa-chat-msg.assistant ul, .aipa-chat-msg.assistant ol { margin:4px 0 4px 18px; }
+  .aipa-chat-msg.assistant strong { color:var(--text); }
+  .aipa-chat-msg.context { font-size:11px; color:var(--muted); font-style:italic; align-self:center; background:none; padding:4px 0; }
+  .aipa-chat-input {
+    padding:12px 16px; border-top:1px solid var(--border); display:flex; gap:8px;
+  }
+  .aipa-chat-input textarea {
+    flex:1; resize:none; border:1px solid var(--border); border-radius:8px;
+    background:var(--surface); color:var(--text); padding:8px 12px; font-size:13px;
+    font-family:inherit; line-height:1.5; min-height:38px; max-height:120px;
+  }
+  .aipa-chat-input textarea:focus { outline:none; border-color:var(--accent1); }
+  .aipa-chat-input textarea::placeholder { color:var(--muted); }
+  .aipa-chat-send {
+    background:var(--accent1); color:#fff; border:none; border-radius:8px;
+    padding:0 16px; font-size:13px; font-weight:600; cursor:pointer;
+    transition:opacity .12s; align-self:flex-end; height:38px;
+  }
+  .aipa-chat-send:hover { opacity:.85; }
+  .aipa-chat-send:disabled { opacity:.4; cursor:not-allowed; }
+  @media (max-width:900px) {
+    .aipa-report-split { flex-direction:column; }
+    .aipa-report-left { max-height:50vh; }
+    .aipa-report-right { width:100%; flex:1; }
+  }
+  .aipa-btn-start {
+    background:var(--accent1); color:#fff; border:none; padding:8px 20px;
+    border-radius:6px; font-size:13px; font-weight:600; cursor:pointer;
+    transition:opacity .12s;
+  }
+  .aipa-btn-start:hover { opacity:.85; }
+  .aipa-btn-start:disabled { opacity:.5; cursor:not-allowed; }
+  .aipa-spinner {
+    display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.3);
+    border-top-color:#fff; border-radius:50%; animation:aipa-spin .6s linear infinite;
+    vertical-align:middle; margin-right:6px;
+  }
+  @keyframes aipa-spin { to { transform:rotate(360deg); } }
+
+  .qs-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.72);
+    align-items:center; justify-content:center; z-index:900; padding:16px; box-sizing:border-box;
+  }
+  .qs-dialog {
+    background:var(--surface); border:1px solid var(--border);
+    border-top:3px solid var(--accent); border-radius:12px;
+    width:min(600px,96vw); max-height:90vh; overflow-y:auto;
+    padding:24px; position:relative; box-sizing:border-box;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  .qs-dialog h3 { margin:0 0 16px; font-size:16px; font-weight:700; }
+  .qs-proj-btn {
+    display:block; width:100%; text-align:left; padding:10px 14px;
+    background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+    color:var(--text); font-size:13px; cursor:pointer; margin-bottom:8px;
+    transition:border-color .12s, background .12s;
+  }
+  .qs-proj-btn:hover { border-color:var(--accent); background:rgba(79,142,247,.08); }
+  .qs-proj-btn .qs-proj-name  { font-weight:600; }
+  .qs-proj-btn .qs-proj-count { font-size:11px; color:var(--muted); margin-top:2px; }
+
+  /* ── Start-Tabs ── */
+  .db-tab-bar {
+    display:flex; gap:0; justify-content:center; margin-bottom:28px;
+    border-bottom:2px solid var(--border);
+  }
+  .db-tab-btn {
+    padding:10px 32px; font-size:14px; font-weight:600;
+    background:none; border:none; border-bottom:2px solid transparent;
+    margin-bottom:-2px; cursor:pointer; color:var(--muted);
+    transition:color .12s, border-color .12s; white-space:nowrap;
+  }
+  .db-tab-btn:hover { color:var(--text); }
+  .db-tab-btn.active { color:var(--text); border-bottom-color:var(--accent1); }
+  .db-tab-panel { display:none; }
+  .db-tab-panel.active { display:block; padding-top:28px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:48px;margin-top:-32px;">
+  <div style="background:var(--bg);margin-left:calc(-50vw + 50%);margin-right:calc(-50vw + 50%);padding:32px;margin-bottom:10px;text-align:center;">
+    <img class="theme-logo" src="/static/sq3.png" data-dark="/static/sq3.png" data-light="/static/sq1.png" alt="spectralQ" style="max-width:20%;height:auto;display:inline-block;" />
+  </div>
+  <div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;text-align:center;" data-i18n="tagline">Erkenne digitale Verhaltensmuster, bevor es andere tun – Für Journalisten, Strategen und Behörden</div>
+</div>
+
+<!-- ── Tab-Bar ── -->
+<div class="db-tab-bar">
+  {% if 'project_assistant' in ai_plugins_enabled %}
+  <button class="db-tab-btn active" id="db-tab-ai"     onclick="dbSwitchTab('ai')">🤖 <span data-i18n="tab_ai">Mit KI starten</span></button>
+  <button class="db-tab-btn"        id="db-tab-manual" onclick="dbSwitchTab('manual')">⚙ <span data-i18n="tab_manual">Manuell starten</span></button>
+  {% else %}
+  <button class="db-tab-btn active" id="db-tab-manual" onclick="dbSwitchTab('manual')">⚙ <span data-i18n="tab_manual">Manuell starten</span></button>
+  {% endif %}
+</div>
+
+{% if 'project_assistant' in ai_plugins_enabled %}
+<!-- ══ Tab: Mit KI starten ══ -->
+<div class="db-tab-panel active" id="db-panel-ai">
+
+<!-- ── AI Project Assistance ── -->
+<div class="aipa-section" id="card-aipa">
+  <div style="margin-bottom:10px;">
+    <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <h2 style="margin:0;font-size:20px;">AI Project Assistance</h2>
+      <span style="font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:2px 8px;">Beta</span>
+      <span style="font-size:11px;color:#a78bfa;border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:2px 8px;">Agentic</span>
+    </div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:#a78bfa;text-transform:uppercase;margin-bottom:8px;" data-i18n="aipa_subtitle">Starte voll-automatisch</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+      <span data-i18n="aipa_desc">Der KI-Agent erstellt vollautomatisch ein Projekt: Er ruft Trenddaten ab, wertet verwandte Suchanfragen aus, entscheidet eigenständig über Vertiefungen und generiert einen Abschlussbericht.</span><br>
+      <span style="opacity:.65;" data-i18n="aipa_desc2">Die Analyse läuft autonom und kann je nach Intensität einige Minuten dauern.</span>
+    </div>
+  </div>
+  <div class="aipa-form">
+    <div class="aipa-field">
+      <label data-i18n="aipa_seed_label">Seed-Keyword *</label>
+      <input id="aipa-seed" type="text" placeholder="z.B. Künstliche Intelligenz" data-i18n-placeholder="aipa_seed_ph" autofocus
+             oninput="document.getElementById('aipa-extra').style.display=this.value.trim()?'flex':'none';if(!window._aipaLimitReached)document.getElementById('aipa-btn-start').disabled=!this.value.trim()" />
+    </div>
+    <div class="aipa-intensity" style="justify-content:center;">
+      <label style="font-size:12px;color:var(--muted);" data-i18n="aipa_intensity">Intensität</label>
+      <input id="aipa-intensity" type="range" min="1" max="5" value="2" />
+      <span class="aipa-int-label" id="aipa-int-val">2</span>
+    </div>
+    <div id="aipa-extra" style="display:none;flex-direction:column;gap:14px;">
+      <div class="aipa-field">
+        <label>Briefing <span style="opacity:.5;" data-i18n="aipa_briefing_opt">(optional – hilft dem Agenten bei der Strategie)</span></label>
+        <textarea id="aipa-briefing" rows="3"
+                  placeholder="z.B. Fokus auf DACH-Region, Vergleich Web vs. YouTube, mediale Aufmerksamkeit nach Regulierungsdebatte …"
+                  data-i18n-placeholder="aipa_briefing_ph"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
+      {% if max_proj > 0 and proj_count >= max_proj %}
+      <button id="aipa-btn-start" class="aipa-btn-start" disabled data-i18n-title="aipa_limit">
+        <span data-i18n="aipa_limit">Projektlimit erreicht</span> ({{ proj_count }}/{{ max_proj }})
+      </button>
+      <script>window._aipaLimitReached=true;</script>
+      {% else %}
+      <button id="aipa-btn-start" class="aipa-btn-start" onclick="aipaStart()" disabled>
+        <span data-i18n="aipa_start">Analyse starten</span>
+      </button>
+      <script>window._aipaLimitReached=false;</script>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- APA Log Popup -->
+<div class="aipa-log-overlay" id="aipa-log-overlay">
+  <div class="aipa-log-dialog">
+    <div class="aipa-log-header">
+      <h3><span class="aipa-spinner" id="aipa-log-spinner"></span><span data-i18n="aipa_monitor">Analyse-Monitor</span></h3>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span id="aipa-log-status" style="font-size:12px;color:var(--muted);"></span>
+        <button id="aipa-abort-btn" onclick="aipaAbort()" style="display:none;background:var(--danger,#ef4444);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;" data-i18n="aipa_abort">Abbrechen</button>
+      </div>
+    </div>
+    <div class="aipa-log" id="aipa-log"></div>
+  </div>
+</div>
+
+<!-- APA Report + Chat Split View -->
+<div class="aipa-report-overlay" id="aipa-report-overlay">
+  <div class="aipa-report-split">
+    <!-- Linke Seite: Bericht -->
+    <div class="aipa-report-left" id="aipa-report"></div>
+    <!-- Rechte Seite: Chat -->
+    <div class="aipa-report-right">
+      <div class="aipa-chat-header">
+        <h3 data-i18n="aipa_chat_title">Fragen zum Bericht</h3>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="aipa-export-bar">
+            <button onclick="aipaExport('pdf')" title="Als PDF exportieren">PDF</button>
+            <button onclick="aipaExport('docx')" title="Als Word exportieren">DOCX</button>
+            <button id="aipa-copy-btn" onclick="aipaCopyClipboard()" data-i18n-title="aipa_copy_title" data-i18n="aipa_copy">Kopieren</button>
+          </div>
+          <button class="aipa-report-close" onclick="aipaCloseReport()" title="Schließen">&times;</button>
+        </div>
+      </div>
+      <div class="aipa-chat-messages" id="aipa-chat-messages">
+        <div class="aipa-chat-msg context" data-i18n="aipa_chat_hint">Klicke auf einen Absatz im Bericht oder stelle eine freie Frage.</div>
+      </div>
+      <div class="aipa-chat-input">
+        <textarea id="aipa-chat-input" rows="1" placeholder="Frage zum Bericht …" data-i18n-placeholder="aipa_chat_ph"
+                  onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aipaChatSend();}"></textarea>
+        <button class="aipa-chat-send" id="aipa-chat-send" onclick="aipaChatSend()" data-i18n="aipa_send">Senden</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /db-panel-ai -->
+{% endif %}
+
+<!-- ══ Tab: Manuell starten ══ -->
+<div class="db-tab-panel{% if 'project_assistant' not in ai_plugins_enabled %} active{% endif %}" id="db-panel-manual">
+
+<!-- ── Erste Schritte ── -->
+<div class="card" id="card-quickstart" style="margin-top:32px;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap;">
+    <h2 style="margin:0;" data-i18n="qs_title">Erste Schritte</h2>
+    <a id="qs-video-link" href="#"
+       style="display:inline-flex;align-items:center;gap:6px;font-size:12px;
+              color:var(--muted);border:1px solid var(--border);border-radius:16px;
+              padding:3px 12px;text-decoration:none;transition:color .12s,border-color .12s;"
+       onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'"
+       onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'"
+       data-i18n-title="qs_video_title" target="_blank">
+      ▶ <span data-i18n="qs_video">Einführungsvideo</span>
+    </a>
+    <a href="/about"
+       style="display:inline-flex;align-items:center;gap:6px;font-size:12px;
+              color:var(--muted);border:1px solid var(--border);border-radius:16px;
+              padding:3px 12px;text-decoration:none;transition:color .12s,border-color .12s;"
+       onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'"
+       onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'"
+       data-i18n="qs_about">Was kann man hiermit machen?</a>
+  </div>
+  <div class="qs-grid">
+    <div class="qs-tile qs-tile-1" onclick="qsOpenNewProject()">
+      <div class="qs-tile-title" data-i18n="tile1_title">Neues Projekt starten</div>
+      <div class="qs-tile-desc"  data-i18n="tile1_desc">Projektname und Briefing eingeben — direkt zur Analyse</div>
+      <button class="qs-tile-cta" data-i18n="tile1_cta">Hier starten</button>
+    </div>
+    <div class="qs-tile qs-tile-2" onclick="qsOpenPicker('analysis')">
+      <div class="qs-tile-title" data-i18n="tile2_title">Bestehendes Projekt analysieren</div>
+      <div class="qs-tile-desc"  data-i18n="tile2_desc">Projekt auswählen und zur Analyse wechseln</div>
+      <button class="qs-tile-cta" data-i18n="tile2_cta">Hier weiterarbeiten</button>
+    </div>
+    <div class="qs-tile qs-tile-3" onclick="qsOpenPicker('events')">
+      <div class="qs-tile-title" data-i18n="tile3_title">Schlüsselereignisse hinterlegen</div>
+      <div class="qs-tile-desc"  data-i18n="tile3_desc">Projekt auswählen und Ereignisse erfassen</div>
+      <button class="qs-tile-cta" data-i18n="tile3_cta">Hier ergänzen</button>
+    </div>
+    <div class="qs-tile qs-tile-4" onclick="qsOpenPicker('report')">
+      <div class="qs-tile-title" data-i18n="tile4_title">Analysebericht erstellen</div>
+      <div class="qs-tile-desc"  data-i18n="tile4_desc">Projekt auswählen und Bericht unter Projekte öffnen</div>
+      <button class="qs-tile-cta" data-i18n="tile4_cta">Hier abschließen</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /db-panel-manual -->
+
+<!-- ── Quickstart: Neues Projekt ── -->
+<div class="qs-overlay" id="qs-new-overlay" onclick="if(event.target===this)qsCloseNew()">
+  <div class="qs-dialog">
+    <button onclick="qsCloseNew()" style="position:absolute;top:12px;right:14px;background:none;
+            border:none;font-size:18px;color:var(--muted);cursor:pointer;">✕</button>
+    <h3 data-i18n="dlg_new_title">Neues Projekt starten</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;" data-i18n="dlg_name_label">Projektname *</label>
+        <input id="qs-proj-name" type="text" placeholder="z.B. Marktanalyse Q2 2026"
+               data-i18n-placeholder="dlg_name_ph" style="width:100%;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Briefing <span style="opacity:.5;" data-i18n="dlg_briefing_opt">(optional)</span></label>
+        <textarea id="qs-proj-briefing" rows="8"
+                  placeholder="Ziel der Analyse, betrachtete Keywords, Kontext …"
+                  data-i18n-placeholder="dlg_briefing_ph"
+                  style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
+      </div>
+      <button id="qs-btn-create" class="btn btn-primary"
+              onclick="qsCreateAndOpen()" style="align-self:flex-end;" data-i18n="dlg_create">
+        Erstellen &amp; zur Analyse →
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Quickstart: Projekt-Picker ── -->
+<div class="qs-overlay" id="qs-picker-overlay" onclick="if(event.target===this)qsClosePicker()">
+  <div class="qs-dialog">
+    <button onclick="qsClosePicker()" style="position:absolute;top:12px;right:14px;background:none;
+            border:none;font-size:18px;color:var(--muted);cursor:pointer;">✕</button>
+    <h3 id="qs-picker-title" data-i18n="dlg_picker_title">Projekt auswählen</h3>
+    <div id="qs-picker-list" style="max-height:340px;overflow-y:auto;"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Übersetzungen Dashboard ───────────────────────────────────────────────
+window._mergeI18n({
+  de: {
+    tagline:         "Erkenne digitale Verhaltensmuster, bevor es andere tun – Für Journalisten, Strategen und Behörden",
+    tab_ai:          "Mit KI starten",
+    tab_manual:      "Manuell starten",
+    aipa_subtitle:   "Starte voll-automatisch",
+    aipa_desc:       "Der KI-Agent erstellt vollautomatisch ein Projekt: Er ruft Trenddaten ab, wertet verwandte Suchanfragen aus, entscheidet eigenständig über Vertiefungen und generiert einen Abschlussbericht.",
+    aipa_desc2:      "Die Analyse läuft autonom und kann je nach Intensität einige Minuten dauern.",
+    aipa_seed_label: "Seed-Keyword *",
+    aipa_seed_ph:    "z.B. Künstliche Intelligenz",
+    aipa_intensity:  "Intensität",
+    aipa_briefing_opt: "(optional – hilft dem Agenten bei der Strategie)",
+    aipa_briefing_ph:  "z.B. Fokus auf DACH-Region, Vergleich Web vs. YouTube, mediale Aufmerksamkeit nach Regulierungsdebatte …",
+    aipa_limit:      "Projektlimit erreicht",
+    aipa_start:      "Analyse starten",
+    aipa_monitor:    "Analyse-Monitor",
+    aipa_abort:      "Abbrechen",
+    aipa_chat_title: "Fragen zum Bericht",
+    aipa_copy:       "Kopieren",
+    aipa_copy_title: "In Zwischenablage kopieren",
+    aipa_chat_hint:  "Klicke auf einen Absatz im Bericht oder stelle eine freie Frage.",
+    aipa_chat_ph:    "Frage zum Bericht …",
+    aipa_send:       "Senden",
+    qs_title:        "Erste Schritte",
+    qs_video:        "Einführungsvideo",
+    qs_video_title:  "Einführungsvideo (folgt in Kürze)",
+    qs_about:        "Was kann man hiermit machen?",
+    tile1_title:     "Neues Projekt starten",
+    tile1_desc:      "Projektname und Briefing eingeben — direkt zur Analyse",
+    tile1_cta:       "Hier starten",
+    tile2_title:     "Bestehendes Projekt analysieren",
+    tile2_desc:      "Projekt auswählen und zur Analyse wechseln",
+    tile2_cta:       "Hier weiterarbeiten",
+    tile3_title:     "Schlüsselereignisse hinterlegen",
+    tile3_desc:      "Projekt auswählen und Ereignisse erfassen",
+    tile3_cta:       "Hier ergänzen",
+    tile4_title:     "Analysebericht erstellen",
+    tile4_desc:      "Projekt auswählen und Bericht unter Projekte öffnen",
+    tile4_cta:       "Hier abschließen",
+    dlg_new_title:   "Neues Projekt starten",
+    dlg_name_label:  "Projektname *",
+    dlg_name_ph:     "z.B. Marktanalyse Q2 2026",
+    dlg_briefing_opt:"(optional)",
+    dlg_briefing_ph: "Ziel der Analyse, betrachtete Keywords, Kontext …",
+    dlg_create:      "Erstellen & zur Analyse →",
+    dlg_picker_title:"Projekt auswählen",
+    js_picker_analysis: "Projekt zur Analyse öffnen",
+    js_picker_events:   "Projekt für Schlüsselereignisse",
+    js_picker_report:   "Projekt für Analysebericht",
+    js_no_projects:     "Noch keine Projekte vorhanden. Erst ein neues Projekt starten.",
+    js_creating:        "…",
+    js_create_btn:      "Erstellen & zur Analyse →",
+  },
+  en: {
+    tagline:         "Detect digital behavioral patterns before others do – For journalists, strategists and authorities",
+    tab_ai:          "Start with AI",
+    tab_manual:      "Manual start",
+    aipa_subtitle:   "Start fully automatic",
+    aipa_desc:       "The AI agent automatically creates a project: it fetches trend data, evaluates related queries, independently decides on deeper analysis and generates a final report.",
+    aipa_desc2:      "The analysis runs autonomously and may take a few minutes depending on intensity.",
+    aipa_seed_label: "Seed keyword *",
+    aipa_seed_ph:    "e.g. Artificial Intelligence",
+    aipa_intensity:  "Intensity",
+    aipa_briefing_opt: "(optional – helps the agent with strategy)",
+    aipa_briefing_ph:  "e.g. Focus on DACH region, compare Web vs. YouTube, media attention after regulation debate …",
+    aipa_limit:      "Project limit reached",
+    aipa_start:      "Start analysis",
+    aipa_monitor:    "Analysis Monitor",
+    aipa_abort:      "Cancel",
+    aipa_chat_title: "Questions about the report",
+    aipa_copy:       "Copy",
+    aipa_copy_title: "Copy to clipboard",
+    aipa_chat_hint:  "Click a paragraph in the report or ask a free question.",
+    aipa_chat_ph:    "Question about the report …",
+    aipa_send:       "Send",
+    qs_title:        "Getting Started",
+    qs_video:        "Intro video",
+    qs_video_title:  "Intro video (coming soon)",
+    qs_about:        "What can you do with this?",
+    tile1_title:     "Start new project",
+    tile1_desc:      "Enter project name and briefing — go straight to analysis",
+    tile1_cta:       "Start here",
+    tile2_title:     "Analyze existing project",
+    tile2_desc:      "Select project and switch to analysis",
+    tile2_cta:       "Continue here",
+    tile3_title:     "Add key events",
+    tile3_desc:      "Select project and capture events",
+    tile3_cta:       "Add here",
+    tile4_title:     "Create analysis report",
+    tile4_desc:      "Select project and open report under Projects",
+    tile4_cta:       "Finish here",
+    dlg_new_title:   "Start new project",
+    dlg_name_label:  "Project name *",
+    dlg_name_ph:     "e.g. Market analysis Q2 2026",
+    dlg_briefing_opt:"(optional)",
+    dlg_briefing_ph: "Goal of analysis, keywords considered, context …",
+    dlg_create:      "Create & go to analysis →",
+    dlg_picker_title:"Select project",
+    js_picker_analysis: "Open project for analysis",
+    js_picker_events:   "Project for key events",
+    js_picker_report:   "Project for analysis report",
+    js_no_projects:     "No projects yet. Start a new project first.",
+    js_creating:        "…",
+    js_create_btn:      "Create & go to analysis →",
+  },
+  fr: {
+    tagline:         "Détectez les tendances numériques avant tout le monde – Pour journalistes, stratèges et autorités",
+    tab_ai:          "Démarrer avec l'IA",
+    tab_manual:      "Démarrage manuel",
+    aipa_subtitle:   "Démarrage entièrement automatique",
+    aipa_desc:       "L'agent IA crée automatiquement un projet : il récupère les données de tendance, évalue les requêtes associées, décide de manière autonome des approfondissements et génère un rapport final.",
+    aipa_desc2:      "L'analyse est autonome et peut prendre quelques minutes selon l'intensité.",
+    aipa_seed_label: "Mot-clé de départ *",
+    aipa_seed_ph:    "ex. Intelligence Artificielle",
+    aipa_intensity:  "Intensité",
+    aipa_briefing_opt: "(optionnel – aide l'agent avec la stratégie)",
+    aipa_briefing_ph:  "ex. Focus sur la région DACH, comparaison Web vs. YouTube …",
+    aipa_limit:      "Limite de projets atteinte",
+    aipa_start:      "Lancer l'analyse",
+    aipa_monitor:    "Moniteur d'analyse",
+    aipa_abort:      "Annuler",
+    aipa_chat_title: "Questions sur le rapport",
+    aipa_copy:       "Copier",
+    aipa_copy_title: "Copier dans le presse-papiers",
+    aipa_chat_hint:  "Cliquez sur un paragraphe du rapport ou posez une question libre.",
+    aipa_chat_ph:    "Question sur le rapport …",
+    aipa_send:       "Envoyer",
+    qs_title:        "Premiers pas",
+    qs_video:        "Vidéo d'introduction",
+    qs_video_title:  "Vidéo d'introduction (bientôt disponible)",
+    qs_about:        "Que peut-on faire avec ceci ?",
+    tile1_title:     "Démarrer un nouveau projet",
+    tile1_desc:      "Entrer le nom du projet et le briefing — accéder directement à l'analyse",
+    tile1_cta:       "Commencer ici",
+    tile2_title:     "Analyser un projet existant",
+    tile2_desc:      "Sélectionner un projet et passer à l'analyse",
+    tile2_cta:       "Continuer ici",
+    tile3_title:     "Ajouter des événements clés",
+    tile3_desc:      "Sélectionner un projet et saisir des événements",
+    tile3_cta:       "Ajouter ici",
+    tile4_title:     "Créer un rapport d'analyse",
+    tile4_desc:      "Sélectionner un projet et ouvrir le rapport sous Projets",
+    tile4_cta:       "Terminer ici",
+    dlg_new_title:   "Démarrer un nouveau projet",
+    dlg_name_label:  "Nom du projet *",
+    dlg_name_ph:     "ex. Analyse de marché T2 2026",
+    dlg_briefing_opt:"(optionnel)",
+    dlg_briefing_ph: "Objectif de l'analyse, mots-clés, contexte …",
+    dlg_create:      "Créer & accéder à l'analyse →",
+    dlg_picker_title:"Sélectionner un projet",
+    js_picker_analysis: "Ouvrir le projet pour l'analyse",
+    js_picker_events:   "Projet pour les événements clés",
+    js_picker_report:   "Projet pour le rapport d'analyse",
+    js_no_projects:     "Pas encore de projets. Commencez par créer un nouveau projet.",
+    js_creating:        "…",
+    js_create_btn:      "Créer & accéder à l'analyse →",
+  },
+  es: {
+    tagline:         "Detecta patrones de comportamiento digital antes que nadie – Para periodistas, estrategas y autoridades",
+    tab_ai:          "Iniciar con IA",
+    tab_manual:      "Inicio manual",
+    aipa_subtitle:   "Inicio totalmente automático",
+    aipa_desc:       "El agente de IA crea automáticamente un proyecto: obtiene datos de tendencias, evalúa consultas relacionadas, decide de forma autónoma las profundizaciones y genera un informe final.",
+    aipa_desc2:      "El análisis es autónomo y puede tardar unos minutos según la intensidad.",
+    aipa_seed_label: "Palabra clave inicial *",
+    aipa_seed_ph:    "p.ej. Inteligencia Artificial",
+    aipa_intensity:  "Intensidad",
+    aipa_briefing_opt: "(opcional – ayuda al agente con la estrategia)",
+    aipa_briefing_ph:  "p.ej. Enfoque en región DACH, comparar Web vs. YouTube …",
+    aipa_limit:      "Límite de proyectos alcanzado",
+    aipa_start:      "Iniciar análisis",
+    aipa_monitor:    "Monitor de análisis",
+    aipa_abort:      "Cancelar",
+    aipa_chat_title: "Preguntas sobre el informe",
+    aipa_copy:       "Copiar",
+    aipa_copy_title: "Copiar al portapapeles",
+    aipa_chat_hint:  "Haz clic en un párrafo del informe o haz una pregunta libre.",
+    aipa_chat_ph:    "Pregunta sobre el informe …",
+    aipa_send:       "Enviar",
+    qs_title:        "Primeros pasos",
+    qs_video:        "Video de introducción",
+    qs_video_title:  "Video de introducción (próximamente)",
+    qs_about:        "¿Qué se puede hacer con esto?",
+    tile1_title:     "Iniciar nuevo proyecto",
+    tile1_desc:      "Introduce el nombre del proyecto y el briefing — directo al análisis",
+    tile1_cta:       "Empezar aquí",
+    tile2_title:     "Analizar proyecto existente",
+    tile2_desc:      "Seleccionar proyecto y cambiar al análisis",
+    tile2_cta:       "Continuar aquí",
+    tile3_title:     "Agregar eventos clave",
+    tile3_desc:      "Seleccionar proyecto y registrar eventos",
+    tile3_cta:       "Agregar aquí",
+    tile4_title:     "Crear informe de análisis",
+    tile4_desc:      "Seleccionar proyecto y abrir informe en Proyectos",
+    tile4_cta:       "Finalizar aquí",
+    dlg_new_title:   "Iniciar nuevo proyecto",
+    dlg_name_label:  "Nombre del proyecto *",
+    dlg_name_ph:     "p.ej. Análisis de mercado T2 2026",
+    dlg_briefing_opt:"(opcional)",
+    dlg_briefing_ph: "Objetivo del análisis, palabras clave consideradas, contexto …",
+    dlg_create:      "Crear & ir al análisis →",
+    dlg_picker_title:"Seleccionar proyecto",
+    js_picker_analysis: "Abrir proyecto para análisis",
+    js_picker_events:   "Proyecto para eventos clave",
+    js_picker_report:   "Proyecto para informe de análisis",
+    js_no_projects:     "Aún no hay proyectos. Primero inicia un nuevo proyecto.",
+    js_creating:        "…",
+    js_create_btn:      "Crear & ir al análisis →",
+  },
+});
+window._applyI18n();
+
+  // ── Tab-Switching ─────────────────────────────────────────────────────────
+  function dbSwitchTab(tab) {
+    ['ai', 'manual'].forEach(t => {
+      document.getElementById('db-panel-' + t).classList.toggle('active', t === tab);
+      document.getElementById('db-tab-' + t).classList.toggle('active', t === tab);
+    });
+    try { localStorage.setItem('db_active_tab', tab); } catch(_) {}
+  }
+  // Tab aus localStorage wiederherstellen
+  (function() {
+    try {
+      const saved = localStorage.getItem('db_active_tab');
+      if (saved === 'manual') dbSwitchTab('manual');
+    } catch(_) {}
+  })();
+
+  function updateNavBadge(n) {
+    const badge = document.getElementById("nav-alert-badge");
+    if (!badge) return;
+    badge.textContent = n > 0 ? n : "";
+    badge.style.display = n > 0 ? "inline" : "none";
+  }
+
+  // Nav-Badge beim Laden aktualisieren
+  (async function() {
+    try {
+      const s = await api("/api/dashboard/summary");
+      updateNavBadge(s.unseen);
+    } catch(_) {}
+  })();
+
+  // ── Quickstart ──────────────────────────────────────────────
+  let qsProjects = [];
+  let qsPickerDest = "analysis"; // "analysis" | "report"
+
+  async function qsLoadProjects() {
+    if (qsProjects.length) return;
+    try { qsProjects = await api("/api/projects"); } catch(_) {}
+  }
+
+  function qsOpenNewProject() {
+    document.getElementById("qs-proj-name").value = "";
+    document.getElementById("qs-proj-briefing").value = "";
+    const ov = document.getElementById("qs-new-overlay");
+    ov.style.display = "flex";
+    setTimeout(() => document.getElementById("qs-proj-name").focus(), 50);
+  }
+  function qsCloseNew() {
+    document.getElementById("qs-new-overlay").style.display = "none";
+  }
+
+  async function qsCreateAndOpen() {
+    const name     = document.getElementById("qs-proj-name").value.trim();
+    const briefing = document.getElementById("qs-proj-briefing").value.trim();
+    if (!name) { document.getElementById("qs-proj-name").focus(); return; }
+    const btn = document.getElementById("qs-btn-create");
+    btn.disabled = true; btn.textContent = window.t("js_creating", "…");
+    try {
+      const r = await api("/api/projects", {
+        method: "POST",
+        body: JSON.stringify({ name, briefing }),
+      });
+      localStorage.setItem("kw_project_id", String(r.project.id));
+      localStorage.setItem("lastSnapProjectId", String(r.project.id));
+      window.location.href = "/analysis";
+    } catch(e) {
+      toast("Fehler: " + e.message, "error");
+      btn.disabled = false; btn.textContent = window.t("js_create_btn");
+    }
+  }
+
+  async function qsOpenPicker(dest) {
+    qsPickerDest = dest;
+    await qsLoadProjects();
+    const title = dest === "analysis" ? window.t("js_picker_analysis")
+                : dest === "events"   ? window.t("js_picker_events")
+                :                      window.t("js_picker_report");
+    document.getElementById("qs-picker-title").textContent = title;
+    const list = document.getElementById("qs-picker-list");
+    if (!qsProjects.length) {
+      list.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:12px 0;">
+        ${window.t("js_no_projects")}</div>`;
+    } else {
+      list.innerHTML = qsProjects.map(p => `
+        <button class="qs-proj-btn" onclick="qsPickProject(${p.id})">
+          <div class="qs-proj-name">${esc(p.name)}</div>
+          ${p.briefing ? `<div class="qs-proj-count">${esc(p.briefing.slice(0,80))}${p.briefing.length>80?"…":""}</div>` : ""}
+        </button>`).join("");
+    }
+    document.getElementById("qs-picker-overlay").style.display = "flex";
+  }
+  function qsClosePicker() {
+    document.getElementById("qs-picker-overlay").style.display = "none";
+  }
+
+  function qsPickProject(id) {
+    qsClosePicker();
+    if (qsPickerDest === "analysis") {
+      localStorage.setItem("kw_project_id", String(id));
+      localStorage.setItem("lastSnapProjectId", String(id));
+      window.location.href = "/analysis";
+    } else if (qsPickerDest === "events") {
+      localStorage.setItem("kw_project_id", String(id));
+      window.location.href = "/events";
+    } else {
+      window.location.href = `/projects?project=${id}`;
+    }
+  }
+
+  // Enter-Taste im Namensfeld
+  document.getElementById("qs-proj-name").addEventListener("keydown", e => {
+    if (e.key === "Enter") qsCreateAndOpen();
+  });
+
+  // ── AI Project Assistance ──────────────────────────────────────────────
+  document.getElementById("aipa-intensity").addEventListener("input", function() {
+    document.getElementById("aipa-int-val").textContent = this.value;
+  });
+
+  let aipaRunning = false;
+  let _aipaAbortCtrl = null;   // AbortController für laufende APA-Analyse
+
+  let _aipaChatHistory = [];   // {role, content}
+  let _aipaReportMd    = "";   // raw markdown for context
+  let _aipaLogText     = "";   // pipeline log for context
+  let _aipaProjectId   = null;
+  let _aipaChatBusy    = false;
+
+  function aipaCloseReport() {
+    document.getElementById("aipa-report-overlay").classList.remove("open");
+  }
+
+  function _aipaExportPayload() {
+    return JSON.stringify({
+      report: _aipaReportMd,
+      chat: _aipaChatHistory.length ? _aipaChatHistory : [],
+    });
+  }
+
+  function aipaExport(fmt) {
+    if (!_aipaReportMd) return;
+    fetch(`/api/aipa-export/${fmt}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: _aipaExportPayload(),
+    }).then(r => {
+      if (!r.ok) return r.json().then(d => { alert(d.error || "Export fehlgeschlagen"); });
+      return r.blob().then(blob => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `APA-Bericht.${fmt}`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+    }).catch(() => alert("Export fehlgeschlagen"));
+  }
+
+  function aipaCopyClipboard() {
+    if (!_aipaReportMd) return;
+    let text = _aipaReportMd;
+    if (_aipaChatHistory.length) {
+      text += "\n\n---\n\n## Anschlussfragen\n\n";
+      for (const m of _aipaChatHistory) {
+        if (m.role === "user") text += `**Frage:** ${m.content}\n\n`;
+        else if (m.role === "assistant") text += `${m.content}\n\n`;
+      }
+    }
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById("aipa-copy-btn");
+      btn.textContent = "✓ Kopiert";
+      btn.classList.add("copied");
+      setTimeout(() => { btn.textContent = "Kopieren"; btn.classList.remove("copied"); }, 2000);
+    }).catch(() => alert("Kopieren fehlgeschlagen"));
+  }
+
+  function aipaStart() {
+    const seed      = document.getElementById("aipa-seed").value.trim();
+    const intensity = parseInt(document.getElementById("aipa-intensity").value);
+    const briefing  = document.getElementById("aipa-briefing").value.trim();
+    if (!seed) { document.getElementById("aipa-seed").focus(); return; }
+    if (aipaRunning) return;
+
+    aipaRunning = true;
+    const btn    = document.getElementById("aipa-btn-start");
+    const logEl  = document.getElementById("aipa-log");
+    const repEl  = document.getElementById("aipa-report");
+    const logOverlay = document.getElementById("aipa-log-overlay");
+    const logStatus  = document.getElementById("aipa-log-status");
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="aipa-spinner"></span>Läuft …';
+    logStatus.textContent = "Verbinde …";
+    logEl.innerHTML = "";
+    _aipaLogText = "";
+    logOverlay.classList.add("open");
+    repEl.innerHTML = "";
+
+    // AbortController für Abbruch-Funktion
+    _aipaAbortCtrl = new AbortController();
+    const abortBtn = document.getElementById("aipa-abort-btn");
+    abortBtn.style.display = "inline-block";
+
+    function appendLog(html) {
+      logEl.innerHTML += html;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // SSE via fetch (POST not supported by EventSource)
+    fetch("/api/ai-project-assist/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seed, intensity, briefing }),
+      signal: _aipaAbortCtrl.signal,
+    }).then(response => {
+      if (!response.ok) {
+        return response.json().then(d => { throw new Error(d.error || response.statusText); });
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      function read() {
+        reader.read().then(({ done, value }) => {
+          if (done) {
+            aipaFinish();
+            return;
+          }
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop(); // unvollständige Zeile behalten
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const ev = JSON.parse(line.slice(6));
+              aipaHandleEvent(ev);
+            } catch(_) {}
+          }
+          read();
+        }).catch(err => {
+          if (err.name === "AbortError") { aipaFinish(); return; }
+          appendLog(`<div class="log-error">Verbindungsfehler: ${esc(err.message)}</div>`);
+          aipaFinish();
+        });
+      }
+      read();
+    }).catch(err => {
+      if (err.name === "AbortError") { aipaFinish(); return; }
+      appendLog(`<div class="log-error">Fehler: ${esc(err.message)}</div>`);
+      aipaFinish();
+    });
+
+    function fmtAgent(msg) {
+      const m = msg.match(/^(Koordinator|Trend-Rechercheur|RQ-Rechercheur|Rechercheur):\s*(.*)/s);
+      if (m) return `<span style="color:#a78bfa;font-weight:700;">${esc(m[1])}</span> ${esc(m[2])}`;
+      return esc(msg);
+    }
+
+    function aipaHandleEvent(ev) {
+      if (ev.type === "status") {
+        logStatus.textContent = ev.msg;
+        appendLog(`<div class="log-status">▸ ${fmtAgent(ev.msg)}</div>`);
+        _aipaLogText += `▸ ${ev.msg}\n`;
+      } else if (ev.type === "data") {
+        appendLog(`<div class="log-data">  ${fmtAgent(ev.msg)}</div>`);
+        _aipaLogText += `  ${ev.msg}\n`;
+        if (ev.picks) {
+          ev.picks.forEach(p => { appendLog(`<div class="log-pick">↳ ${esc(p)}</div>`); _aipaLogText += `  ↳ ${p}\n`; });
+        }
+        if (ev.queries) {
+          ev.queries.forEach(q => { appendLog(`<div class="log-pick">↳ ${esc(q)}</div>`); _aipaLogText += `  ↳ ${q}\n`; });
+        }
+      } else if (ev.type === "report") {
+        _aipaReportMd  = ev.report || "";
+        _aipaProjectId = ev.project_id || null;
+        _aipaChatHistory = [];
+        repEl.innerHTML = aipaRenderMdBlocks(_aipaReportMd);
+        if (ev.project_id) {
+          repEl.innerHTML += `<div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;">
+            <a href="/analysis" onclick="localStorage.setItem('kw_project_id','${ev.project_id}');localStorage.setItem('lastSnapProjectId','${ev.project_id}')"
+               class="btn btn-primary" style="font-size:12px;">Zur Analyse →</a>
+            <a href="/projects?project=${ev.project_id}" class="btn btn-ghost btn-sm" style="font-size:12px;">Projekt öffnen</a>
+          </div>`;
+        }
+        // Chat zurücksetzen
+        document.getElementById("aipa-chat-messages").innerHTML =
+          '<div class="aipa-chat-msg context">Klicke auf einen Absatz im Bericht oder stelle eine freie Frage.</div>';
+        document.getElementById("aipa-chat-input").value = "";
+        // Log-Popup schließen, Report-Popup öffnen, Formular zurücksetzen
+        logOverlay.classList.remove("open");
+        document.getElementById("aipa-report-overlay").classList.add("open");
+        document.getElementById("aipa-seed").value = "";
+        document.getElementById("aipa-briefing").value = "";
+        document.getElementById("aipa-extra").style.display = "none";
+        btn.disabled = true;
+      } else if (ev.type === "done") {
+        appendLog(`<div class="log-status" style="color:#22c55e;">✓ ${esc(ev.msg)}</div>`);
+        logStatus.textContent = "Fertig";
+      } else if (ev.type === "error") {
+        appendLog(`<div class="log-error">✕ Fehler: ${esc(ev.msg)}</div>`);
+        logStatus.textContent = "Fehler";
+      }
+    }
+
+    function aipaFinish() {
+      aipaRunning = false;
+      btn.disabled = false;
+      btn.textContent = "Analyse starten";
+      document.getElementById("aipa-log-spinner").style.display = "none";
+      document.getElementById("aipa-abort-btn").style.display = "none";
+      _aipaAbortCtrl = null;
+    }
+  }
+
+  function aipaAbort() {
+    if (!_aipaAbortCtrl) return;
+    _aipaAbortCtrl.abort();
+    const logEl = document.getElementById("aipa-log");
+    if (logEl) {
+      logEl.innerHTML += '<div class="log-error">Analyse vom Benutzer abgebrochen.</div>';
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    document.getElementById("aipa-log-status").textContent = "Abgebrochen";
+  }
+
+  // Markdown→HTML-Renderer (vollständig: Tabellen, Listen, Überschriften)
+  function _aipa_inline(s) {
+    return esc(s)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g,     '<em>$1</em>')
+      .replace(/`(.+?)`/g,       '<code style="background:var(--surface);padding:1px 5px;border-radius:3px;font-size:12px;">$1</code>');
+  }
+  function aipaRenderMd(md) {
+    let html = '';
+    const lines = md.split('\n');
+    let inUl = false, inOl = false, tableRows = [];
+    function flushTable() {
+      if (!tableRows.length) return;
+      const isSep = r => /^\s*\|[\s\-:|]+\|\s*$/.test(r);
+      if (tableRows.length >= 2 && isSep(tableRows[1])) {
+        const parse = row => row.split('|').slice(1,-1).map(c => c.trim());
+        html += '<table style="width:100%;border-collapse:collapse;font-size:12px;margin:10px 0;"><thead><tr>';
+        parse(tableRows[0]).forEach(c => { html += `<th style="text-align:left;padding:6px 10px;border-bottom:2px solid var(--border);color:var(--text);font-weight:600;">${_aipa_inline(c)}</th>`; });
+        html += '</tr></thead><tbody>';
+        tableRows.slice(2).forEach(row => {
+          html += '<tr>';
+          parse(row).forEach(c => { html += `<td style="padding:5px 10px;border-bottom:1px solid var(--border);color:var(--muted);">${_aipa_inline(c)}</td>`; });
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+      } else {
+        tableRows.forEach(r => { html += `<p>${_aipa_inline(r)}</p>`; });
+      }
+      tableRows = [];
+    }
+    function closeLists() {
+      if (inUl) { html += '</ul>'; inUl = false; }
+      if (inOl) { html += '</ol>'; inOl = false; }
+    }
+    for (let i = 0; i < lines.length; i++) {
+      const ln = lines[i];
+      if (/^\s*\|/.test(ln)) { closeLists(); tableRows.push(ln); continue; }
+      if (tableRows.length) flushTable();
+      const hm = ln.match(/^(#{1,6}) (.+)/);
+      if (hm) { closeLists(); const lvl = Math.min(hm[1].length, 4); const tag = lvl<=1?'h1':`h${lvl}`; html += `<${tag}>${_aipa_inline(hm[2])}</${tag}>`; continue; }
+      if (/^---+$/.test(ln.trim())) { closeLists(); html += '<hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">'; continue; }
+      if (/^[-*] /.test(ln))  { if (inOl) { html += '</ol>'; inOl = false; } if (!inUl) { html += '<ul style="margin:6px 0 6px 20px;">'; inUl = true; } html += `<li>${_aipa_inline(ln.slice(2))}</li>`; continue; }
+      if (/^\d+\. /.test(ln)) { if (inUl) { html += '</ul>'; inUl = false; } if (!inOl) { html += '<ol style="margin:6px 0 6px 20px;">'; inOl = true; } html += `<li>${_aipa_inline(ln.replace(/^\d+\. /,''))}</li>`; continue; }
+      closeLists();
+      if (!ln.trim()) { html += '<p></p>'; continue; }
+      html += `<p>${_aipa_inline(ln)}</p>`;
+    }
+    if (tableRows.length) flushTable();
+    closeLists();
+    return html;
+  }
+
+  // Render report with hoverable/clickable blocks
+  function aipaRenderMdBlocks(md) {
+    const raw = aipaRenderMd(md);
+    // Wrap top-level elements in .report-block divs
+    const tmp = document.createElement("div");
+    tmp.innerHTML = raw;
+    let html = "";
+    for (const node of Array.from(tmp.childNodes)) {
+      if (node.nodeType !== 1) { html += node.textContent || ""; continue; }
+      const tag = node.tagName;
+      if (/^H[1-6]$/.test(tag) || tag === "HR") {
+        html += node.outerHTML;
+        continue;
+      }
+      const txt = (node.textContent || "").trim();
+      if (!txt) { html += node.outerHTML; continue; }
+      html += `<div class="report-block">${node.outerHTML}<button class="block-ask">Fragen</button></div>`;
+    }
+    return html;
+  }
+
+  // Event delegation for report blocks
+  document.getElementById("aipa-report").addEventListener("click", function(e) {
+    const askBtn = e.target.closest(".block-ask");
+    const block  = e.target.closest(".report-block");
+    if (askBtn && block) {
+      e.stopPropagation();
+      aipaAskAboutBlock(block);
+      return;
+    }
+    if (block) {
+      document.querySelectorAll(".aipa-report-left .report-block.selected").forEach(b => b.classList.remove("selected"));
+      block.classList.add("selected");
+    }
+  });
+
+  function aipaAskAboutBlock(blockEl) {
+    // Extract text from the selected block
+    const clone = blockEl.cloneNode(true);
+    const askBtn = clone.querySelector(".block-ask");
+    if (askBtn) askBtn.remove();
+    const text = clone.textContent.trim();
+    if (!text) return;
+    // Highlight block
+    document.querySelectorAll(".aipa-report-left .report-block.selected").forEach(b => b.classList.remove("selected"));
+    blockEl.classList.add("selected");
+    // Prefill chat input
+    const inp = document.getElementById("aipa-chat-input");
+    inp.value = "";
+    inp.focus();
+    // Add context hint
+    const msgsEl = document.getElementById("aipa-chat-messages");
+    msgsEl.innerHTML += `<div class="aipa-chat-msg context">Bezug: „${esc(text.slice(0, 120))}${text.length > 120 ? '…' : ''}"</div>`;
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+    // Store selected block text for context
+    _aipaSelectedBlock = text;
+  }
+  let _aipaSelectedBlock = "";
+
+  function aipaChatSend() {
+    const inp = document.getElementById("aipa-chat-input");
+    const q = inp.value.trim();
+    if (!q || _aipaChatBusy) return;
+
+    _aipaChatBusy = true;
+    const sendBtn = document.getElementById("aipa-chat-send");
+    sendBtn.disabled = true;
+    inp.value = "";
+
+    const msgsEl = document.getElementById("aipa-chat-messages");
+
+    // Build user message with optional block context
+    let userContent = q;
+    if (_aipaSelectedBlock) {
+      userContent = `Bezug auf folgenden Absatz aus dem Bericht:\n\"${_aipaSelectedBlock}\"\n\nFrage: ${q}`;
+      _aipaSelectedBlock = "";
+    }
+
+    // Show user message
+    msgsEl.innerHTML += `<div class="aipa-chat-msg user">${esc(q)}</div>`;
+    msgsEl.innerHTML += `<div class="aipa-chat-msg assistant" id="aipa-chat-loading"><span class="aipa-spinner" style="border-color:rgba(124,92,191,.3);border-top-color:var(--accent1);"></span></div>`;
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+
+    _aipaChatHistory.push({ role: "user", content: userContent });
+
+    fetch("/api/ai-chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: _aipaChatHistory,
+        analysis_context: _aipaReportMd,
+        pipeline_log: _aipaLogText,
+        project_id: _aipaProjectId,
+      }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        const loadEl = document.getElementById("aipa-chat-loading");
+        if (loadEl) loadEl.remove();
+        if (data.error) {
+          msgsEl.innerHTML += `<div class="aipa-chat-msg assistant" style="color:var(--danger);">${esc(data.error)}</div>`;
+        } else {
+          const reply = data.reply || "";
+          _aipaChatHistory.push({ role: "assistant", content: reply });
+          msgsEl.innerHTML += `<div class="aipa-chat-msg assistant">${aipaRenderMd(reply)}</div>`;
+        }
+        msgsEl.scrollTop = msgsEl.scrollHeight;
+      })
+      .catch(err => {
+        const loadEl = document.getElementById("aipa-chat-loading");
+        if (loadEl) loadEl.remove();
+        msgsEl.innerHTML += `<div class="aipa-chat-msg assistant" style="color:var(--danger);">Fehler: ${esc(err.message)}</div>`;
+        msgsEl.scrollTop = msgsEl.scrollHeight;
+      })
+      .finally(() => {
+        _aipaChatBusy = false;
+        sendBtn.disabled = false;
+        inp.focus();
+      });
+  }
+
+  // Auto-resize chat textarea
+  document.getElementById("aipa-chat-input").addEventListener("input", function() {
+    this.style.height = "auto";
+    this.style.height = Math.min(this.scrollHeight, 120) + "px";
+  });
+
+  // Enter-Taste im Seed-Feld
+  document.getElementById("aipa-seed").addEventListener("keydown", e => {
+    if (e.key === "Enter") aipaStart();
+  });
+
+  // ── Init ──
+</script>
+{% endblock %}

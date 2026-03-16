@@ -1,0 +1,11 @@
+{# ── Refresh-Leiste (Aircraft) ── #}
+<div id="wz-refresh-bar" style="display:none;padding:5px 16px;border-bottom:1px solid var(--border);
+     background:var(--surface);flex-shrink:0;align-items:center;gap:10px;justify-content:flex-end;">
+  <span id="wz-refresh-ts" style="font-size:11px;color:var(--muted);"></span>
+  <button id="wz-refresh-btn" onclick="wzRefreshLive()"
+    style="background:transparent;border:1px solid var(--border);border-radius:6px;
+           color:var(--text);padding:3px 12px;font-size:11px;font-weight:600;cursor:pointer;
+           display:inline-flex;align-items:center;gap:6px;">
+    <span data-i18n="wz_btn_refresh">&#x21bb; Refresh</span>
+  </button>
+</div>

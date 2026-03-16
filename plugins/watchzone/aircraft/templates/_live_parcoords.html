@@ -1,0 +1,44 @@
+{# ── Inline Parallel Coordinates (Aircraft) ── #}
+<style>
+  /* Collision-Popup auf Leaflet-Karte */
+  .wz-collision-popup .leaflet-popup-content-wrapper {
+    background: transparent; box-shadow: none; padding: 0; border-radius: 0;
+    animation: wz-collision-pulse 1.5s ease-in-out infinite;
+  }
+  .wz-collision-popup .leaflet-popup-content { margin: 0; }
+  .wz-collision-popup .leaflet-popup-tip { background: #dc2626; }
+  @keyframes wz-collision-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.03); opacity: .85; }
+  }
+  /* Fullscreen side-by-side: rechte Hälfte (per JS aufgebaut) */
+  #wz-fs-row .wz-fs-right {
+    width: 50%; height: 100%; flex: none;
+    display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  }
+  #wz-fs-row .wz-fs-right #wz-live-sticky { flex-shrink: 0; }
+  #wz-fs-row .wz-fs-right #wz-live-body {
+    flex: 1; height: 0; min-height: 0; overflow-y: auto;
+  }
+</style>
+<div id="wz-parcoords-inline" style="display:none;height:320px;min-height:80px;flex-shrink:0;overflow:hidden;
+     background:var(--surface);position:relative;">
+  <div style="padding:8px 16px 4px;display:flex;align-items:center;gap:8px;">
+    <span style="font-size:12px;font-weight:700;color:var(--accent1);" data-i18n="wz_parcoords_title">⫼ Multidimensional Analysis and Filtering</span>
+    <span id="wz-parcoords-filter-count" style="font-size:11px;color:var(--muted);"></span>
+    <span style="flex:1;"></span>
+    <button id="wz-parcoords-reset-btn" onclick="wzResetParCoordsBrushes()" style="display:none;background:none;border:1px solid var(--border);
+      color:var(--muted);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;" data-i18n="wz_btn_reset_filter">Reset Filter</button>
+    <button data-parcoords-close onclick="wzToggleParCoords()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px;">&#10005;</button>
+  </div>
+  <div id="wz-parcoords-body" style="padding:0 16px 8px;position:relative;height:calc(100% - 40px);overflow:hidden;">
+    <canvas id="wz-parcoords-canvas"></canvas>
+    <div id="wz-parcoords-tooltip" style="display:none;position:absolute;z-index:10;background:var(--surface);
+      border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;
+      box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none;white-space:nowrap;"></div>
+  </div>
+</div>
+{# ── Resize-Handle: ParCoords ↔ Liste ── #}
+<div class="wz-resize-handle" id="wz-resize-parcoords" data-resize="parcoords" title="Adjust height" style="display:none;">
+  <span class="wz-resize-dots">⋯</span>
+</div>

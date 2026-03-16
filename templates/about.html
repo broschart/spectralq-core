@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Was kann man hiermit machen? – spectralQ{% endblock %}
+
+{% block head %}
+<style>
+  .about-hero {
+    background: linear-gradient(135deg, rgba(79,142,247,.08) 0%, rgba(124,92,191,.08) 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: clamp(28px, 5vw, 56px) clamp(24px, 5vw, 56px);
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .about-hero::before {
+    content: "";
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 260px; height: 260px;
+    background: radial-gradient(circle, rgba(79,142,247,.12), transparent 70%);
+    pointer-events: none;
+  }
+  .about-hero h1 {
+    font-size: clamp(22px, 4vw, 34px);
+    font-weight: 800;
+    letter-spacing: -.5px;
+    margin-bottom: 12px;
+    background: linear-gradient(90deg, var(--accent), var(--accent1));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .about-hero .tagline {
+    font-size: 15px;
+    color: var(--muted);
+    max-width: 680px;
+    line-height: 1.7;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .feat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .feat-card .feat-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .feat-card h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.3;
+  }
+  .feat-card p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0;
+    flex: 1;
+  }
+  .feat-card .feat-accent {
+    display: inline-block;
+    width: 28px; height: 3px;
+    border-radius: 2px;
+    margin-bottom: 10px;
+  }
+
+  .audience-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  @media (max-width: 700px) {
+    .audience-grid { grid-template-columns: 1fr; }
+  }
+  .aud-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 24px;
+  }
+  .aud-card h4 { font-size: 15px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+  .aud-card p  { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
+
+  .workflow-steps {
+    counter-reset: step;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .ws-item {
+    display: flex;
+    gap: 18px;
+    position: relative;
+    padding-bottom: 28px;
+  }
+  .ws-item:last-child { padding-bottom: 0; }
+  .ws-item::before {
+    content: counter(step);
+    counter-increment: step;
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(79,142,247,.15);
+    border: 1px solid rgba(79,142,247,.35);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+  .ws-item:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 32px;
+    width: 2px;
+    height: calc(100% - 32px);
+    background: var(--border);
+  }
+  .ws-item-body h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; margin-top: 4px; }
+  .ws-item-body p  { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
+
+  .cta-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<div class="about-hero">
+  <div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">VeriTrend</div>
+  <h1>Was kann man hiermit machen?</h1>
+  <p class="tagline">
+    VeriTrend ist ein professionelles Monitoring-System für Google Trends. Es hilft Teams dabei,
+    Suchvolumen-Bewegungen systematisch zu beobachten, zu interpretieren und in fundierte
+    Analyseberichte zu überführen — automatisiert, kollaborativ und KI-gestützt.
+  </p>
+</div>
+
+<!-- Zielgruppe -->
+<div class="card" style="margin-bottom:20px;">
+  <h2 style="margin-bottom:18px;font-size:20px;">Für wen ist das System?</h2>
+  <div class="audience-grid">
+    <div class="aud-card">
+      <h4>Marktforschung &amp; Strategie</h4>
+      <p>Teams, die Nachfrage-Trends und Themenkonjunkturen über Wochen und Monate hinweg verfolgen wollen.</p>
+    </div>
+    <div class="aud-card">
+      <h4>PR &amp; Kommunikation</h4>
+      <p>Agenturen und Inhouse-Teams, die Meinungsbilder rund um Marken, Themen oder Ereignisse analysieren.</p>
+    </div>
+    <div class="aud-card">
+      <h4>Journalismus &amp; Redaktion</h4>
+      <p>Redaktionen, die gesellschaftliche Aufmerksamkeitsverläufe dokumentieren und auswerten.</p>
+    </div>
+    <div class="aud-card">
+      <h4>Politik &amp; Campaigning</h4>
+      <p>Analyse öffentlicher Interessen-Verschiebungen zu relevanten Themen über den Kampagnenzeitraum.</p>
+    </div>
+    <div class="aud-card">
+      <h4>Forensische Analyse &amp; Behörden</h4>
+      <p>Behörden und Ermittlungsteams, die öffentliche Aufmerksamkeitsverläufe zu Personen, Ereignissen oder Themen dokumentieren und als Beweismittel sichern.</p>
+    </div>
+    <div class="aud-card">
+      <h4>Wissenschaft &amp; Forschung</h4>
+      <p>Strukturierte Erhebung von Suchvolumen-Zeitreihen als Datenbasis für empirische Analysen.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Core Features -->
+<div class="card" style="margin-bottom:20px;">
+  <h2 style="margin-bottom:18px;font-size:20px;">Kernfunktionen</h2>
+  <div class="features-grid">
+
+    <div class="feat-card">
+      <div class="feat-accent" style="background:#4f8ef7;"></div>
+      <div class="feat-label">Datenerhebung</div>
+      <h3>Automatisches Keyword-Tracking</h3>
+      <p>Keywords werden täglich automatisch über Google Trends abgerufen. Zeitreihen werden pro Abholung als eigener Datenpunkt gespeichert — so entsteht eine lückenlose Verlaufshistorie.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-accent" style="background:#22c55e;"></div>
+      <div class="feat-label">Projekte</div>
+      <h3>Projektbasierte Organisation</h3>
+      <p>Keywords lassen sich beliebigen Projekten zuordnen. Jedes Projekt hat ein eigenes Briefing, eine Farbkodierung und einen vollständigen Analysebericht — von den Rohdaten bis zur KI-Bewertung.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-accent" style="background:#f97316;"></div>
+      <div class="feat-label">Analyse</div>
+      <h3>Verlaufsanalyse &amp; Snapshots</h3>
+      <p>Für jeden Abholzeitpunkt (Run) lässt sich eine detaillierte Ansicht der Trendkurve, der verwandten Suchanfragen und des regionalen Interesses aufrufen. Snapshots frieren den Stand für Berichte ein.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-accent" style="background:#a78bfa;"></div>
+      <div class="feat-label">KI-Unterstützung</div>
+      <h3>KI-gestützte Gesamtbewertung</h3>
+      <p>Das System generiert auf Basis aller gesammelten Daten, Kommentare und Markierungen eine integrierte Analyse aus der Wir-Perspektive: Gesamtbild, Kernbefunde, Muster, Schlussfolgerungen und nächste Schritte.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-accent" style="background:#4f8ef7;"></div>
+      <div class="feat-label">Alerts</div>
+      <h3>Echtzeit-Alerting</h3>
+      <p>Benutzerdefinierte Schwellenwerte lösen automatisch Benachrichtigungen aus — bei plötzlichem Anstieg, Verschwinden oder Wiederauftauchen von Trendthemen.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-accent" style="background:#22c55e;"></div>
+      <div class="feat-label">Ereignisse</div>
+      <h3>Schlüsselereignisse verknüpfen</h3>
+      <p>Externe Ereignisse (Pressemitteilungen, Kampagnenstarts, politische Ereignisse) lassen sich im Zeitstrahl verankern und mit den Trendverläufen korrelieren.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-accent" style="background:#f97316;"></div>
+      <div class="feat-label">Bericht</div>
+      <h3>Präsentationsansicht &amp; Export</h3>
+      <p>Snapshots, Textbilder und KI-Analysen lassen sich zu einem vollständigen Analysebericht zusammenstellen — mit wählbarem Layout (Bild links, rechts oder oben) und DOCX-Export.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-accent" style="background:#a78bfa;"></div>
+      <div class="feat-label">Live-Check</div>
+      <h3>Suchbegriff-Recherche in Echtzeit</h3>
+      <p>Bevor ein Begriff ins dauerhafte Tracking aufgenommen wird, lässt sich das aktuelle Trendverhalten live prüfen — inklusive verwandter Suchanfragen und regionalem Interesse.</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- Workflow -->
+<div class="card" style="margin-bottom:20px;">
+  <h2 style="margin-bottom:24px;font-size:20px;">Typischer Arbeitsablauf</h2>
+  <div class="workflow-steps">
+    <div class="ws-item">
+      <div class="ws-item-body">
+        <h4>Projekt anlegen</h4>
+        <p>Ein neues Projekt mit Namen und Briefing erstellen — als thematischer Rahmen für alle Keywords und Auswertungen.</p>
+      </div>
+    </div>
+    <div class="ws-item">
+      <div class="ws-item-body">
+        <h4>Keywords recherchieren und hinzufügen</h4>
+        <p>Suchbegriffe über den Live-Check prüfen, verfeinern und dann dem Projekt dauerhaft zuordnen.</p>
+      </div>
+    </div>
+    <div class="ws-item">
+      <div class="ws-item-body">
+        <h4>Trendverläufe beobachten</h4>
+        <p>Das System ruft täglich automatisch neue Daten ab. Auffällige Bewegungen werden als Alert gemeldet.</p>
+      </div>
+    </div>
+    <div class="ws-item">
+      <div class="ws-item-body">
+        <h4>Snapshots anlegen &amp; kommentieren</h4>
+        <p>Relevante Zeitpunkte werden als Snapshot gesichert, mit Kommentaren und farblichen Markierungen versehen.</p>
+      </div>
+    </div>
+    <div class="ws-item">
+      <div class="ws-item-body">
+        <h4>Schlüsselereignisse hinterlegen</h4>
+        <p>Externe Ereignisse im Projektzeitraum erfassen, um Trendausschläge mit realen Ursachen zu verknüpfen.</p>
+      </div>
+    </div>
+    <div class="ws-item">
+      <div class="ws-item-body">
+        <h4>KI-Gesamtbewertung erstellen</h4>
+        <p>Alle gesammelten Daten und Kommentare werden in eine integrierte Analyse überführt — aus der Perspektive des eigenen Analyse-Teams.</p>
+      </div>
+    </div>
+    <div class="ws-item">
+      <div class="ws-item-body">
+        <h4>Bericht zusammenstellen &amp; exportieren</h4>
+        <p>Snapshots, KI-Analyse und Intro-Text werden zu einem Präsentationsbericht kombiniert und als DOCX exportiert.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="card">
+  <h2 style="margin-bottom:8px;font-size:20px;">Jetzt loslegen</h2>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">
+    Ein neues Projekt braucht nur einen Namen und ein Briefing — der Rest ergibt sich im Arbeitsfluss.
+  </p>
+  <div class="cta-bar">
+    <a href="/start" class="btn btn-primary" style="text-decoration:none;">Zum Start</a>
+    <a href="/analysis"  class="btn btn-ghost"   style="text-decoration:none;">Zur Analyse</a>
+  </div>
+</div>
+
+{% endblock %}

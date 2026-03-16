@@ -1,0 +1,22 @@
+{
+  "de": {
+    "analysis_period_filter_label": "Periodizitäts-Filter",
+    "analysis_period_filter_desc": "Spektralanalyse zur Erkennung periodischer Muster.",
+    "an_period_filter": "∼ Periodizitäts-Filter"
+  },
+  "en": {
+    "analysis_period_filter_label": "Periodicity Filter",
+    "analysis_period_filter_desc": "Spectral analysis for detecting periodic patterns.",
+    "an_period_filter": "∼ Periodicity filter"
+  },
+  "fr": {
+    "analysis_period_filter_label": "Filtre de périodicité",
+    "analysis_period_filter_desc": "Analyse spectrale pour détecter les motifs périodiques.",
+    "an_period_filter": "∼ Filtre de périodicité"
+  },
+  "es": {
+    "analysis_period_filter_label": "Filtro de periodicidad",
+    "analysis_period_filter_desc": "Análisis espectral para detectar patrones periódicos.",
+    "an_period_filter": "∼ Filtro de periodicidad"
+  }
+}

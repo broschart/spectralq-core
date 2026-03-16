@@ -1,0 +1,279 @@
+<!-- ═══════════════════════════════════════════════════════════
+     CLUSTER-ANALYSE OVERLAY
+═══════════════════════════════════════════════════════════ -->
+<style>
+#cl-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82);
+  display: none; align-items: center; justify-content: center;
+  z-index: 9500; padding: 16px; box-sizing: border-box;
+}
+#cl-dialog {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; width: 96vw; max-width: 1100px;
+  max-height: 88vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#cl-result-wrap {
+  flex: 1; overflow-y: auto; padding: 16px 24px;
+}
+#cl-result-wrap .cl-cluster {
+  margin-bottom: 16px; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--border); background: rgba(255,255,255,.02);
+}
+#cl-result-wrap .cl-cluster-title {
+  font-size: 15px; font-weight: 700; margin-bottom: 6px;
+}
+#cl-result-wrap .cl-queries {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px;
+}
+#cl-result-wrap .cl-chip {
+  padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  background: rgba(139,92,246,.12); color: #a78bfa; border: 1px solid rgba(139,92,246,.25);
+}
+#cl-result-wrap .cl-chip.rising {
+  background: rgba(34,197,94,.12); color: #22c55e; border-color: rgba(34,197,94,.25);
+}
+</style>
+
+<div id="cl-overlay">
+  <div id="cl-dialog">
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <h2 style="margin:0 0 3px;font-size:16px;font-weight:600;" data-i18n="analysis_cluster_label">RQ Cluster Analyse</h2>
+        <div id="cl-subtitle" style="font-size:12px;color:var(--muted);"></div>
+      </div>
+      <button id="btn-cl-close" style="flex-shrink:0;width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;">&times;</button>
+    </div>
+
+    <!-- Status -->
+    <div id="cl-status" style="padding:10px 20px;font-size:12px;color:var(--muted);flex-shrink:0;">
+      <div id="cl-loading" style="display:none;align-items:center;gap:10px;">
+        <div class="spinner" style="width:18px;height:18px;"></div>
+        <span data-i18n="an_cl_loading">KI analysiert verwandte Suchanfragen…</span>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="cl-result-wrap">
+      <div id="cl-result"></div>
+    </div>
+
+    <!-- Chat -->
+    <div id="cl-chat-wrap" class="ai-chat-wrap" style="display:none;flex-shrink:0;padding:12px 24px;background:var(--surface2);border-top:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;" data-i18n="an_cl_followup">Folgefragen</div>
+      <div id="cl-chat-history" class="ai-chat-history"></div>
+      <div class="ai-chat-input-row">
+        <input id="cl-chat-input" type="text" data-i18n-placeholder="an_cl_chat_placeholder" placeholder="Frage zu den Clustern …"
+          onkeydown="if(event.key==='Enter'&&window._clChatSend)window._clChatSend()">
+        <button id="cl-chat-send" onclick="if(window._clChatSend)window._clChatSend()" data-i18n="an_cl_chat_send">Senden</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  let _clKwId = null;
+  let _clChatHistory = [];
+  let _clAnalysisCtx = '';
+
+  // ── Verwandte Suchanfragen laden (alle Batches) ─────────────────
+  async function loadRelatedHistory(kwId) {
+    const res = await fetch(`/api/keywords/${kwId}/related-queries?history=1`);
+    if (!res.ok) return [];
+    return res.json();
+  }
+
+  // ── Daten aufbereiten für KI ────────────────────────────────────
+  function prepareClusterData(rawEntries, keyword) {
+    // Nach Batch gruppieren
+    const batches = {};
+    for (const r of rawEntries) {
+      const ts = r.fetched_at;
+      if (!batches[ts]) batches[ts] = { fetched_at: ts, rising: [], top: [] };
+      batches[ts][r.query_type].push({ query: r.query, value: r.value, rank: r.rank });
+    }
+
+    // Zeitlich sortiert
+    const sorted = Object.values(batches).sort((a, b) => a.fetched_at.localeCompare(b.fetched_at));
+
+    // Alle einzigartigen Queries sammeln
+    const allQueries = new Set();
+    for (const b of sorted) {
+      b.rising.forEach(q => allQueries.add(q.query));
+      b.top.forEach(q => allQueries.add(q.query));
+    }
+
+    return { batches: sorted, uniqueQueries: [...allQueries], keyword };
+  }
+
+  // ── KI-Analyse starten ──────────────────────────────────────────
+  async function runClusterAnalysis(kwId) {
+    const statusEl = document.getElementById('cl-status');
+    const loadingEl = document.getElementById('cl-loading');
+    const resultEl = document.getElementById('cl-result');
+    const chatWrap = document.getElementById('cl-chat-wrap');
+
+    const kw = typeof allKeywords !== 'undefined'
+      ? allKeywords.find(k => k.id === kwId) : null;
+    const kwName = kw ? kw.keyword : `Keyword #${kwId}`;
+
+    document.getElementById('cl-subtitle').textContent = kwName;
+    loadingEl.style.display = 'flex';
+    resultEl.innerHTML = '';
+    chatWrap.style.display = 'none';
+    _clChatHistory = [];
+
+    try {
+      const raw = await loadRelatedHistory(kwId);
+      if (!raw.length) {
+        loadingEl.style.display = 'none';
+        resultEl.innerHTML = `<p style="color:var(--muted);padding:12px 0;">${window.t('an_cl_no_data','Keine verwandten Suchanfragen vorhanden. Zuerst einen Datenabruf durchführen.')}</p>`;
+        return;
+      }
+
+      const data = prepareClusterData(raw, kwName);
+
+      // Prompt bauen
+      const batchSummaries = data.batches.map(b => {
+        const date = b.fetched_at.slice(0, 10);
+        const topStr = b.top.slice(0, 15).map(q => `${q.query} (${q.value})`).join(', ');
+        const risingStr = b.rising.slice(0, 15).map(q => `${q.query} (${q.value})`).join(', ');
+        return `[${date}] Top: ${topStr || '–'} | Rising: ${risingStr || '–'}`;
+      }).join('\n');
+
+      const prompt = `Du bist ein forensischer Suchtrend-Analyst. Analysiere die verwandten Suchanfragen zum Keyword "${kwName}" über ${data.batches.length} Abruf-Zeitpunkte.
+
+DATEN (${data.uniqueQueries.length} einzigartige Queries, ${data.batches.length} Zeitpunkte):
+${batchSummaries}
+
+AUFGABE: Führe eine thematische RQ Cluster Analyse durch:
+
+1. **Thematische Cluster bilden**: Gruppiere ALLE verwandten Suchanfragen in sinnvolle thematische Cluster (z.B. Produkt, Person, Ort, Ereignis, Kategorie). Jeder Cluster braucht einen aussagekräftigen Namen.
+
+2. **Zeitliche Entwicklung**: Für jeden Cluster: Wie hat er sich über die Abruf-Zeitpunkte entwickelt? Wächst er, schrumpft er, ist er stabil, taucht er plötzlich auf oder verschwindet?
+
+3. **Signifikante Entwicklungen**: Welche Cluster zeigen die auffälligsten Veränderungen? Welche Queries sind neu aufgetaucht (Rising/Breakout)? Welche sind verschwunden?
+
+4. **Forensische Bewertung**: Was verraten die Cluster-Muster über das Suchverhalten rund um "${kwName}"? Gibt es Hinweise auf Ereignisse, Kampagnen oder Trendwechsel?
+
+5. **Nachrichtenbezug**: Welche realen Ereignisse könnten die beobachteten Cluster-Verschiebungen erklären?
+
+FORMAT: Antworte auf Deutsch. Strukturiere klar mit Überschriften. Für jeden Cluster: Name, enthaltene Queries, Bewertung der zeitlichen Entwicklung (mit Zeitangaben).`;
+
+      const projectId = parseInt(document.getElementById('hdr-project-select')?.value) || null;
+
+      const res = await fetch('/api/ai-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          series: window._collectSeries ? window._collectSeries(kwId) : [],
+          context: prompt,
+          mode: 'cluster',
+          extras: {
+            cluster: {
+              keyword: kwName,
+              batches: data.batches.length,
+              unique_queries: data.uniqueQueries.length,
+              queries: data.uniqueQueries.slice(0, 100),
+            }
+          },
+          format: 'prose',
+          project_id: projectId,
+        }),
+      });
+
+      const json = await res.json();
+      loadingEl.style.display = 'none';
+
+      if (!res.ok || json.error) {
+        resultEl.innerHTML = `<div style="color:#ef4444;padding:12px 0;">${json.error || window.t('an_cl_error','Fehler bei der Analyse.')}</div>`;
+        return;
+      }
+
+      // Analyse rendern
+      _clAnalysisCtx = json.analysis || '';
+      resultEl.innerHTML = typeof mdToHtml === 'function'
+        ? mdToHtml(json.analysis)
+        : `<div style="white-space:pre-wrap;font-size:14px;line-height:1.7;">${json.analysis}</div>`;
+
+      // Chat aktivieren
+      chatWrap.style.display = 'block';
+      document.getElementById('cl-chat-history').innerHTML = '';
+      document.getElementById('cl-chat-input').value = '';
+
+      statusEl.querySelector('#cl-loading').style.display = 'none';
+
+    } catch (e) {
+      loadingEl.style.display = 'none';
+      resultEl.innerHTML = `<div style="color:#ef4444;padding:12px 0;">${window.t('an_cl_error_prefix','Fehler:')} ${e.message}</div>`;
+    }
+  }
+
+  // ── Chat-Funktion ───────────────────────────────────────────────
+  window._clChatSend = async function() {
+    const input = document.getElementById('cl-chat-input');
+    const histEl = document.getElementById('cl-chat-history');
+    const sendBtn = document.getElementById('cl-chat-send');
+    const question = input.value.trim();
+    if (!question) return;
+
+    _clChatHistory.push({ role: 'user', content: question });
+    histEl.innerHTML += `<div style="margin-bottom:8px;"><strong style="color:var(--text);">${window.t('an_cl_chat_you','Du:')}</strong> <span style="color:var(--text);">${question}</span></div>`;
+    input.value = '';
+    sendBtn.disabled = true;
+
+    try {
+      const projectId = parseInt(document.getElementById('hdr-project-select')?.value) || null;
+      const res = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          history: _clChatHistory,
+          analysis_context: _clAnalysisCtx,
+          project_id: projectId,
+        }),
+      });
+      const json = await res.json();
+      const answer = json.answer || json.error || window.t('an_cl_no_answer','Keine Antwort.');
+      _clChatHistory.push({ role: 'assistant', content: answer });
+      const rendered = typeof mdToHtml === 'function' ? mdToHtml(answer) : answer;
+      histEl.innerHTML += `<div style="margin-bottom:8px;"><strong style="color:#a78bfa;">${window.t('an_cl_chat_ai','KI:')}</strong> <div style="color:var(--text);display:inline-block;">${rendered}</div></div>`;
+      histEl.scrollTop = histEl.scrollHeight;
+    } catch (e) {
+      histEl.innerHTML += `<div style="color:#ef4444;margin-bottom:8px;">${window.t('an_cl_error_prefix','Fehler:')} ${e.message}</div>`;
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  };
+
+  // ── Öffnen / Schließen ──────────────────────────────────────────
+  function openCluster(kwId) {
+    _clKwId = kwId;
+    document.getElementById('cl-overlay').style.display = 'flex';
+    document.getElementById('cl-result').innerHTML = '';
+    document.getElementById('cl-chat-wrap').style.display = 'none';
+    runClusterAnalysis(kwId);
+  }
+
+  function closeCluster() {
+    document.getElementById('cl-overlay').style.display = 'none';
+  }
+
+  window.openClusterForKw = function(kwId) { openCluster(kwId); };
+
+  document.getElementById('btn-cl-close').addEventListener('click', closeCluster);
+  document.getElementById('cl-overlay').addEventListener('click', e => {
+    if (e.target.id === 'cl-overlay') closeCluster();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('cl-overlay').style.display === 'flex') closeCluster();
+  });
+})();
+</script>
+

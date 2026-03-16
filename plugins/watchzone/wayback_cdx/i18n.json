@@ -1,0 +1,54 @@
+{
+  "de": {
+    "wz_sidebar_wayback_cdx": "Wayback Frequenz",
+    "wz_wbf_title": "Wayback Archivierungsfrequenz",
+    "wz_wbf_source": "Quelle: Wayback Machine CDX API",
+    "wz_wbf_desc": "Zeigt wie oft eine URL vom Internet Archive gecacht wurde. Hohe Archivierungsfrequenz deutet auf Medienaufmerksamkeit, koordinierte Zugriffe oder bewusste Archivierung hin. Kein API-Key noetig.",
+    "wz_wbf_hint": "URLs eingeben und Zone erstellen. Die Archivierungshaeufigkeit wird automatisch aus dem Wayback Machine CDX Index abgerufen.",
+    "wz_wbf_snapshots": "Snapshots",
+    "wz_wbf_days": "Tage",
+    "wz_wbf_daily_avg": "⌀/Tag",
+    "wz_wbf_peak": "Peak",
+    "wz_wbf_total": "Gesamt",
+    "wz_wbf_empty": "Keine Wayback-Snapshots fuer diese URL.",
+    "wz_wbf_header": "Archivierungsfrequenz",
+    "wz_wbf_first": "Erster Snapshot",
+    "wz_wbf_last": "Letzter Snapshot",
+    "wz_wbf_apply": "Anwenden",
+    "wz_wbf_add_url": "+ Website hinzufügen"
+  },
+  "en": {
+    "wz_sidebar_wayback_cdx": "Wayback Frequency",
+    "wz_wbf_title": "Wayback Archiving Frequency",
+    "wz_wbf_source": "Source: Wayback Machine CDX API",
+    "wz_wbf_desc": "Shows how often a URL was cached by the Internet Archive. High archiving frequency indicates media attention, coordinated access or deliberate archiving. No API key required.",
+    "wz_wbf_hint": "Enter URLs and create a zone. Archiving frequency will be fetched automatically from the Wayback Machine CDX index.",
+    "wz_wbf_snapshots": "Snapshots",
+    "wz_wbf_days": "days",
+    "wz_wbf_daily_avg": "⌀/day",
+    "wz_wbf_peak": "Peak",
+    "wz_wbf_total": "Total",
+    "wz_wbf_empty": "No Wayback snapshots for this URL.",
+    "wz_wbf_header": "Archiving frequency",
+    "wz_wbf_first": "First snapshot",
+    "wz_wbf_last": "Last snapshot",
+    "wz_wbf_apply": "Apply",
+    "wz_wbf_add_url": "+ Add Website"
+  },
+  "fr": {
+    "wz_sidebar_wayback_cdx": "Frequence Wayback",
+    "wz_wbf_title": "Frequence d'archivage Wayback",
+    "wz_wbf_source": "Source : Wayback Machine CDX API",
+    "wz_wbf_empty": "Aucun snapshot Wayback pour cette URL.",
+    "wz_wbf_apply": "Appliquer",
+    "wz_wbf_add_url": "+ Ajouter un site"
+  },
+  "es": {
+    "wz_sidebar_wayback_cdx": "Frecuencia Wayback",
+    "wz_wbf_title": "Frecuencia de archivado Wayback",
+    "wz_wbf_source": "Fuente: Wayback Machine CDX API",
+    "wz_wbf_empty": "Sin snapshots Wayback para esta URL.",
+    "wz_wbf_apply": "Aplicar",
+    "wz_wbf_add_url": "+ Añadir sitio web"
+  }
+}
