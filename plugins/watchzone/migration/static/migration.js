@@ -4,58 +4,29 @@
 (function() {
 "use strict";
 var WZ = window.WZ;
-var t = window._t || function(k, fb) { return fb; };
+var t = window.t || function(k, fb) { return fb; };
 
 var _COLORS = ["#8b5cf6","#3b82f6","#ef4444","#22c55e","#f59e0b","#06b6d4","#ec4899","#f97316","#14b8a6","#a855f7"];
 
 function _renderMigrationLive(data) {
+  var ctx = WZ._currentCtx;
   var countries = data.countries || [];
 
-  document.getElementById("wz-live-count").textContent =
-    countries.length + " " + t("wz_mig_country", "Country") +
-    (countries.length !== 1 ? "s" : "");
-
-  if (WZ._liveMarkers) WZ._liveMarkers.clearLayers();
-
-  // ── Layout: Charts links volle Höhe, Länderinfos rechts ──
-  var liveBox = document.getElementById("wz-live-box");
-  if (liveBox) {
-    liveBox.style.display = "flex";
-    liveBox.style.flexDirection = "column";
-    liveBox.style.height = "95vh";
-    liveBox.style.maxHeight = "95vh";
-    liveBox.style.maxWidth = "1400px";
-  }
-  // Karte ausblenden, Map-Row als Chart-Container nutzen
-  var mapRow = document.getElementById("wz-map-row");
-  if (mapRow) { mapRow.style.display = "none"; }
-  ["wz-under-map-bar","wz-resize-map","wz-live-sticky"].forEach(function(id) {
-    var el = document.getElementById(id); if (el) el.style.display = "none";
-  });
-
-  // Body als Hauptcontainer nutzen (flex horizontal)
-  var body = document.getElementById("wz-live-body");
-  if (body) {
-    body.style.display = "flex";
-    body.style.flexDirection = "row";
-    body.style.flex = "1";
-    body.style.minHeight = "0";
-    body.style.padding = "0";
-  }
-  var contentEl = document.getElementById("wz-live-content");
-  if (contentEl) {
+  // Content-Container
+  var contentEl = ctx ? ctx.contentEl : document.getElementById("wz-mig-content");
+  // Im Standard-Popup: bodyEl als flex-row für Zwei-Spalten-Layout nutzen
+  if (ctx && ctx.bodyEl) {
+    ctx.bodyEl.style.display = "flex";
+    ctx.bodyEl.style.flexDirection = "row";
     contentEl.style.display = "flex";
     contentEl.style.flex = "1";
     contentEl.style.minWidth = "0";
     contentEl.style.flexDirection = "column";
-    contentEl.style.height = "100%";
     contentEl.style.padding = "0";
   }
-  var loadingEl = document.getElementById("wz-live-loading");
-  if (loadingEl) loadingEl.style.display = "none";
 
   if (!countries.length) {
-    contentEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">' +
+    if (contentEl) contentEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">' +
       t("wz_mig_empty", "No migration data for this region.") + '</div>';
     return;
   }
@@ -88,13 +59,13 @@ function _renderMigrationLive(data) {
 
   // ── Seitenpanel rechts (Länderkarten) ──
   var panel = document.getElementById("mig-side-panel");
-  if (!panel) {
+  if (!panel && ctx && ctx.bodyEl) {
     panel = document.createElement("div");
     panel.id = "mig-side-panel";
     panel.style.cssText = "width:380px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;";
-    body.appendChild(panel);
+    ctx.bodyEl.appendChild(panel);
   }
-  panel.style.display = "flex";
+  if (panel) panel.style.display = "flex";
 
   var panelHtml = '';
   // Header
@@ -222,15 +193,120 @@ function _esc(s) {
   return d.innerHTML;
 }
 
-WZ._onLiveClose.push(function() {
-  var panel = document.getElementById("mig-side-panel");
-  if (panel) { panel.style.display = "none"; panel.innerHTML = ""; }
-});
-
 WZ.registerPlugin("migration", {
   renderer: _renderMigrationLive,
   has_live_map: false,
+  has_map: false,
+  mix_global_zones: true,
   default_source: "unhcr",
+  live_title_prefix: "Migration & Displacement:",
+  live_box_max_width: "1400px",
+  live_box_height: "90vh",
 });
+
+// Collect Renderer
+WZ._collectRenderers["migration"] = {
+  renderHTML: function(data, cardId) {
+    var h = "";
+    var countries = data.countries || [];
+    if (!countries.length) { h += '<div style="font-size:11px;color:var(--muted);">Keine Daten.</div>'; return h; }
+
+    countries.forEach(function(c, ci) {
+      h += '<div style="margin-bottom:12px;' + (ci > 0 ? 'padding-top:10px;border-top:1px solid var(--border);' : '') + '">';
+      h += '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;">' + WZ._esc(c.name) + ' (' + WZ._esc(c.iso3) + ')</div>';
+
+      // Latest stats
+      var la = c.latest_as_asylum || {};
+      var lo = c.latest_as_origin || {};
+      h += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">';
+      if (la.refugees) h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#06b6d4;">' + la.refugees.toLocaleString() + '</div><div style="font-size:8px;color:var(--muted);">Fl\u00fcchtlinge (aufgenommen)</div></div>';
+      if (la.asylum_seekers) h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#f59e0b;">' + la.asylum_seekers.toLocaleString() + '</div><div style="font-size:8px;color:var(--muted);">Asylsuchende</div></div>';
+      if (la.idps) h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#ef4444;">' + la.idps.toLocaleString() + '</div><div style="font-size:8px;color:var(--muted);">Binnenvertriebene</div></div>';
+      if (lo.refugees) h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#a855f7;">' + lo.refugees.toLocaleString() + '</div><div style="font-size:8px;color:var(--muted);">Fl\u00fcchtlinge (Herkunft)</div></div>';
+      h += '</div>';
+
+      // Chart canvas
+      if (c.asylum_series && c.asylum_series.length > 1) {
+        h += '<div style="position:relative;height:160px;"><canvas id="' + cardId + '-mig-' + ci + '"></canvas></div>';
+      }
+      h += '</div>';
+    });
+    return h;
+  },
+  afterRender: function(data, cardId) {
+    if (!window.Chart) return;
+    var countries = data.countries || [];
+    var chartColors = { refugees: "#06b6d4", asylum_seekers: "#f59e0b", idps: "#ef4444", origin_refugees: "#a855f7" };
+
+    countries.forEach(function(c, ci) {
+      var canvas = document.getElementById(cardId + "-mig-" + ci);
+      if (!canvas || !c.asylum_series || c.asylum_series.length < 2) return;
+
+      var labels = c.asylum_series.map(function(s) { return String(s.year); });
+      var datasets = [];
+      // Asylum refugees
+      var refVals = c.asylum_series.map(function(s) { return s.refugees || 0; });
+      if (refVals.some(function(v) { return v > 0; })) {
+        datasets.push({ label: "Fl\u00fcchtlinge (aufgen.)", data: refVals, borderColor: chartColors.refugees, backgroundColor: chartColors.refugees + "20", borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 2 });
+      }
+      // Asylum seekers
+      var asVals = c.asylum_series.map(function(s) { return s.asylum_seekers || 0; });
+      if (asVals.some(function(v) { return v > 0; })) {
+        datasets.push({ label: "Asylsuchende", data: asVals, borderColor: chartColors.asylum_seekers, borderWidth: 1.5, fill: false, tension: 0.3, pointRadius: 2 });
+      }
+      // IDPs
+      var idpVals = c.asylum_series.map(function(s) { return s.idps || 0; });
+      if (idpVals.some(function(v) { return v > 0; })) {
+        datasets.push({ label: "Binnenvertriebene", data: idpVals, borderColor: chartColors.idps, borderWidth: 1.5, fill: false, tension: 0.3, pointRadius: 2 });
+      }
+      // Origin refugees
+      if (c.origin_series && c.origin_series.length) {
+        var origMap = {}; c.origin_series.forEach(function(s) { origMap[s.year] = s.refugees || 0; });
+        var origVals = labels.map(function(y) { return origMap[parseInt(y)] || 0; });
+        if (origVals.some(function(v) { return v > 0; })) {
+          datasets.push({ label: "Fl\u00fcchtlinge (Herkunft)", data: origVals, borderColor: chartColors.origin_refugees, borderWidth: 1.5, borderDash: [4, 3], fill: false, tension: 0.3, pointRadius: 2 });
+        }
+      }
+      if (!datasets.length) return;
+
+      // Focus time plugin
+      var migPlugins = [];
+      var tf = data.time_focus;
+      if (tf && tf.from) {
+        var tfYear = tf.from.slice(0, 4);
+        migPlugins.push({
+          id: 'migFocus' + ci,
+          afterDraw: function(chart) {
+            var xScale = chart.scales.x, ctx2 = chart.ctx;
+            var fi = labels.indexOf(tfYear);
+            if (fi === -1) return;
+            var x = xScale.getPixelForValue(fi);
+            var top = chart.chartArea.top, bottom = chart.chartArea.bottom;
+            ctx2.save();
+            ctx2.beginPath(); ctx2.moveTo(x, top); ctx2.lineTo(x, bottom);
+            ctx2.strokeStyle = '#f59e0b'; ctx2.lineWidth = 2; ctx2.setLineDash([4, 3]); ctx2.stroke();
+            ctx2.fillStyle = '#f59e0b'; ctx2.font = 'bold 9px sans-serif'; ctx2.textAlign = 'center';
+            ctx2.fillText(tf.title || tfYear, x, top - 4);
+            ctx2.restore();
+          }
+        });
+      }
+
+      new Chart(canvas.getContext("2d"), {
+        type: "line", data: { labels: labels, datasets: datasets }, plugins: migPlugins,
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: true, position: "bottom", labels: { font: { size: 8 }, boxWidth: 10, padding: 4 } },
+            tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ": " + (ctx.parsed.y != null ? ctx.parsed.y.toLocaleString() : "\u2014"); } } } },
+          scales: {
+            x: { ticks: { font: { size: 8 }, color: "#888" }, grid: { display: false } },
+            y: { ticks: { font: { size: 8 }, color: "#888", callback: function(v) { return v >= 1000000 ? (v/1000000).toFixed(1) + "M" : v >= 1000 ? Math.round(v/1000) + "k" : v; } }, grid: { color: "rgba(100,100,100,.1)" } }
+          },
+          interaction: { intersect: false, mode: "index" }
+        }
+      });
+    });
+  }
+};
 
 })();

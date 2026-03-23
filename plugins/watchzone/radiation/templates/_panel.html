@@ -1,12 +1,11 @@
 <div id="panel-radiation" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_rad_title">Radiation Monitoring</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_rad_source">Sources: BfS ODL (Germany) + EURDEP (Europe)</span>
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_rad_desc">Monitors ambient gamma dose rate in an area. BfS ODL provides data for ~1,600 stations in Germany, EURDEP for ~37,000 stations Europe-wide. Elevated values (>0.3 µSv/h) are flagged as anomalies.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_rad_help">Monitors ambient gamma dose rate from fixed measurement stations in the defined area.<br><br><b>How to use:</b> Draw a zone on the map and click "Live". All stations in the area are displayed with their current readings. For German stations (BfS), a time-series chart shows the dose rate over time. You can toggle between validated and unvalidated data.<br><br><b>Anomaly detection:</b> Elevated values above 0.3 µSv/h are automatically flagged. Normal background radiation in Central Europe is 0.05–0.18 µSv/h.<br><br><b>Coverage:</b> BfS ODL provides data for ~1,600 stations in Germany. EURDEP covers ~37,000 stations across Europe.<br><br><b>Data sources:</b> BfS ODL (Germany) + EURDEP (Europe) — no API key required.</div>
   </div>
   <div class="wz-main-body">
-    <div id="wz-map-radiation" class="wz-map-container" style="height:500px;"></div>
+    <div id="wz-map-radiation" class="wz-map-container" ></div>
     <div class="wz-hint" id="wz-hint-radiation" data-i18n="wz_rad_hint">
       Draw observation zones on the map. Gamma dose rate data
       will be fetched automatically for all stations in the zone.

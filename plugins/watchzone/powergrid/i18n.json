@@ -15,7 +15,8 @@
     "wz_pg_unit": "MW",
     "wz_pg_empty": "Keine Lastdaten verfuegbar.",
     "wz_pg_chart_title": "Netzlast 48h",
-    "wz_pg_no_key": "ENTSO-E Token fehlt. Kostenlos beantragen auf transparency.entsoe.eu."
+    "wz_pg_no_key": "ENTSO-E Token fehlt. Kostenlos beantragen auf transparency.entsoe.eu.",
+    "wz_pg_help": "Überwacht die Stromnetzlast europäischer Länder in nahezu Echtzeit.<br><br><b>Bedienung:</b> Zone über ein oder mehrere Länder einzeichnen und auf „Live“ klicken. Ein 48-Stunden-Diagramm zeigt den Lastverlauf mit aktuellen, durchschnittlichen, minimalen und maximalen Werten. Abweichungen von normalen Mustern werden hervorgehoben.<br><br><b>Forensische Relevanz:</b> Plötzliche Lastabfälle deuten auf Stromausfälle, Infrastrukturschäden oder gezielte Abschaltungen hin. Allmähliche Rückgänge können wirtschaftliche Störungen widerspiegeln. Kreuzvergleich mit Konfliktdaten oder Wetterereignissen hilft, absichtliche von natürlichen Ursachen zu unterscheiden.<br><br><b>Datenquelle:</b> ENTSO-E Transparency Platform — kostenloser API-Token erforderlich."
   },
   "en": {
     "wz_sidebar_powergrid": "Power Grid",
@@ -33,7 +34,8 @@
     "wz_pg_unit": "MW",
     "wz_pg_empty": "No load data available.",
     "wz_pg_chart_title": "Grid Load 48h",
-    "wz_pg_no_key": "ENTSO-E token missing. Free registration at transparency.entsoe.eu."
+    "wz_pg_no_key": "ENTSO-E token missing. Free registration at transparency.entsoe.eu.",
+    "wz_pg_help": "Monitors power grid load across European countries in near real time.<br><br><b>How to use:</b> Draw a zone covering one or more countries and click \"Live\". A 48-hour chart shows load progression with current, average, minimum and maximum values. The system highlights deviations from normal patterns.<br><br><b>Forensic relevance:</b> Sudden load drops indicate blackouts, infrastructure damage or targeted shutdowns. Gradual declines may reflect economic disruption. Cross-referencing with conflict data or weather events helps distinguish intentional from natural causes.<br><br><b>Data source:</b> ENTSO-E Transparency Platform — requires a free API token."
   },
   "fr": {
     "wz_sidebar_powergrid": "Reseau electrique",
@@ -45,7 +47,8 @@
     "wz_pg_current": "Actuel",
     "wz_pg_avg": "Moyenne (24h)",
     "wz_pg_empty": "Aucune donnee disponible.",
-    "wz_pg_no_key": "Token ENTSO-E manquant."
+    "wz_pg_no_key": "Token ENTSO-E manquant.",
+    "wz_pg_help": "Monitors power grid load across European countries in near real time.<br><br><b>How to use:</b> Draw a zone covering one or more countries and click \"Live\". A 48-hour chart shows load progression with current, average, minimum and maximum values. The system highlights deviations from normal patterns.<br><br><b>Forensic relevance:</b> Sudden load drops indicate blackouts, infrastructure damage or targeted shutdowns. Gradual declines may reflect economic disruption. Cross-referencing with conflict data or weather events helps distinguish intentional from natural causes.<br><br><b>Data source:</b> ENTSO-E Transparency Platform — requires a free API token."
   },
   "es": {
     "wz_sidebar_powergrid": "Red electrica",
@@ -57,6 +60,7 @@
     "wz_pg_current": "Actual",
     "wz_pg_avg": "Promedio (24h)",
     "wz_pg_empty": "No hay datos disponibles.",
-    "wz_pg_no_key": "Falta el token ENTSO-E."
+    "wz_pg_no_key": "Falta el token ENTSO-E.",
+    "wz_pg_help": "Monitors power grid load across European countries in near real time.<br><br><b>How to use:</b> Draw a zone covering one or more countries and click \"Live\". A 48-hour chart shows load progression with current, average, minimum and maximum values. The system highlights deviations from normal patterns.<br><br><b>Forensic relevance:</b> Sudden load drops indicate blackouts, infrastructure damage or targeted shutdowns. Gradual declines may reflect economic disruption. Cross-referencing with conflict data or weather events helps distinguish intentional from natural causes.<br><br><b>Data source:</b> ENTSO-E Transparency Platform — requires a free API token."
   }
 }

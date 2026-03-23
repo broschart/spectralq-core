@@ -19,7 +19,8 @@
     "wz_ndvi_dense": "Dichte Vegetation",
     "wz_ndvi_moderate": "Mäßige Vegetation",
     "wz_ndvi_sparse": "Gering",
-    "wz_ndvi_none": "Kein Grün"
+    "wz_ndvi_none": "Kein Grün",
+    "wz_ndvi_help": "Misst die Vegetationsdichte per Satellit anhand des NDVI-Index (Normalized Difference Vegetation Index), der von -1 (keine Vegetation) bis +1 (dichte, gesunde Vegetation) reicht.<br><br><b>Bedienung:</b> Zone auf der Karte einzeichnen und auf „Live“ klicken. Das System berechnet den NDVI-Trend der letzten 90 Tage mit aktuellen, maximalen, minimalen und durchschnittlichen Werten. Die Zeitreihe wird automatisch in die Analyse-Timeline unter „Zusätzliche Quellen“ integriert.<br><br><b>Forensische Relevanz:</b> Plötzliche NDVI-Rückgänge können auf Abholzung, Bombenschäden, Waldbrandfolgen oder landwirtschaftlichen Zusammenbruch hindeuten. Allmähliche Rückgänge können auf Dürre oder Wüstenbildung hinweisen. Der Vergleich von NDVI mit Konfliktdaten hilft, die Umweltauswirkungen militärischer Operationen zu bewerten.<br><br><b>Datenquelle:</b> Copernicus Sentinel-2 — Copernicus-Zugangsdaten erforderlich."
   },
   "en": {
     "wz_sidebar_ndvi": "NDVI / Vegetation",
@@ -41,7 +42,8 @@
     "wz_ndvi_dense": "Dense Vegetation",
     "wz_ndvi_moderate": "Moderate Vegetation",
     "wz_ndvi_sparse": "Sparse",
-    "wz_ndvi_none": "No Greenery"
+    "wz_ndvi_none": "No Greenery",
+    "wz_ndvi_help": "Measures vegetation density via satellite using the NDVI index (Normalized Difference Vegetation Index), which ranges from -1 (no vegetation) to +1 (dense, healthy vegetation).<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". The system calculates the NDVI trend over the last 90 days, showing current, maximum, minimum and average values. The time series is automatically integrated into the analysis timeline under \"Additional Sources\".<br><br><b>Forensic relevance:</b> Sudden NDVI decreases can indicate deforestation, bombing damage, wildfire aftermath or agricultural collapse. Gradual declines may point to drought or desertification. Comparing NDVI with conflict data helps assess environmental impact of military operations.<br><br><b>Data source:</b> Copernicus Sentinel-2 — requires Copernicus credentials."
   },
   "fr": {
     "wz_sidebar_ndvi": "NDVI / Végétation",
@@ -63,7 +65,8 @@
     "wz_ndvi_dense": "Végétation dense",
     "wz_ndvi_moderate": "Végétation modérée",
     "wz_ndvi_sparse": "Clairsemée",
-    "wz_ndvi_none": "Pas de verdure"
+    "wz_ndvi_none": "Pas de verdure",
+    "wz_ndvi_help": "Measures vegetation density via satellite using the NDVI index (Normalized Difference Vegetation Index), which ranges from -1 (no vegetation) to +1 (dense, healthy vegetation).<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". The system calculates the NDVI trend over the last 90 days, showing current, maximum, minimum and average values. The time series is automatically integrated into the analysis timeline under \"Additional Sources\".<br><br><b>Forensic relevance:</b> Sudden NDVI decreases can indicate deforestation, bombing damage, wildfire aftermath or agricultural collapse. Gradual declines may point to drought or desertification. Comparing NDVI with conflict data helps assess environmental impact of military operations.<br><br><b>Data source:</b> Copernicus Sentinel-2 — requires Copernicus credentials."
   },
   "es": {
     "wz_sidebar_ndvi": "NDVI / Vegetación",
@@ -85,6 +88,7 @@
     "wz_ndvi_dense": "Vegetación densa",
     "wz_ndvi_moderate": "Vegetación moderada",
     "wz_ndvi_sparse": "Escasa",
-    "wz_ndvi_none": "Sin vegetación"
+    "wz_ndvi_none": "Sin vegetación",
+    "wz_ndvi_help": "Measures vegetation density via satellite using the NDVI index (Normalized Difference Vegetation Index), which ranges from -1 (no vegetation) to +1 (dense, healthy vegetation).<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". The system calculates the NDVI trend over the last 90 days, showing current, maximum, minimum and average values. The time series is automatically integrated into the analysis timeline under \"Additional Sources\".<br><br><b>Forensic relevance:</b> Sudden NDVI decreases can indicate deforestation, bombing damage, wildfire aftermath or agricultural collapse. Gradual declines may point to drought or desertification. Comparing NDVI with conflict data helps assess environmental impact of military operations.<br><br><b>Data source:</b> Copernicus Sentinel-2 — requires Copernicus credentials."
   }
 }

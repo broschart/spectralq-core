@@ -27,8 +27,9 @@
     "wz_rad_ts_error": "Fehler",
     "wz_rad_no_ts": "Keine Zeitreihendaten",
     "wz_rad_ts_odl_only": "Zeitreihen nur für BfS ODL (Deutschland) verfügbar",
-    "wz_rad_trend_mode": "Trend 6h\u201972h",
-    "wz_rad_ago": "zurück"
+    "wz_rad_trend_mode": "Trend 6h’72h",
+    "wz_rad_ago": "zurück",
+    "wz_rad_help": "Überwacht die Gamma-Ortsdosisleistung an festen Messstationen im definierten Gebiet.<br><br><b>Bedienung:</b> Zone auf der Karte einzeichnen und auf „Live“ klicken. Alle Stationen im Gebiet werden mit ihren aktuellen Messwerten angezeigt. Für deutsche Stationen (BfS) zeigt ein Zeitreihendiagramm den Dosisleistungsverlauf. Zwischen validierten und nicht-validierten Daten kann umgeschaltet werden.<br><br><b>Anomalie-Erkennung:</b> Erhöhte Werte über 0,3 µSv/h werden automatisch markiert. Normale Hintergrundstrahlung in Mitteleuropa liegt bei 0,05–0,18 µSv/h.<br><br><b>Abdeckung:</b> BfS ODL liefert Daten für ~1.600 Stationen in Deutschland. EURDEP deckt ~37.000 Stationen in ganz Europa ab.<br><br><b>Datenquellen:</b> BfS ODL (Deutschland) + EURDEP (Europa) — kein API-Key erforderlich."
   },
   "en": {
     "wz_sidebar_radiation": "Radiation",
@@ -58,8 +59,9 @@
     "wz_rad_ts_error": "Error",
     "wz_rad_no_ts": "No timeseries data",
     "wz_rad_ts_odl_only": "Timeseries only available for BfS ODL (Germany)",
-    "wz_rad_trend_mode": "Trend 6h\u201972h",
-    "wz_rad_ago": "ago"
+    "wz_rad_trend_mode": "Trend 6h’72h",
+    "wz_rad_ago": "ago",
+    "wz_rad_help": "Monitors ambient gamma dose rate from fixed measurement stations in the defined area.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All stations in the area are displayed with their current readings. For German stations (BfS), a time-series chart shows the dose rate over time. You can toggle between validated and unvalidated data.<br><br><b>Anomaly detection:</b> Elevated values above 0.3 µSv/h are automatically flagged. Normal background radiation in Central Europe is 0.05–0.18 µSv/h.<br><br><b>Coverage:</b> BfS ODL provides data for ~1,600 stations in Germany. EURDEP covers ~37,000 stations across Europe.<br><br><b>Data sources:</b> BfS ODL (Germany) + EURDEP (Europe) — no API key required."
   },
   "fr": {
     "wz_sidebar_radiation": "Radioactivité",
@@ -86,7 +88,8 @@
     "wz_rad_stop": "Arrêt",
     "wz_rad_days": "jours",
     "wz_rad_loading_ts": "Chargement…",
-    "wz_rad_ts_error": "Erreur"
+    "wz_rad_ts_error": "Erreur",
+    "wz_rad_help": "Monitors ambient gamma dose rate from fixed measurement stations in the defined area.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All stations in the area are displayed with their current readings. For German stations (BfS), a time-series chart shows the dose rate over time. You can toggle between validated and unvalidated data.<br><br><b>Anomaly detection:</b> Elevated values above 0.3 µSv/h are automatically flagged. Normal background radiation in Central Europe is 0.05–0.18 µSv/h.<br><br><b>Coverage:</b> BfS ODL provides data for ~1,600 stations in Germany. EURDEP covers ~37,000 stations across Europe.<br><br><b>Data sources:</b> BfS ODL (Germany) + EURDEP (Europe) — no API key required."
   },
   "es": {
     "wz_sidebar_radiation": "Radiactividad",
@@ -115,6 +118,7 @@
     "wz_rad_loading_ts": "Cargando…",
     "wz_rad_ts_error": "Error",
     "wz_rad_no_ts": "No timeseries data",
-    "wz_rad_ts_odl_only": "Timeseries only available for BfS ODL (Germany)"
+    "wz_rad_ts_odl_only": "Timeseries only available for BfS ODL (Germany)",
+    "wz_rad_help": "Monitors ambient gamma dose rate from fixed measurement stations in the defined area.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All stations in the area are displayed with their current readings. For German stations (BfS), a time-series chart shows the dose rate over time. You can toggle between validated and unvalidated data.<br><br><b>Anomaly detection:</b> Elevated values above 0.3 µSv/h are automatically flagged. Normal background radiation in Central Europe is 0.05–0.18 µSv/h.<br><br><b>Coverage:</b> BfS ODL provides data for ~1,600 stations in Germany. EURDEP covers ~37,000 stations across Europe.<br><br><b>Data sources:</b> BfS ODL (Germany) + EURDEP (Europe) — no API key required."
   }
 }

@@ -24,12 +24,16 @@
 <div id="wz-parcoords-inline" style="display:none;height:320px;min-height:80px;flex-shrink:0;overflow:hidden;
      background:var(--surface);position:relative;">
   <div style="padding:8px 16px 4px;display:flex;align-items:center;gap:8px;">
-    <span style="font-size:12px;font-weight:700;color:var(--accent1);" data-i18n="wz_parcoords_title">⫼ Multidimensional Analysis and Filtering</span>
+    <span style="font-size:12px;font-weight:700;color:var(--text);" data-i18n="wz_parcoords_title">Multidimensional Analysis and Filtering</span>
     <span id="wz-parcoords-filter-count" style="font-size:11px;color:var(--muted);"></span>
     <span style="flex:1;"></span>
+    <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);">
+      <span>Opacity</span>
+      <input type="range" min="5" max="100" value="10" style="width:60px;height:12px;cursor:pointer;accent-color:#8b5cf6;"
+        oninput="WZ._pcOpacity=this.value/100;if(WZ._onResizeParcoords)WZ._onResizeParcoords.forEach(function(fn){fn();});" />
+    </span>
     <button id="wz-parcoords-reset-btn" onclick="wzResetParCoordsBrushes()" style="display:none;background:none;border:1px solid var(--border);
       color:var(--muted);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;" data-i18n="wz_btn_reset_filter">Reset Filter</button>
-    <button data-parcoords-close onclick="wzToggleParCoords()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px;">&#10005;</button>
   </div>
   <div id="wz-parcoords-body" style="padding:0 16px 8px;position:relative;height:calc(100% - 40px);overflow:hidden;">
     <canvas id="wz-parcoords-canvas"></canvas>

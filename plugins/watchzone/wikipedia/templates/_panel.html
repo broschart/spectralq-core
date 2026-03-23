@@ -1,11 +1,10 @@
 <div id="panel-wikipedia" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_wiki_title">Wikipedia Monitoring</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_wiki_source">Source: Wikipedia / Wikimedia API</span>
     <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="wzAddWikipedia()" data-i18n="wz_wiki_add_btn">
       + Add Article
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_wiki_desc">Tracks edits and page views of Wikipedia articles. "Live" shows the number and scope of recent changes over the last 30 days.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_wiki_help">Tracks edits and page views of specific Wikipedia articles over time.<br><br><b>How to use:</b> Add a Wikipedia article URL and click "Live". The system shows the edit count and timeline over the last 30 days, page size changes, and an author analysis including account age. Use parallel coordinates to filter by edit size, author or date.<br><br><b>Forensic relevance:</b> Wikipedia articles about conflicts, political figures or organisations are often edited in coordinated campaigns. Sudden spikes in edit activity — especially by new accounts — can indicate information operations. Page view surges correlate with media events and public attention. Tracking who edits what and when provides insight into narrative control attempts.<br><br><b>Data source:</b> Wikipedia / Wikimedia API — no API key required.</div>
   </div>
   <div class="wz-main-body">
     <div class="wz-hint" id="wz-hint-wikipedia" data-i18n="wz_wiki_hint">

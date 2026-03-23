@@ -1,12 +1,11 @@
 <div id="panel-acled" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_acled_title">Armed Conflicts &amp; Political Violence</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_acled_source">Source: ACLED (Armed Conflict Location &amp; Event Data)</span>
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_acled_desc">Monitors armed conflicts, political violence, protests and riots worldwide based on the ACLED database. Events are captured daily with geo-referencing and can be correlated in the analysis timeline.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_acled_help">Monitors armed conflicts, political violence, protests and riots worldwide based on the ACLED database.<br><br><b>How to use:</b> Draw a zone on the map and click "Live". All events from the last 30 days are shown with date, location, event type, actors involved and fatality count. Events are categorised into battles, violence against civilians, explosions/remote violence, riots, protests and strategic developments.<br><br><b>Forensic relevance:</b> Geo-referenced events can be correlated with other data sources in the analysis timeline — e.g. satellite imagery changes, refugee movements or media coverage spikes. Useful for pattern recognition in escalation dynamics.<br><br><b>Data source:</b> ACLED (Armed Conflict Location &amp; Event Data Project) — requires a free API key.</div>
   </div>
   <div class="wz-main-body">
-    <div id="wz-map-acled" class="wz-map-container" style="height:500px;"></div>
+    <div id="wz-map-acled" class="wz-map-container" ></div>
     <div class="wz-hint" id="wz-hint-acled" data-i18n="wz_acled_hint">
       Draw observation areas on the map. ACLED conflict events
       will be fetched automatically for all zones.

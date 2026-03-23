@@ -1,12 +1,11 @@
 <div id="panel-traffic" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_traffic_title">Traffic Conditions</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_traffic_source">Source: TomTom Traffic API</span>
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_traffic_desc">Monitors traffic incidents, congestion, accidents and road closures in real time. Anomalies in traffic density can indicate major events, demonstrations or security incidents.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_traffic_help">Monitors traffic incidents, congestion, accidents and road closures in the defined area in real time.<br><br><b>How to use:</b> Draw a zone on the map and click "Live". All current incidents are listed with severity level, type and location. The Flow Index shows overall traffic density compared to normal conditions.<br><br><b>Forensic relevance:</b> Anomalies in traffic density can indicate major events, demonstrations, military convoys, evacuations or security cordons. Sudden road closures that don't match known construction activity may point to security incidents.<br><br><b>Data source:</b> TomTom Traffic API — requires an API key.</div>
   </div>
   <div class="wz-main-body">
-    <div id="wz-map-traffic" class="wz-map-container" style="height:500px;"></div>
+    <div id="wz-map-traffic" class="wz-map-container" ></div>
     <div class="wz-hint" id="wz-hint-traffic" data-i18n="wz_traffic_hint">
       Draw observation areas on the map. Traffic incidents
       will be fetched in real time from TomTom.

@@ -16,9 +16,12 @@ TABLE OF CONTENTS
      3.5 api_routes() — Standalone API Endpoints
      3.6 ai_tools() and ai_tool_handler()
      3.7 analysis_provider()
-     3.8 Templates (HTML Panel)
-     3.9 JavaScript (Live Renderer)
-     3.10 Internationalization (i18n.json)
+     3.8 apa_action_handler()
+     3.9 Templates (HTML Panel)
+     3.10 JavaScript (Live Renderer)
+     3.11 Internationalization (i18n.json)
+     3.12 Collect Config (Global Zone Data Collection)
+     3.13 Collect Renderer (Global Zone Result Display)
   4. Building an Analysis Plugin
      4.1 Minimal Example
      4.2 Meta Dictionary Reference
@@ -37,9 +40,96 @@ TABLE OF CONTENTS
 
 spectralQ uses a plugin system with three plugin types:
 
-  watchzone   — Real-time geospatial and web monitoring (vessel, seismic, ...)
-  analysis    — Statistical analysis methods (outlier, forecast, ...)
-  ai          — AI-powered features (trend analysis, scientific paper, ...)
+  watchzone   — Real-time geospatial and web monitoring (vessel, seismic, ...) — 26 plugins
+  analysis    — Statistical analysis methods (outlier, forecast, ...) — 11 plugins
+  ai          — AI-powered features (trend analysis, telegram analyst, ...) — 10 plugins
+
+  New plugins added in 0.92:
+    watchzone/telegram_monitor — Telegram channel/group keyword monitoring
+      Features: SearchGlobalRequest, auto-translation, NER geo-extraction,
+      channel catalog with 300+ channels, projectized channel management,
+      interactive map + calendar, content heatmap, geo/date filtering
+    watchzone/commodities — Commodity price monitoring (Yahoo Finance)
+      Features: 20 commodities (energy/metals/agri), YoY comparison,
+      normalized % charts, time focus support
+    watchzone/internet_health — Internet backbone monitoring (IODA API)
+      Features: BGP routes, Active Probing, Google Traffic, Unsolicited Traffic,
+      submarine cable map (12 sea + 15 terrestrial), cable capacity/RFS data,
+      animated cable flow visualization (dot speed/size/color = health),
+      timeline playback with slider, anomaly detection (drops + scanning/DDoS spikes),
+      pulsing anomaly rings on map, auto-zoom to anomalies,
+      concentric distance circles (walking/car/plane),
+      distance measurement (D key) with 3-phase cycle,
+      chart crosshair with inline data labels, chart playhead sync,
+      fullscreen side-by-side layout (map left, charts right),
+      focus time event markers on slider + charts,
+      analysis triangulation provider with datasource selection,
+      collect config (countries, days) + collect renderer (map+cables+animation)
+    ai/telegram_analyst — KI analysis of Telegram monitoring data
+    ai/internet_health_analyst — KI analysis of connectivity data
+
+  New features in 0.921:
+    Global Zone Data Collection ("Sammeln"):
+      - "Sammeln" button on global zones collects data from selected plugins
+      - Plugin-specific config UI (WZ._collectConfigs) in each plugin's JS
+      - Plugin-specific result rendering (WZ._collectRenderers) in each plugin's JS
+      - Progress bar during collection, fullscreen results overlay
+      - Masonry layout for result cards (column-width: 380px)
+      - Overview map with all geo data across plugins
+      - Each plugin renders its own card: maps, charts, images, tables
+
+    Distance Measurement (all maps):
+      - D key activates measurement on any visible Leaflet map
+      - Line + radius circle from start point
+      - Travel time calculation: walking (5 km/h), bicycle (20 km/h),
+        car (120 km/h), plane (900 km/h, >50km only)
+
+    Internet Health Enhancements:
+      - Terrestrial backbone routes (15 routes covering EU, Caucasus, Middle East,
+        South/Southeast Asia, East Africa, Afghanistan corridor)
+      - Cable hover highlight (red) with wider hit area (15px)
+      - Scanning/DDoS spike detection (Merit darknet >50% above mean)
+      - Country names in full (ISO→German name mapping)
+      - Anomaly table with focus-time highlighting + full-screen list popup
+      - Seekabel/Landkabel visibility toggles
+      - Relative/Absolute chart mode switch with units (Prefixe, /24-Blöcke, etc.)
+      - Click on chart jumps map to that date
+
+    Collect System — Plugin-specific renderers for data collection results:
+      internet_health:  Animated cable map + health table
+      ndvi:             NDVI images + trend chart with values
+      nightlights:      Image + brightness value + focus comparison
+      satellite:        True-color image + focus comparison
+      seismic:          Map + magnitude table (or "no earthquakes" message)
+      weather:          Current values + historical chart (temp/rain) + alerts
+      radiation:        Station map + dose rate table
+      celltowers:       Map (only with data) + technology breakdown
+      acled:            Map + event/fatality table + type breakdown
+      powergrid:        Load values + time series chart + anomaly warning
+      airquality:       PM2.5 map + station table
+      osm_changes:      Map + category/contributor breakdown + change table
+      commodities:      Normalized % price chart + focus-time marker + price table
+      telegram_monitor: Keyword stats + geo map + timeline chart +
+                        chronological messages with translation, split into
+                        before/during/after event sections with event marker line,
+                        timestamps (date + time)
+      aircraft:         Map + callsign/type/altitude/speed table (real-time)
+      migration:        Country stats + multi-line chart (refugees/IDPs/asylum)
+                        with focus-time marker
+      satoverpass:      Witness test + category pie charts (operator/resolution/type)
+      website:          Snapshot count + size chart (snapshots/day + KB) + focus marker
+      wikipedia:        Per-article edit count + views + chart (edits + views/day) +
+                        focus marker
+
+    Collect Configs — Plugin parameter UI for global zone collection:
+      internet_health:  Countries (ISO codes), days
+      seismic:          Min. magnitude
+      weather:          Temperature/precipitation/wind toggles
+      commodities:      Commodity selection (checkboxes + custom symbols + import
+                        from existing zone), days
+      telegram_monitor: Search term + source zone selection (channels import)
+      website:          URL (manual or import from existing zone)
+      wikipedia:        Articles (manual or import from existing zone)
 
 All plugins:
   - Inherit from a type-specific base class
@@ -164,6 +254,8 @@ and the Live button will call your live_handler().
 
   OPTIONAL KEYS:
     required_credentials    List of AppSetting keys needed (e.g. ["my_api_key"])
+    apa_action              APA action name (e.g. "vessel_traffic", "seismic_history")
+                            Enables dynamic dispatch from apa_stream.py
     overlay_template        Extra modal template
     live_header_template    Buttons injected into live popup header
     live_side_panels_template  Side panels next to live map
@@ -314,7 +406,58 @@ Enable your plugin's data as a triangulation source in the analysis view.
   "history_endpoint_suffix" must match a suffix from history_routes().
 
 ----------------------------------------------------------------------------
-3.8 Templates (HTML Panel)
+3.8 apa_action_handler(action)
+----------------------------------------------------------------------------
+
+Handle APA (AI Project Assistant) actions for this plugin. When the APA
+coordinator issues an action matching your meta["apa_action"], this handler
+is called automatically via dynamic dispatch in apa_stream.py.
+
+  Prerequisites:
+    Set meta["apa_action"] to your action name (e.g. "vessel_traffic").
+
+  Arguments:
+    action      dict — action parameters from APA coordinator
+                  Typical keys: bbox, days, label, zone_id, url, etc.
+
+  Must return:
+    Success: {
+      "status_msg": "Human-readable status during execution",
+      "report":     "Multi-line detailed report for researcher_reports",
+      "data_msg":   "Short summary for SSE data event",
+      "error":      None,
+    }
+    Error: {"error": "Human-readable error message"}
+
+  Example:
+
+    meta = {
+        ...
+        "apa_action": "my_sensor_history",
+    }
+
+    def apa_action_handler(self, action):
+        from plugins.watchzone.my_sensor._transport import fetch_history
+        bbox = action.get("bbox", [])
+        days = min(action.get("days", 180), 730)
+        label = action.get("label", "Region")
+        if len(bbox) != 4:
+            return {"error": "bbox muss 4 Werte haben"}
+        data = fetch_history(bbox, days)
+        if not data:
+            return {"error": f"{label}: Keine Daten"}
+        return {
+            "status_msg": f"Sensor-Daten: {label} ({days}d) …",
+            "report": f"SENSOR ({label}): {len(data)} Messwerte",
+            "data_msg": f"Sensor {label}: {len(data)} Messwerte",
+            "error": None,
+        }
+
+  The dispatch in apa_stream.py builds a lookup map from all plugins
+  with meta["apa_action"] set. No code changes in apa_stream.py needed.
+
+----------------------------------------------------------------------------
+3.9 Templates (HTML Panel)
 ----------------------------------------------------------------------------
 
 File: plugins/watchzone/my_sensor/templates/_panel.html
@@ -343,7 +486,7 @@ File: plugins/watchzone/my_sensor/templates/_panel.html
   - Use data-i18n attributes for translatable text
 
 ----------------------------------------------------------------------------
-3.9 JavaScript (Live Renderer)
+3.10 JavaScript (Live Renderer)
 ----------------------------------------------------------------------------
 
 File: plugins/watchzone/my_sensor/static/my_sensor.js
@@ -404,7 +547,7 @@ File: plugins/watchzone/my_sensor/static/my_sensor.js
     window._t(key, fallback) — i18n translation function
 
 ----------------------------------------------------------------------------
-3.10 Internationalization (i18n.json)
+3.11 Internationalization (i18n.json)
 ----------------------------------------------------------------------------
 
 File: plugins/watchzone/my_sensor/i18n.json
@@ -431,6 +574,101 @@ File: plugins/watchzone/my_sensor/i18n.json
   Keys are merged into the global frontend i18n object.
   Access in JS: window._t("wz_my_sensor_title", "My Sensor")
   Access in HTML: data-i18n="wz_my_sensor_title"
+
+
+----------------------------------------------------------------------------
+3.12 Collect Config (Global Zone Data Collection)
+----------------------------------------------------------------------------
+
+When a global zone collects data from multiple plugins ("Sammeln"), each
+plugin can provide a configuration UI. Register in your plugin's JS file:
+
+  WZ._collectConfigs["my_sensor"] = {
+    fields: function(saved) {
+      // saved = previously stored config values (or {})
+      // Return HTML string with form elements.
+      // Use class="wz-cc-field" + data-key="fieldname" for auto-reading.
+      return '<label>Min. Threshold</label>'
+        + '<input class="wz-cc-field" data-key="threshold" value="' + (saved.threshold || 10) + '">';
+    },
+    read: function(container) {
+      // Read values from the config panel DOM container.
+      // Return a plain object that will be saved to zone.config.plugins[pluginId].
+      var inp = container.querySelector('[data-key="threshold"]');
+      return { threshold: parseFloat(inp.value) || 10 };
+    }
+  };
+
+The config is stored in zone.config.plugins.<pluginId> via PUT /api/watchzones/<id>.
+On collection, the backend merges these values into the config passed to live_handler().
+
+To import settings from existing zones of the same type:
+
+  var h = '<select class="wz-cc-field" data-key="_import" onchange="...">';
+  (WZ._zones || []).forEach(function(z) {
+    if (z.zone_type !== "my_sensor") return;
+    h += '<option value="' + z.id + '">' + WZ._esc(z.name) + '</option>';
+  });
+
+When a user interacts with the config panel, the plugin's checkbox is
+automatically checked (input/change events are monitored by the framework).
+
+----------------------------------------------------------------------------
+3.13 Collect Renderer (Global Zone Result Display)
+----------------------------------------------------------------------------
+
+After data collection, each plugin can provide custom result rendering.
+Register in your plugin's JS file:
+
+  WZ._collectRenderers["my_sensor"] = {
+    renderHTML: function(data, cardId, zone) {
+      // data = response from live_handler()
+      // cardId = unique DOM ID prefix for this card
+      // Return HTML string for the card body (header is rendered by framework).
+      var h = '';
+      if (data.items && data.items.length) {
+        h += '<div id="' + cardId + '-map" style="height:400px;border-radius:6px;margin-bottom:8px;"></div>';
+        h += '<table>...</table>';
+      }
+      return h;
+    },
+    afterRender: function(data, cardId, cardEl) {
+      // Called after HTML is in the DOM. Initialize maps, charts, animations.
+      // cardEl = the card's DOM element
+      if (!window.L) return;
+      var mapEl = cardEl.querySelector("[id$='-map']");
+      if (!mapEl) return;
+      var m = L.map(mapEl, { zoomControl: false }).setView([48, 10], 5);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png").addTo(m);
+      // Add markers, bindings, etc.
+    }
+  };
+
+If no renderer is registered, the generic fallback is used:
+  - WZ._collectGenericHTML(data, cardId) — images, tables, geo map placeholder
+  - WZ._collectGenericAfterRender(r, cardId, cardEl) — Leaflet map init
+
+Helpers available to renderers:
+  - WZ._esc(str)          HTML-escape a string
+  - WZ._fmtDate(str)      Format date using admin-configured format
+  - WZ.ZONE_COLORS[pid]   Plugin accent color
+  - WZ.PLUGIN_LABELS[pid] Localized plugin name
+
+Focus Time annotation example (for Chart.js plugins):
+
+  var tf = data.time_focus;
+  if (tf && tf.from) {
+    var tfFrom = tf.from.slice(0,10);
+    plugins.push({
+      id: 'myFocus',
+      afterDraw: function(chart) {
+        // Draw shaded region + dashed line at event date
+        var xScale = chart.scales.x, ctx2 = chart.ctx;
+        var fi = labels.indexOf(tfFrom); // or find nearest
+        // ... ctx2.fillRect, ctx2.stroke, ctx2.fillText(tf.title)
+      }
+    });
+  }
 
 
 ============================================================================
@@ -525,6 +763,9 @@ File: plugins/analysis/my_method/__init__.py
     required_credentials  API keys needed (usually empty for analysis)
     modal_template      Path to modal HTML: "my_method/_modal.html"
                         Auto-included in analysis.html via {% include %}
+    apa_method          APA method name (e.g. "spike_coincidence", "outliers")
+                        Enables dynamic dispatch from _run_analysis() and
+                        APA coordinator. Must be unique across all plugins.
 
 ----------------------------------------------------------------------------
 4.3 compute(body)
@@ -558,9 +799,11 @@ The core computation function. Receives the request body as dict.
 
 Define HTTP endpoints for your analysis method.
 
-  Returns: list of {"rule": str, "handler": callable, "methods": [str]}
+  Returns: list of {"rule": str, "endpoint": str, "handler": callable, "methods": [str]}
 
   The handler is wrapped with @login_required automatically.
+  The "endpoint" key provides an explicit Flask endpoint name (used for
+  unique route registration: an_<plugin_id>_<endpoint>).
   Convention: POST to /api/<method-name>
 
   Standard handler pattern:
@@ -695,7 +938,67 @@ If your plugin requires API keys:
 
 
 ============================================================================
-8. CHECKLIST
+8. NON-GEO PLUGINS (No Map)
+============================================================================
+
+  Plugins without a map (has_map: false) need special handling:
+
+  FULL-WIDTH LIVE POPUP:
+    In your JS renderer, add:
+      var lb = document.getElementById("wz-live-box");
+      if (lb) lb.classList.add("wz-live-fullwidth");
+      var _body = document.getElementById("wz-live-body");
+      if (_body) _body.style.display = "block";
+
+    The CSS class is defined in events_watchzones.html:
+      #wz-live-box.wz-live-fullwidth { max-width: 98vw !important; width: 96% !important; }
+
+    The display:block fix prevents flex shrinking of wz-live-content.
+
+  HIDING CORE MAP:
+    In your renderer, hide the core map row:
+      var _mapRow = document.getElementById("wz-map-row");
+      if (_mapRow) _mapRow.style.display = "none";
+
+  CUSTOM EDIT HANDLER:
+    Override wzEditZone for your zone_type:
+      var _origEdit = window.wzEditZone;
+      window.wzEditZone = function(id, panel) {
+        if (panel === "my_plugin") { _myEditZone(id); return; }
+        if (_origEdit) _origEdit(id, panel);
+      };
+
+  DATA CACHING (24h):
+    Use the shared cache from telegram_monitor:
+      from plugins.watchzone.telegram_monitor._cache import get as cache_get, put as cache_put
+      cached = cache_get(zone.id, config)
+      if cached: return cached
+      # ... fetch data ...
+      cache_put(zone.id, config, result)
+
+  PROJECTIZED ZONES:
+    Pass project_id when creating zones:
+      var _projSel = document.getElementById('hdr-wz-project');
+      var _projectId = _projSel && _projSel.value ? parseInt(_projSel.value) : null;
+
+  TIME FOCUS:
+    Read from own zone config (not inherited):
+      import json as _j2
+      _own_config = _j2.loads(zone.config) if zone.config else {}
+      tf = _own_config.get("time_focus")
+
+  REGISTER PLUGIN:
+    WZ.registerPlugin("my_plugin", {
+      renderer: _myRenderer,
+      has_map: false,
+      has_live_map: false,
+      live_box_max_width: "98vw",
+      live_title_prefix: "My Plugin",
+    });
+
+
+============================================================================
+9. CHECKLIST
 ============================================================================
 
   [ ] __init__.py with class inheriting from correct base
@@ -708,3 +1011,13 @@ If your plugin requires API keys:
   [ ] Tested: plugin appears on /plugins page
   [ ] Tested: live data works through UI
   [ ] No hardcoded API keys in source code
+
+  Optional (recommended for full integration):
+  [ ] WZ._collectConfigs registration in JS (for global zone collection)
+  [ ] WZ._collectRenderers registration in JS (custom result card rendering)
+  [ ] analysis_provider() for triangulation support
+  [ ] history_routes() for historical data API
+  [ ] ai_tools() for AI integration
+  [ ] Focus-time support (reading config.time_focus, marking on charts)
+  [ ] Normalize string inputs (comma-separated to arrays, uppercase ISO codes)
+  [ ] Return time_focus in live_handler result if present in config

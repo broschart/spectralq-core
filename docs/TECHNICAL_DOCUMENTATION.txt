@@ -33,9 +33,12 @@ simultaneously, a hint becomes a finding.
 
 Core capabilities:
   - Google Trends monitoring with multi-backend fetching
-  - 22 WatchZone plugin types (geospatial, web, social media)
+  - 26 WatchZone plugin types (geospatial, web, social media, OSINT)
   - 11 statistical analysis methods (forecasting, outlier detection, etc.)
-  - 7 AI plugins (trend analysis, project assistant, scientific paper, etc.)
+  - 10 AI plugins (trend analysis, project assistant, telegram analyst, etc.)
+  - Telegram channel monitoring with NER geo-extraction and auto-translation
+  - Commodity price tracking with YoY comparison (Yahoo Finance)
+  - Internet backbone health monitoring (IODA/Georgia Tech)
   - Project-based workflow with snapshots, presentations, and exports
   - Alert system with automated anomaly detection
   - Hash-chained audit trail for forensic integrity
@@ -83,9 +86,36 @@ Core capabilities:
   ├── plugins/                  Plugin system root
   │   ├── __init__.py           PluginManager (registry, discovery)
   │   ├── base.py               BasePlugin base class
-  │   ├── watchzone/            WatchZone plugins (22 types)
+  │   ├── watchzone/            WatchZone plugins (26 types)
   │   │   ├── __init__.py       WatchZonePlugin base + core i18n
   │   │   ├── _helpers.py       Shared utilities (bbox, geojson)
+  │   │   ├── telegram_monitor/ Telegram channel/group monitoring
+  │   │   │   ├── __init__.py   Plugin class, SearchGlobalRequest, translation,
+  │   │   │   │                 source zone channel inheritance for collect
+  │   │   │   ├── _routes.py    API routes (mentions, auth, channels, translate)
+  │   │   │   ├── _geo.py       NER geo-extraction (spaCy), Photon geocoding
+  │   │   │   ├── _cache.py     24h in-memory data cache (key includes search term)
+  │   │   │   ├── templates/    Panel + create/join overlays
+  │   │   │   └── static/       JS renderer (map, calendar, heatmap, filters),
+  │   │   │                     collect config (search + source zone), collect renderer
+  │   │   │                     (before/during/after event split, translated text,
+  │   │   │                     event marker line, timestamps, timeline chart)
+  │   │   ├── commodities/      Commodity price monitoring (Yahoo Finance)
+  │   │   │   ├── __init__.py   Plugin class, yfinance integration, YoY data
+  │   │   │   ├── templates/    Panel with category-based commodity selector
+  │   │   │   └── static/       JS renderer (normalized % chart, comparison table)
+  │   │   ├── internet_health/  Internet backbone/connectivity monitoring (IODA)
+  │   │   │   ├── __init__.py   Plugin class, IODA API, anomaly detection,
+  │   │   │   │                 cable health timeline, analysis provider, history handler
+  │   │   │   ├── _geodata.py   Country centroids, submarine cables (12) with capacity/RFS,
+  │   │   │   │                 terrestrial backbones (15) with country mappings
+  │   │   │   ├── templates/    Panel with country presets, comprehensive help text
+  │   │   │   └── static/
+  │   │   │       ├── internet_health.js         Main renderer: animated cable flow map,
+  │   │   │       │   timeline playback, anomaly rings, distance measurement (D key),
+  │   │   │       │   chart playhead sync, fullscreen side-by-side layout,
+  │   │   │       │   crosshair with inline data labels, collect renderer + config
+  │   │   │       └── internet_health_analysis.js  Triangulation analysis provider
   │   │   ├── vessel/           Example: AIS ship tracking
   │   │   │   ├── __init__.py   Plugin class + api_routes()
   │   │   │   ├── _transport.py API fetch functions (AISHub)
@@ -95,7 +125,7 @@ Core capabilities:
   │   │   ├── satellite/        Sentinel-2 imagery
   │   │   │   ├── _transport.py fetch_sentinel_image()
   │   │   │   └── _routes.py    /api/sentinel/image endpoint
-  │   │   └── ... (20 more, each self-contained)
+  │   │   └── ... (21 more, each self-contained)
   │   ├── analysis/             Analysis plugins (11 methods)
   │   │   ├── __init__.py       AnalysisPlugin base (incl. modal_template)
   │   │   ├── _helpers.py       load_series() helper
@@ -105,11 +135,17 @@ Core capabilities:
   │   │   │   └── templates/
   │   │   │       └── _modal.html  Complete modal (HTML+CSS+JS)
   │   │   └── ... (10 more, each with own _modal.html)
-  │   └── ai/                   AI plugins (7 modules)
+  │   └── ai/                   AI plugins (10 modules)
   │       ├── __init__.py       AIPlugin base + guard/quota
   │       ├── _llm.py           Multi-provider LLM abstraction
-  │       ├── trend_analysis/   Example: Chat-based trend analysis
-  │       └── ... (6 more)
+  │       ├── telegram_analyst/     KI-Analyse von Telegram-Monitoring-Daten
+  │       ├── internet_health_analyst/  KI-Analyse von Konnektivitätsdaten
+  │       ├── project_analysis/     Projektweite Snapshot-Analyse
+  │       ├── keyword_suggestions/  KI-Keyword-Vorschläge
+  │       ├── report_analysis/      Nachrichten-Briefing-Generator
+  │       ├── project_assistant/    APA-Streaming-Assistent
+  │       ├── trend_analysis/       Chat-based trend analysis
+  │       └── ... (3 more: intro, linkedin, scientific paper)
   │
   ├── templates/                Jinja2 templates
   │   ├── base.html             Layout, navigation, i18n, date formatting
@@ -205,20 +241,35 @@ Core capabilities:
 
     BasePlugin (plugins/base.py)
     ├── WatchZonePlugin (plugins/watchzone/__init__.py)
-    │   └── 22 concrete plugins (vessel, seismic, aircraft, ...)
+    │   └── 25 concrete plugins (vessel, seismic, aircraft, ...)
     ├── AnalysisPlugin (plugins/analysis/__init__.py)
     │   └── 11 concrete plugins (outlier, forecast, cpd, ...)
     └── AIPlugin (plugins/ai/__init__.py)
-        └── 7 concrete plugins (trend_analysis, scientific_paper, ...)
+        └── 10 concrete plugins (trend_analysis, scientific_paper, ...)
+
+  Collect System (Global Zone Data Collection):
+    WZ._collectConfigs[pluginId]     — Plugin-specific config UI (fields/read)
+    WZ._collectRenderers[pluginId]   — Plugin-specific result rendering (renderHTML/afterRender)
+    Registered in each plugin's JS file, not in wz_core.js.
+    Framework in wz_core.js: wzCollectData(), _wzDoCollect(), _wzRenderCollectResults()
+    Plugins with collect configs: internet_health, seismic, weather, commodities,
+      telegram_monitor, website, wikipedia
+    Plugins with collect renderers: internet_health, ndvi, nightlights, satellite,
+      seismic, weather, radiation, celltowers, acled, powergrid, airquality,
+      osm_changes, commodities, telegram_monitor, aircraft, migration, satoverpass,
+      website, wikipedia
 
   Registration Flow:
     1. Type registration:   PluginManager.register_type("watchzone", WatchZonePlugin)
     2. Instance registration: PluginManager.register(VesselPlugin())
     3. Route registration:  app.add_url_rule() for each plugin's api_routes()
        - _register_wz_api_routes()      — WatchZone standalone API routes
+         Endpoint naming: wz_<plugin_id>_<sanitized_rule>
        - _register_wz_history_routes()   — WatchZone history routes
        - _register_analysis_routes()     — Analysis plugin routes
+         Endpoint naming: an_<plugin_id>_<endpoint> (uses explicit endpoint field)
        - _register_ai_routes()           — AI plugin routes
+         Endpoint naming: ai_<plugin_id>_<endpoint> (uses explicit endpoint field)
 
   Per-User Enable/Disable:
     Opt-out principle: all plugins enabled by default
@@ -230,6 +281,19 @@ Core capabilities:
       1. User-specific AppSetting
       2. Global AppSetting (user_id=None)
       3. Environment variable (KEY_NAME → uppercase)
+    Credential-to-API-group mappings are built dynamically at startup
+    via _build_credential_maps() from plugin required_credentials.
+
+  APA Integration (dynamic dispatch):
+    WatchZone plugins can set meta["apa_action"] (e.g. "vessel_traffic")
+    and implement apa_action_handler(action) → {status_msg, report, data_msg, error}
+    The APA coordinator dispatches actions dynamically via _wz_action_map.
+
+    Analysis plugins can set meta["apa_method"] (e.g. "spike_coincidence")
+    and implement compute(body). The APA calls _run_analysis(method, body)
+    which dynamically finds the plugin by matching meta["apa_method"].
+
+    No hardcoded if/elif chains — new plugins are discovered automatically.
 
   See PLUGIN_DEVELOPMENT_GUIDE.txt for detailed development instructions.
 
@@ -332,6 +396,17 @@ Core capabilities:
     → Returns JSON with results + summary
     → Frontend renders chart/table + optional AI interpretation
 
+    Internal (APA):
+    → _run_analysis(method, body) finds plugin by meta["apa_method"]
+    → plugin.compute(body) directly (no HTTP request)
+
+  APA WATCHZONE ACTIONS:
+    APA coordinator issues action (e.g. {"type": "vessel_traffic", "bbox": [...]})
+    → apa_stream.py builds _wz_action_map from meta["apa_action"]
+    → plugin.apa_action_handler(action)
+    → Plugin calls external API, formats report
+    → Returns {status_msg, report, data_msg} → SSE stream
+
   AI FEATURES:
     User invokes AI analysis
     → Plugin._guard() checks: authenticated? enabled? quota ok?
@@ -377,6 +452,16 @@ Core capabilities:
     - Zone list rendering (hover-zoom, click-anchor, edit/delete icons)
     - Live popup management (open, close, fullscreen)
     - Crosshair drawing mode
+    - Distance measurement (D key) — line + radius circle, travel time calculation
+      (walking/bicycle/car/plane), works on any visible Leaflet map
+    - Global zone data collection ("Sammeln" button):
+      Plugin selection + per-plugin config, progress bar,
+      fullscreen results overlay with masonry layout,
+      plugin-specific renderers (maps, charts, images, tables)
+    - WZ.PLUGIN_LABELS — localized plugin names from backend
+    - WZ._fmtDate — shared date formatting for plugins
+    - WZ._collectConfigs — plugin config UI registry
+    - WZ._collectRenderers — plugin result renderer registry
 
   CHART RENDERING (analysis.html):
     - Chart.js for time series with zoom plugin
@@ -398,6 +483,11 @@ Core capabilities:
     → Fetches all active keywords
     → Evaluates alert rules
     → Logs results
+
+  Job: tg_cache_cleanup (hourly)
+    → Removes expired entries from Telegram/Internet Health data cache
+    → Cache TTL: 24 hours
+    → Shared by telegram_monitor and internet_health plugins
 
   Manual trigger: POST /api/fetch (login_required)
 
@@ -431,10 +521,36 @@ Core capabilities:
   AI Project Assistant (APA):
     Multi-round tool-use agent (apa_tools.py + apa_stream.py) with access to:
     - All WatchZone plugin tools via plugin.ai_tools() (auto-discovered)
+    - WatchZone actions via plugin.apa_action_handler() (auto-discovered)
+    - Analysis methods via plugin.compute() / meta["apa_method"] (auto-discovered)
     - Core tools: list_watchzones, create_watchzone, get_live_data
     - Standalone tools: wiki_views, gdelt_volume, yahoo_finance,
-      run_traceroute, bgp_lookup, wayback
+      run_traceroute, bgp_lookup
     - Up to 5 tool-use rounds per conversation turn
+
+  Telegram Analyst (telegram_analyst):
+    POST /api/ai-telegram-analyze
+    - Full analysis mode (__full_analysis__): structured report with
+      source overview, chronological summary, geographic patterns,
+      key actors, project context integration, assessment
+    - Follow-up questions supported
+    - Context includes: search parameters, translated messages,
+      geo-locations, temporal events, project briefing
+    - Saves results as project slides (snapshots)
+
+  Internet Health Analyst (internet_health_analyst):
+    POST /api/ai-internet-health-analyze
+    - Analyzes IODA connectivity data (BGP, Active Probing, Google Traffic)
+    - Detects anomalies, correlates between countries
+    - Identifies potential cable outages, shutdowns, DDoS
+    - Follow-up questions supported
+    - Context includes: per-country signal summaries, anomaly list,
+      project briefing
+
+  New WatchZone Plugin Tools (available to APA):
+    - telegram_keyword_search: Search Telegram channels for keywords
+    - get_commodity_prices: Fetch commodity prices from Yahoo Finance
+    - internet_health_check: Check country connectivity via IODA
 
 
 ============================================================================

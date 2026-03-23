@@ -3,7 +3,7 @@
     "wz_sidebar_vessel": "Schiffe",
     "wz_vessel_title": "Schiffsverfolgung",
     "wz_vessel_source": "Quelle: VesselFinder / AISHub",
-    "wz_vessel_desc": "Überwacht Schiffsbewegungen (AIS) in einem selbst eingezeichneten Seegebiet. Zone auf der Karte einzeichnen, dann auf \u201eLive\u201c klicken \u2013 die Ansicht zeigt alle Schiffe im Bereich mit Name, Kurs und Geschwindigkeit in Echtzeit.",
+    "wz_vessel_desc": "Überwacht Schiffsbewegungen (AIS) in einem selbst eingezeichneten Seegebiet. Zone auf der Karte einzeichnen, dann auf „Live“ klicken – die Ansicht zeigt alle Schiffe im Bereich mit Name, Kurs und Geschwindigkeit in Echtzeit.",
     "wz_vessel_hint": "Rechtecke oder Polygone auf der Karte einzeichnen, um Seegebiete zu definieren. VesselFinder-Daten zeigen Schiffsbewegungen in Echtzeit.",
     "wz_vessel_empty": "Keine Schiffe in dieser Zone gefunden.",
     "wz_vessel_analyse": "⫼ Schiffsverkehr analysieren",
@@ -22,13 +22,14 @@
     "wz_vessel_speed_label": "Geschw.",
     "wz_vessel_course_label": "Kurs",
     "wz_vessel_dest_label": "Zielhafen",
-    "wz_vessel_localtime_label": "Ortszeit"
+    "wz_vessel_localtime_label": "Ortszeit",
+    "wz_vessel_help": "Überwacht Schiffsbewegungen über AIS (Automatic Identification System) in einem selbst eingezeichneten Seegebiet.<br><br><b>Bedienung:</b> Zone auf der Karte einzeichnen und auf „Live“ klicken. Die Ansicht listet alle Schiffe im Bereich mit Name, Typ, Flaggenstaat, Kurs, Geschwindigkeit und Zielhafen in Echtzeit.<br><br><b>Anomalie-Erkennung:</b> Ungewöhnliches Verhalten — etwa unerwartete Stopps, Kursabweichungen oder Dark-Perioden (AIS abgeschaltet) — wird automatisch markiert. Dies hilft bei der Identifikation von Schmuggelrouten, Sanktionsumgehung oder illegaler Fischerei.<br><br><b>Datenquelle:</b> VesselFinder / AISHub — kein API-Key erforderlich."
   },
   "en": {
     "wz_sidebar_vessel": "Vessels",
     "wz_vessel_title": "Vessel Tracking",
     "wz_vessel_source": "Source: VesselFinder / AISHub",
-    "wz_vessel_desc": "Monitors vessel movements (AIS) within a user-drawn maritime area. Draw a zone on the map, then click \u201cLive\u201d \u2013 the view shows all vessels in the area with name, heading and speed in real time.",
+    "wz_vessel_desc": "Monitors vessel movements (AIS) within a user-drawn maritime area. Draw a zone on the map, then click “Live” – the view shows all vessels in the area with name, heading and speed in real time.",
     "wz_vessel_hint": "Draw rectangles or polygons on the map to define maritime areas. VesselFinder data shows vessel movements in real time.",
     "wz_vessel_empty": "No vessels found in this zone.",
     "wz_vessel_analyse": "⫼ Analyse Vessel Traffic",
@@ -47,13 +48,14 @@
     "wz_vessel_speed_label": "Speed",
     "wz_vessel_course_label": "Course",
     "wz_vessel_dest_label": "Destination",
-    "wz_vessel_localtime_label": "Local time"
+    "wz_vessel_localtime_label": "Local time",
+    "wz_vessel_help": "Monitors vessel movements via AIS (Automatic Identification System) within a user-drawn maritime area.<br><br><b>How to use:</b> Draw a zone on the map, then click \"Live\". The view lists all vessels in the area with name, type, flag state, heading, speed and destination in real time.<br><br><b>Anomaly detection:</b> Unusual behaviour — such as unexpected stops, course deviations or dark periods (AIS switched off) — is automatically flagged. This helps identify smuggling routes, sanctions evasion or illegal fishing activity.<br><br><b>Data source:</b> VesselFinder / AISHub — no API key required."
   },
   "fr": {
     "wz_sidebar_vessel": "Navires",
     "wz_vessel_title": "Suivi des navires",
-    "wz_vessel_source": "Source\u00a0: VesselFinder / AISHub",
-    "wz_vessel_desc": "Surveille les mouvements de navires (AIS) dans une zone maritime définie. Dessinez une zone sur la carte, puis cliquez sur \u00ab\u00a0Direct\u00a0\u00bb \u2013 la vue affiche tous les navires dans la zone avec nom, cap et vitesse en temps réel.",
+    "wz_vessel_source": "Source : VesselFinder / AISHub",
+    "wz_vessel_desc": "Surveille les mouvements de navires (AIS) dans une zone maritime définie. Dessinez une zone sur la carte, puis cliquez sur « Direct » – la vue affiche tous les navires dans la zone avec nom, cap et vitesse en temps réel.",
     "wz_vessel_hint": "Dessinez des rectangles ou des polygones sur la carte pour définir des zones maritimes. Les données VesselFinder montrent les mouvements de navires en temps réel.",
     "wz_vessel_empty": "Aucun navire trouvé dans cette zone.",
     "wz_vessel_analyse": "⫼ Analyser le trafic maritime",
@@ -72,13 +74,14 @@
     "wz_vessel_speed_label": "Vitesse",
     "wz_vessel_course_label": "Cap",
     "wz_vessel_dest_label": "Port de dest.",
-    "wz_vessel_localtime_label": "Heure locale"
+    "wz_vessel_localtime_label": "Heure locale",
+    "wz_vessel_help": "Monitors vessel movements via AIS (Automatic Identification System) within a user-drawn maritime area.<br><br><b>How to use:</b> Draw a zone on the map, then click \"Live\". The view lists all vessels in the area with name, type, flag state, heading, speed and destination in real time.<br><br><b>Anomaly detection:</b> Unusual behaviour — such as unexpected stops, course deviations or dark periods (AIS switched off) — is automatically flagged. This helps identify smuggling routes, sanctions evasion or illegal fishing activity.<br><br><b>Data source:</b> VesselFinder / AISHub — no API key required."
   },
   "es": {
     "wz_sidebar_vessel": "Embarcaciones",
     "wz_vessel_title": "Seguimiento de embarcaciones",
     "wz_vessel_source": "Fuente: VesselFinder / AISHub",
-    "wz_vessel_desc": "Monitorea movimientos de embarcaciones (AIS) en un área marítima definida. Dibuje una zona en el mapa, luego haga clic en \u201cVivo\u201d \u2013 la vista muestra todas las embarcaciones en el área con nombre, rumbo y velocidad en tiempo real.",
+    "wz_vessel_desc": "Monitorea movimientos de embarcaciones (AIS) en un área marítima definida. Dibuje una zona en el mapa, luego haga clic en “Vivo” – la vista muestra todas las embarcaciones en el área con nombre, rumbo y velocidad en tiempo real.",
     "wz_vessel_hint": "Dibuje rectángulos o polígonos en el mapa para definir áreas marítimas. Los datos de VesselFinder muestran movimientos de embarcaciones en tiempo real.",
     "wz_vessel_empty": "No se encontraron embarcaciones en esta zona.",
     "wz_vessel_analyse": "⫼ Analizar tráfico marítimo",
@@ -97,6 +100,7 @@
     "wz_vessel_speed_label": "Velocidad",
     "wz_vessel_course_label": "Rumbo",
     "wz_vessel_dest_label": "Puerto destino",
-    "wz_vessel_localtime_label": "Hora local"
+    "wz_vessel_localtime_label": "Hora local",
+    "wz_vessel_help": "Monitors vessel movements via AIS (Automatic Identification System) within a user-drawn maritime area.<br><br><b>How to use:</b> Draw a zone on the map, then click \"Live\". The view lists all vessels in the area with name, type, flag state, heading, speed and destination in real time.<br><br><b>Anomaly detection:</b> Unusual behaviour — such as unexpected stops, course deviations or dark periods (AIS switched off) — is automatically flagged. This helps identify smuggling routes, sanctions evasion or illegal fishing activity.<br><br><b>Data source:</b> VesselFinder / AISHub — no API key required."
   }
 }

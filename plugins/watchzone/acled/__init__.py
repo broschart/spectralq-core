@@ -37,7 +37,7 @@ def _acled_auth(user_id=None):
     return None
 
 def _acled_get_token(user_id=None):
-    """Get a Bearer token for the ACLED API (cached for 23h)."""
+    """Get an OAuth Bearer token for the ACLED API (cached for 23h)."""
     import requests as _rq
 
     now = datetime.now(timezone.utc)
@@ -50,16 +50,19 @@ def _acled_get_token(user_id=None):
         return None
 
     try:
-        r = _rq.post(ACLED_TOKEN_URL, data={
-            "username": creds[0],
-            "password": creds[1],
-            "grant_type": "password",
-            "client_id": "acled",
-        }, timeout=15)
+        r = _rq.post(ACLED_TOKEN_URL,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={
+                "username": creds[0],
+                "password": creds[1],
+                "grant_type": "password",
+                "client_id": "acled",
+            }, timeout=15)
         r.raise_for_status()
         token = r.json().get("access_token")
         if token:
             _token_cache[user_id] = (token, now + timedelta(hours=23))
+            log.info("ACLED OAuth token obtained for %s", creds[0])
         return token
     except Exception as exc:
         log.warning("ACLED token error: %s", exc)
@@ -170,6 +173,7 @@ class ACLEDPlugin(WatchZonePlugin):
         "description": "Bewaffnete Konflikte & politische Gewalt via ACLED",
         "category": "geo",
         "required_credentials": ["acled_email", "acled_password"],
+        "credential_group": "acled",
         "has_live": True,
         "has_history": True,
         "panel_template": "acled/_panel.html",
@@ -316,6 +320,12 @@ class ACLEDPlugin(WatchZonePlugin):
         return {
             "data_types": ["acled"],
             "history_endpoint_suffix": "acled-history",
+            "analysis_js": "/plugins/watchzone/acled/static/acled_analysis.js",
+            "ui_prefix": "acled",
+            "ui_label": "ACLED Konflikte",
+            "ui_color": "#dc2626",
+            "zone_types": ["acled"],
+            "accepts_global": True,
         }
 
     # ------------------------------------------------------------------

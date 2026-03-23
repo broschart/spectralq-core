@@ -11,7 +11,7 @@ var WZ = window.WZ;
   function _vesselUsageBadge(usage) {
     const map = {
       military:   {label: "MIL",   bg: "#dc2626"},
-      government: {label: "GOV",   bg: "var(--accent1)"},
+      government: {label: "GOV",   bg: "var(--accent3)"},
       passenger:  {label: "PAX",   bg: "#2563eb"},
       cargo:      {label: "CARGO", bg: "#d97706"},
       tanker:     {label: "TANK",  bg: "#b45309"},
@@ -20,7 +20,7 @@ var WZ = window.WZ;
       sailing:    {label: "SAIL",  bg: "#0891b2"},
       pleasure:   {label: "SPORT", bg: "#0891b2"},
       hsc:        {label: "HSC",   bg: "#e11d48"},
-      pilot:      {label: "PILOT", bg: "var(--accent1)"},
+      pilot:      {label: "PILOT", bg: "var(--accent3)"},
       other:      {label: "SONST", bg: "#6b7280"},
     };
     const m = map[usage] || map.other;
@@ -29,17 +29,18 @@ var WZ = window.WZ;
   }
 
   function _vesselColor(usage) {
-    const map = { military:"#dc2626", government:"var(--accent1)", passenger:"#2563eb",
+    const map = { military:"#dc2626", government:"var(--accent3)", passenger:"#2563eb",
       cargo:"#d97706", tanker:"#b45309", fishing:"#16a34a", tug:"#6b7280",
-      sailing:"#0891b2", pleasure:"#0891b2", hsc:"#e11d48", pilot:"var(--accent1)" };
+      sailing:"#0891b2", pleasure:"#0891b2", hsc:"#e11d48", pilot:"var(--accent3)" };
     return map[usage] || "#3b82f6";
   }
 
   function _renderVesselLive(data) {
+    var ctx = WZ._currentCtx;
     const items = data.items || [];
     WZ._liveVesselItems = items;
     const anomCount = items.filter(v => v.anomaly_score > 0).length;
-    document.getElementById("wz-live-count").textContent =
+    ctx.countEl.textContent =
       items.length + " " + t('wz_vessel_ships','vessels') + (anomCount ? ` (${anomCount} ${t('wz_vessel_anomalous','anomalous')})` : "");
     if (WZ._liveMarkers) WZ._liveMarkers.clearLayers();
 
@@ -62,14 +63,14 @@ var WZ = window.WZ;
     }
     WZ._updateZoneTimeLabel(items);
 
-    const content = document.getElementById("wz-live-content");
+    const content = ctx.contentEl;
     if (!items.length) {
       content.innerHTML = `<p style="color:var(--muted);text-align:center;padding:12px;">${t('wz_vessel_empty','No vessels found in this zone.')}</p>`;
       return;
     }
     content.innerHTML = `
       <div style="display:flex;justify-content:flex-start;padding:6px 8px 2px;">
-        <button onclick="wzShowVesselParCoords()" style="background:var(--accent1);color:#fff;border:none;border-radius:6px;
+        <button onclick="wzShowVesselParCoords()" style="background:var(--accent3);color:#fff;border:none;border-radius:6px;
           padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
           ${t('wz_vessel_analyse','⫼ Analyse Vessel Traffic')}
         </button>

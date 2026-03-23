@@ -368,6 +368,15 @@ class PowerGridPlugin(WatchZonePlugin):
         }
 
     def analysis_provider(self):
-        return {"data_types": ["powergrid"], "history_endpoint_suffix": "powergrid-history"}
+        return {
+            "data_types": ["powergrid"],
+            "history_endpoint_suffix": "powergrid-history",
+            "analysis_js": "/plugins/watchzone/powergrid/static/powergrid_analysis.js",
+            "ui_prefix": "pg",
+            "ui_label": "Stromnetz",
+            "ui_color": "#f59e0b",
+            "zone_types": ["powergrid"],
+            "accepts_global": True,
+        }
 
 PluginManager.register(PowerGridPlugin())

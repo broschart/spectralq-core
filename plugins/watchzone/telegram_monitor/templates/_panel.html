@@ -1,43 +1,1026 @@
 <div id="panel-telegram_monitor" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
-    <h2 data-i18n="wz_tgm_title">Telegram Keyword Monitor</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_tgm_source">Source: Telegram Public Channels (Telethon)</span>
+    <h2 data-i18n="wz_tgm_title">Telegram Keyword-Monitor</h2>
+    <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="_tgmCreateZone()" data-i18n="wz_tgm_add_zone">
+      + Keyword-Gruppe anlegen
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_tgm_desc">Monitors keyword mentions in public Telegram channels. Shows message volume over time — useful for detecting disinformation campaigns, mobilization and narrative tracking.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_tgm_help">Monitors keyword mentions across Telegram channels and groups over a configurable time period (up to 90 days).<br><br><b>How to use:</b> Create keyword groups with one or more search terms. Optionally restrict the search to specific channels, or leave empty for a global search across all joined channels. The channel management section below lets you join, leave and browse available channels.<br><br><b>Features:</b> Trend visualisation shows mention volume over time with daily averages and peak detection. Geographic mapping plots message origins where available. The content evolution heatmap and term shift analysis reveal how narratives develop.<br><br><b>Forensic relevance:</b> Telegram is a primary platform for coordination in conflict zones, protest movements and disinformation campaigns. Tracking keyword frequency across channels helps detect mobilisation, narrative shifts and coordinated messaging. Useful for early warning of escalation.<br><br><b>Data source:</b> Telegram via Telethon — requires an active Telegram session.</div>
   </div>
+  <!-- Kanal-Verwaltung -->
+  <div id="tgm-channels-section" style="margin:8px 12px 10px 12px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.15);display:none;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <strong style="font-size:12px;color:var(--text);flex:1;" data-i18n="wz_tgm_channels_title">Suche in folgenden abonnierten Kanälen</strong>
+      <button id="tgm-ch-join-btn"
+              style="padding:4px 12px;border:none;border-radius:5px;background:var(--accent3);color:#fff;cursor:pointer;font-size:11px;font-weight:600;">+ Channel/Group-Join</button>
+      {% if 'telegram_analyst' in ai_plugins_enabled %}
+      <button id="tgm-ai-suggest-btn" onclick="_tgmOpenAISuggest()"
+              style="padding:4px 12px;border:none;border-radius:5px;background:linear-gradient(135deg,#0088cc,#5c6bc0);color:#fff;cursor:pointer;font-size:11px;font-weight:600;">
+        <svg viewBox="0 0 20 16" width="14" height="11" fill="currentColor" style="vertical-align:middle;margin-right:3px;">
+          <text x="1" y="12" font-family="system-ui" font-size="10" font-weight="700">AI</text>
+        </svg>Kanal-Vorschläge</button>
+      {% endif %}
+    </div>
+    <div id="tgm-ch-list" style="font-size:11px;color:var(--muted);max-height:180px;overflow-y:auto;">Lade Kanaele...</div>
+  </div>
+
+  <!-- Join-Popup -->
+  <div id="tgm-join-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9100;
+       align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;
+                width:94%;max-width:820px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.4);">
+      <div style="display:flex;align-items:center;margin-bottom:14px;">
+        <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text);flex:1;" data-i18n="wz_tgm_join_title">Kanal beitreten</h3>
+        <button onclick="document.getElementById('tgm-join-overlay').style.display='none'"
+                style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;">&times;</button>
+      </div>
+
+      <!-- Freie Eingabe -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <input id="tgm-join-input" type="text" placeholder="@kanalname oder t.me/kanalname"
+               style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;">
+        <button id="tgm-join-go"
+                style="padding:6px 16px;border:none;border-radius:6px;background:var(--accent3);color:#fff;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">Join</button>
+      </div>
+      <div id="tgm-join-status" style="font-size:11px;margin:-10px 0 12px;display:none;"></div>
+
+      <!-- Katalog-Suchtreffer -->
+      <div id="tgm-search-results" style="display:none;margin:-8px 0 12px;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--bg);"></div>
+
+      <!-- Telegram-Suche -->
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;">Telegram-Suche</div>
+        <div style="display:flex;gap:8px;margin-bottom:6px;">
+          <input id="tgm-tg-search-input" type="text" placeholder="Stichwort eingeben…"
+                 style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px;">
+          <button id="tgm-tg-search-go" onclick="_tgmTelegramSearch()"
+                  style="padding:6px 14px;border:none;border-radius:6px;background:var(--accent3);color:#fff;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;">Suchen</button>
+        </div>
+        <div id="tgm-tg-translate-chips" style="display:none;display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;"></div>
+        <div id="tgm-tg-search-results" style="display:none;margin-top:8px;max-height:240px;overflow-y:auto;"></div>
+      </div>
+
+      <!-- Katalog: Land-Chips -->
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;" data-i18n="wz_tgm_catalog">Kanal-Katalog</div>
+      <div id="tgm-cat-countries" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;"></div>
+
+      <!-- Kategorie-Tabs -->
+      <div id="tgm-cat-tabs" style="display:flex;gap:2px;margin-bottom:10px;border-bottom:1px solid var(--border);"></div>
+
+      <!-- Kanal-Grid -->
+      <div id="tgm-cat-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;max-height:300px;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <!-- AI Kanal-Vorschläge Popup -->
+  <div id="tgm-ai-suggest-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9200;
+       align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;
+                width:94%;max-width:560px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.4);">
+      <div style="display:flex;align-items:center;margin-bottom:14px;">
+        <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text);flex:1;">
+          <svg viewBox="0 0 20 16" width="16" height="13" fill="currentColor" style="vertical-align:middle;margin-right:6px;color:#5c6bc0;">
+            <text x="1" y="13" font-family="system-ui" font-size="11" font-weight="700">AI</text>
+          </svg>Kanal-Vorschläge</h3>
+        <button onclick="document.getElementById('tgm-ai-suggest-overlay').style.display='none'"
+                style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;">&times;</button>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Nach welcher Art von Kanälen suchen Sie?</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <input id="tgm-ai-suggest-q" type="text" placeholder="z.B. Militärische Lageberichte Ukraine, OSINT-Kanäle, Protest-Monitoring..."
+                 style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;">
+          <button id="tgm-ai-suggest-go" onclick="_tgmAISuggestSearch()"
+                  style="padding:8px 16px;border:none;border-radius:6px;background:linear-gradient(135deg,#0088cc,#5c6bc0);color:#fff;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">Vorschlagen</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="font-size:11px;color:var(--muted);white-space:nowrap;">Time Focus:</label>
+          <select id="tgm-ai-suggest-tf" style="flex:1;font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);">
+            <option value="">— Kein Time Focus —</option>
+          </select>
+        </div>
+      </div>
+      <div id="tgm-ai-suggest-status" style="display:none;font-size:11px;color:var(--muted);margin-bottom:8px;"></div>
+      <div id="tgm-ai-suggest-results" style="display:none;"></div>
+    </div>
+  </div>
+  <script>
+  function _tgmOpenAISuggest() {
+    var ov = document.getElementById('tgm-ai-suggest-overlay');
+    if (ov) ov.style.display = 'flex';
+    // Populate time focus dropdown from events
+    var sel = document.getElementById('tgm-ai-suggest-tf');
+    sel.innerHTML = '<option value="">— Kein Time Focus —</option>';
+    // Get active zone's current time_focus
+    var currentTfId = null;
+    try {
+      var az = WZ._zones.find(function(z) { return z.zone_type === 'telegram_monitor'; });
+      if (az && az.config && az.config.time_focus) currentTfId = az.config.time_focus.event_id;
+    } catch(e) {}
+    // Fetch events for dropdown
+    fetch('/api/events').then(function(r) { return r.json(); }).then(function(events) {
+      events.forEach(function(ev) {
+        var opt = document.createElement('option');
+        opt.value = JSON.stringify({ event_id: ev.id, title: ev.title, from: ev.start_dt, to: ev.end_dt || ev.start_dt, color: ev.color || '#f59e0b' });
+        opt.textContent = ev.title + ' (' + (ev.start_dt || '').slice(0, 10) + ')';
+        if (ev.id === currentTfId) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }).catch(function() {});
+    document.getElementById('tgm-ai-suggest-q').focus();
+  }
+  function _tgmAISuggestSearch() {
+    var q = document.getElementById('tgm-ai-suggest-q').value.trim();
+    if (!q) return;
+    var status = document.getElementById('tgm-ai-suggest-status');
+    var results = document.getElementById('tgm-ai-suggest-results');
+    var btn = document.getElementById('tgm-ai-suggest-go');
+    status.style.display = 'block';
+    status.innerHTML = '<span style="color:var(--muted);">KI analysiert Fragestellung und Projektkontext …</span>';
+    results.style.display = 'none';
+    btn.disabled = true; btn.style.opacity = '.5';
+
+    // Get current project_id from active zone, time_focus from dropdown
+    var projId = null;
+    var timeFocus = null;
+    try {
+      var activeZone = WZ._zones.find(function(z) { return z.zone_type === 'telegram_monitor'; });
+      if (activeZone) projId = activeZone.project_id;
+    } catch(e) {}
+    var tfVal = document.getElementById('tgm-ai-suggest-tf').value;
+    if (tfVal) {
+      try { timeFocus = JSON.parse(tfVal); } catch(e) {}
+    }
+
+    fetch('/api/ai-telegram-suggest-channels', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ question: q, project_id: projId, time_focus: timeFocus })
+    })
+    .then(function(r) {
+      if (!r.ok && r.status !== 200) {
+        return r.text().then(function(t) { throw new Error('HTTP ' + r.status + ': ' + t.slice(0, 200)); });
+      }
+      return r.json();
+    })
+    .then(function(data) {
+      btn.disabled = false; btn.style.opacity = '';
+      if (data.error) {
+        status.innerHTML = '<span style="color:var(--danger);">' + data.error + '</span>';
+        return;
+      }
+      var suggestions = data.suggestions || [];
+      if (!suggestions.length) {
+        status.innerHTML = '<span style="color:var(--muted);">Keine passenden Kanäle gefunden.</span>';
+        return;
+      }
+      status.innerHTML = '<span style="color:var(--success);">' + suggestions.length + ' Vorschläge</span>';
+      results.style.display = 'block';
+      results.innerHTML = suggestions.map(function(s, i) {
+        var searchTerms = (s.search_terms || []).map(function(t) { return '<a href="https://t.me/s/' + encodeURIComponent(t) + '" target="_blank" rel="noopener" style="font-size:10px;color:var(--accent3);text-decoration:none;border:1px solid var(--border);border-radius:10px;padding:1px 6px;white-space:nowrap;">' + t + '</a>'; }).join(' ');
+        var verifiedBadge = s.verified === true
+          ? '<span style="font-size:9px;color:var(--success);margin-left:4px;" title="Kanal existiert auf Telegram">✓ verifiziert' + (s.members ? ' · ' + s.members.toLocaleString() + ' Mitglieder' : '') + '</span>'
+          : s.verified === false
+          ? '<span style="font-size:9px;color:var(--danger);margin-left:4px;" title="Kanal nicht gefunden auf Telegram">✗ nicht gefunden</span>'
+          : '<span style="font-size:9px;color:var(--warn);margin-left:4px;">⚠ ungeprüft</span>';
+        var unverified = verifiedBadge;
+        return '<div style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--bg);">'
+          + '<div style="display:flex;align-items:center;gap:10px;">'
+          + '<div style="flex:1;min-width:0;">'
+          + '<div style="font-size:13px;font-weight:600;color:var(--text);">' + (s.name || s.username) + unverified + '</div>'
+          + '<div style="font-size:11px;color:var(--muted);">@' + s.username + '</div>'
+          + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + (s.reason || '') + '</div>'
+          + '</div>'
+          + (s.verified !== false
+            ? '<button onclick="_tgmAISuggestJoin(\'' + s.username.replace(/'/g, "\\'") + '\',this)" '
+              + 'style="padding:4px 14px;border:none;border-radius:6px;background:var(--accent3);color:#fff;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0;">'
+              + '+ Join</button>'
+            : '')
+          + '</div>'
+          + (searchTerms ? '<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;align-items:center;"><span style="font-size:10px;color:var(--muted);">Suche:</span> ' + searchTerms + '</div>' : '')
+          + '</div>';
+      }).join('');
+    })
+    .catch(function(err) {
+      btn.disabled = false; btn.style.opacity = '';
+      status.innerHTML = '<span style="color:var(--danger);">Fehler: ' + err.message + '</span>';
+    });
+  }
+  function _tgmAISuggestJoin(username, btn) {
+    btn.disabled = true; btn.style.opacity = '.5'; btn.textContent = '…';
+    fetch('/api/admin/telegram-channels', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'join', channel: username, project_id: null})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (data.ok) {
+        btn.textContent = '✓ Joined';
+        btn.style.background = 'var(--success)';
+        btn.disabled = true;
+        btn.style.opacity = '1';
+        if (window._tgmLoadChannelsInner) window._tgmLoadChannelsInner();
+      } else {
+        btn.textContent = '✗';
+        btn.style.background = 'var(--danger)';
+        btn.title = data.error || 'Fehler';
+        btn.style.opacity = '1';
+        setTimeout(function() { btn.textContent = '+ Join'; btn.style.background = 'var(--accent3)'; btn.disabled = false; }, 3000);
+      }
+    }).catch(function() {
+      btn.textContent = '✗';
+      btn.style.background = 'var(--danger)';
+      btn.style.opacity = '1';
+      setTimeout(function() { btn.textContent = '+ Join'; btn.style.background = 'var(--accent3)'; btn.disabled = false; }, 3000);
+    });
+  }
+  // Enter-Taste im Suchfeld
+  document.getElementById('tgm-ai-suggest-q').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') _tgmAISuggestSearch();
+  });
+  </script>
+
   <div class="wz-main-body">
     <div id="wz-map-telegram_monitor" class="wz-map-container" style="display:none;"></div>
     <div class="wz-hint" id="wz-hint-telegram_monitor" data-i18n="wz_tgm_hint">
-      Enter keywords and create a zone. Mentions in public
-      Telegram channels will be counted automatically.
+      Noch keine Keyword-Gruppen angelegt. Klicke oben auf „Keyword-Gruppe anlegen" um loszulegen.
     </div>
     <div class="wz-zone-list" id="wz-zones-telegram_monitor"></div>
   </div>
 </div>
 
-<script>
-// Telegram Monitor: Zone erstellen per Prompt (keine Karte nötig)
-function _tgmCreateZone() {
-  var keywords = prompt("Keywords eingeben (kommagetrennt):", "");
-  if (!keywords || !keywords.trim()) return;
-  var name = prompt("Name der Keyword-Gruppe:", keywords.split(",")[0].trim());
-  if (!name) return;
+<div id="tgm-create-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;
+     align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;
+              width:90%;max-width:500px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.4);">
+    <h3 style="margin:0 0 14px;font-size:15px;font-weight:700;color:var(--text);" data-i18n="wz_tgm_add_zone">Keyword-Gruppe anlegen</h3>
 
-  fetch("/api/watchzones", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name: name,
-      zone_type: "telegram_monitor",
-      geometry: { type: "Point", coordinates: [0, 0] },
-      config: { keywords: keywords, days: 90 },
-    }),
-  }).then(r => r.json()).then(data => {
-    if (data.id) {
-      location.reload();
+    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;" data-i18n="wz_tgm_lbl_keywords">Keywords (kommagetrennt)</label>
+    <input id="tgm-kw-input" type="text" placeholder="z.B. Ukraine, NATO, Mobilisierung"
+           style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;box-sizing:border-box;">
+    <!-- Übersetzungsvorschläge -->
+    <div id="tgm-kw-translate" style="display:none;margin:4px 0 2px;"></div>
+    <!-- Preview -->
+    <div id="tgm-preview" style="margin:6px 0 10px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:11px;color:var(--muted);display:none;max-height:120px;overflow-y:auto;"></div>
+
+    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;" data-i18n="wz_tgm_lbl_channels">Kanäle <span style="opacity:.5">(optional, kommagetrennt — leer = globale Suche)</span></label>
+    <input id="tgm-channels-input" type="text" placeholder="z.B. @ria_novosti, @taborko, @legitimniy"
+           style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;box-sizing:border-box;margin-bottom:10px;">
+
+    <div style="display:flex;gap:10px;margin-bottom:10px;">
+      <div style="flex:1;">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;" data-i18n="wz_tgm_lbl_name">Name</label>
+        <input id="tgm-name-input" type="text" placeholder="Gruppenname"
+               style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;box-sizing:border-box;">
+      </div>
+      <div style="width:120px;">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;" data-i18n="wz_tgm_lbl_days">Zeitraum</label>
+        <select id="tgm-days-input"
+                style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;box-sizing:border-box;">
+          <option value="1">1 Tag</option>
+          <option value="7" selected>7 Tage</option>
+          <option value="30">30 Tage</option>
+        </select>
+      </div>
+    </div>
+
+    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Time Focus <span style="opacity:.5">(optional)</span></label>
+    <select id="tgm-tf-event" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px;box-sizing:border-box;margin-bottom:14px;">
+      <option value="">-- Kein Time Focus --</option>
+    </select>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="document.getElementById('tgm-create-overlay').style.display='none'"
+              style="padding:6px 16px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--muted);cursor:pointer;font-size:12px;">Abbrechen</button>
+      <button id="tgm-save-btn"
+              style="padding:6px 16px;border:none;border-radius:6px;background:var(--accent1);color:#fff;cursor:pointer;font-size:12px;font-weight:600;">Anlegen</button>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  'use strict';
+  var _fd = typeof fmtDateOnly === 'function' ? fmtDateOnly : function(s) { return s ? s.slice(0,10) : ''; };
+  var _previewTimer = null;
+
+  // ── Events laden für Time Focus Dropdown ──
+  function _loadEvents(sel) {
+    fetch('/api/events').then(function(r) { return r.json(); }).then(function(evts) {
+      var html = '<option value="">-- Kein Time Focus --</option>';
+      (evts || []).forEach(function(ev) {
+        html += '<option value="' + ev.id + '" data-title="' + (ev.title||'').replace(/"/g,'&quot;') + '"'
+          + ' data-from="' + (ev.start_dt||'') + '" data-to="' + (ev.end_dt||ev.start_dt||'') + '"'
+          + (ev.lat ? ' data-lat="'+ev.lat+'" data-lon="'+ev.lon+'"' : '')
+          + (ev.location_name ? ' data-loc="'+ev.location_name.replace(/"/g,'&quot;')+'"' : '')
+          + '>' + _fd(ev.start_dt) + ' — ' + (ev.title||'').substring(0,50) + '</option>';
+      });
+      sel.innerHTML = html;
+    }).catch(function() {});
+  }
+
+  // ── Keyword Preview ──
+  function _getTimeFocusDates() {
+    var sel = document.getElementById('tgm-tf-event');
+    var opt = sel && sel.options[sel.selectedIndex];
+    if (!opt || !opt.value) return null;
+    var from = opt.dataset.from || '';
+    var to = opt.dataset.to || from;
+    if (!from) return null;
+    return {from: from.slice(0, 10), to: (to || from).slice(0, 10), title: opt.dataset.title || ''};
+  }
+
+  function _doPreview() {
+    var kw = document.getElementById('tgm-kw-input').value.trim();
+    var prev = document.getElementById('tgm-preview');
+    if (!kw) { prev.style.display = 'none'; return; }
+    prev.style.display = '';
+    prev.innerHTML = '<span style="color:var(--muted);">Suche…</span>';
+    var keywords = kw.split(',').map(function(k){return k.trim();}).filter(Boolean).slice(0,3);
+    var days = parseInt(document.getElementById('tgm-days-input').value) || 7;
+
+    // Build URL with optional time focus date range
+    var tf = _getTimeFocusDates();
+    var url = '/api/telegram-mentions?terms=' + encodeURIComponent(keywords.join(',')) + '&days=' + days;
+    var rangeLabel = days + 'd';
+    if (tf) {
+      url += '&date_from=' + encodeURIComponent(tf.from) + '&date_to=' + encodeURIComponent(tf.to);
+      rangeLabel = tf.from + ' – ' + tf.to;
+    }
+
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(results) {
+        if (!Array.isArray(results)) results = [];
+        if (results.length && results[0].error) {
+          prev.innerHTML = '<span style="color:#ef4444;">' + results[0].error + '</span>';
+          return;
+        }
+        if (!results.length || results.every(function(r){return !r.total;})) {
+          prev.innerHTML = '<span style="color:#f59e0b;">Keine Treffer (' + _esc(rangeLabel) + ').</span>';
+          return;
+        }
+        var html = '';
+        results.forEach(function(r) {
+          var clr = r.total > 0 ? '#4ade80' : 'var(--muted)';
+          html += '<div style="display:flex;gap:6px;align-items:center;padding:2px 0;">'
+            + '<span style="width:8px;height:8px;border-radius:50%;background:'+clr+';flex-shrink:0;"></span>'
+            + '<strong>' + (r.term||'?') + '</strong>'
+            + '<span style="color:var(--muted);">' + r.total + ' Treffer (' + _esc(rangeLabel) + ')</span>'
+            + '</div>';
+        });
+        prev.innerHTML = html;
+      })
+      .catch(function() {
+        prev.innerHTML = '<span style="color:var(--muted);">Preview nicht verfügbar</span>';
+      });
+  }
+
+  // ── Keyword-Übersetzung (State) ──
+  var _lastTranslatedKw = '';
+
+  // ── Dialog öffnen ──
+  window._tgmCreateZone = function() {
+    var ov = document.getElementById('tgm-create-overlay');
+    ov.style.display = 'flex';
+    var kwInput = document.getElementById('tgm-kw-input');
+    kwInput.value = '';
+    document.getElementById('tgm-channels-input').value = '';
+    document.getElementById('tgm-name-input').value = '';
+    document.getElementById('tgm-name-input').dataset.edited = '';
+    document.getElementById('tgm-days-input').value = '7';
+    document.getElementById('tgm-preview').style.display = 'none';
+    document.getElementById('tgm-kw-translate').style.display = 'none';
+    _lastTranslatedKw = '';
+    _loadEvents(document.getElementById('tgm-tf-event'));
+    setTimeout(function() { kwInput.focus(); }, 50);
+
+    // Auto-fill name + preview + translate
+    var _translateTimer = null;
+    kwInput.oninput = function() {
+      var nameInput = document.getElementById('tgm-name-input');
+      if (!nameInput.dataset.edited) {
+        nameInput.value = kwInput.value.split(',')[0].trim();
+      }
+      clearTimeout(_previewTimer);
+      _previewTimer = setTimeout(_doPreview, 800);
+      clearTimeout(_translateTimer);
+      _translateTimer = setTimeout(_doTranslateKw, 600);
+    };
+    document.getElementById('tgm-name-input').oninput = function() {
+      this.dataset.edited = '1';
+    };
+    // Update days labels when time focus changes
+    function _updateDaysLabels() {
+      var hasTf = !!document.getElementById('tgm-tf-event').value;
+      var sel = document.getElementById('tgm-days-input');
+      var opts = sel.options;
+      for (var oi = 0; oi < opts.length; oi++) {
+        var v = opts[oi].value;
+        opts[oi].textContent = hasTf ? (v + ' + ' + v + ' Tage') : (v + (v === '1' ? ' Tag' : ' Tage'));
+      }
+    }
+
+    // Re-run preview when time focus or days change
+    document.getElementById('tgm-tf-event').onchange = function() {
+      _updateDaysLabels();
+      if (kwInput.value.trim()) {
+        clearTimeout(_previewTimer);
+        _previewTimer = setTimeout(_doPreview, 300);
+      }
+    };
+    document.getElementById('tgm-days-input').onchange = function() {
+      if (kwInput.value.trim()) {
+        clearTimeout(_previewTimer);
+        _previewTimer = setTimeout(_doPreview, 300);
+      }
+    };
+  };
+
+  // ── Keyword-Übersetzung ──
+  function _doTranslateKw() {
+    var kwInput = document.getElementById('tgm-kw-input');
+    var box = document.getElementById('tgm-kw-translate');
+    // Letztes Keyword nehmen (nach dem letzten Komma)
+    var parts = kwInput.value.split(',');
+    var lastKw = (parts[parts.length - 1] || '').trim();
+    if (!lastKw || lastKw.length < 2 || lastKw.startsWith('@') || lastKw === _lastTranslatedKw) {
+      if (!lastKw || lastKw.length < 2) box.style.display = 'none';
+      return;
+    }
+    _lastTranslatedKw = lastKw;
+    box.style.display = '';
+    box.innerHTML = '<span style="font-size:10px;color:var(--muted);">Übersetze…</span>';
+
+    fetch('/api/telegram-translate-kw?text=' + encodeURIComponent(lastKw))
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.ok || !d.translations || !d.translations.length) {
+          box.style.display = 'none';
+          return;
+        }
+        var html = '<div style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 0;">';
+        d.translations.forEach(function(tr) {
+          html += '<button onclick="_tgmAddTranslation(this)" data-text="' + _esc(tr.text) + '"'
+            + ' style="padding:2px 8px;border:1px solid var(--border);border-radius:10px;background:var(--surface);'
+            + 'color:var(--text);cursor:pointer;font-size:11px;white-space:nowrap;" '
+            + 'title="' + _esc(tr.name) + ': ' + _esc(tr.text) + '">'
+            + '<span style="font-size:9px;color:var(--muted);margin-right:3px;">' + _esc(tr.lang.toUpperCase().replace('ZH-CN','ZH')) + '</span>'
+            + _esc(tr.text)
+            + '</button>';
+        });
+        html += '</div>';
+        box.innerHTML = html;
+      })
+      .catch(function() { box.style.display = 'none'; });
+  }
+
+  window._tgmAddTranslation = function(btn) {
+    var text = btn.dataset.text;
+    if (!text) return;
+    var kwInput = document.getElementById('tgm-kw-input');
+    var val = kwInput.value.trim();
+    if (val && !val.endsWith(',')) val += ', ';
+    else if (val.endsWith(',')) val += ' ';
+    kwInput.value = val + text;
+    // Visuelles Feedback
+    btn.style.background = '#0e7490';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#0e7490';
+    btn.disabled = true;
+    // Preview + Name aktualisieren
+    clearTimeout(_previewTimer);
+    _previewTimer = setTimeout(_doPreview, 400);
+    var nameInput = document.getElementById('tgm-name-input');
+    if (!nameInput.dataset.edited) {
+      nameInput.value = kwInput.value.split(',')[0].trim();
+    }
+  };
+
+  // ── Speichern ──
+  document.getElementById('tgm-save-btn').addEventListener('click', function() {
+    var keywords = document.getElementById('tgm-kw-input').value.trim();
+    if (!keywords) { document.getElementById('tgm-kw-input').focus(); return; }
+    var name = document.getElementById('tgm-name-input').value.trim() || keywords.split(',')[0].trim();
+
+    var channels = document.getElementById('tgm-channels-input').value.trim();
+    var days = parseInt(document.getElementById('tgm-days-input').value) || 7;
+    days = Math.max(7, Math.min(365, days));
+    var config = { keywords: keywords, days: days };
+    if (channels) {
+      config.channels = channels.split(',').map(function(c) { return c.trim().replace(/^@/, ''); }).filter(Boolean);
+    }
+
+    // Time Focus aus Event-Dropdown
+    var evSel = document.getElementById('tgm-tf-event');
+    var evOpt = evSel.options[evSel.selectedIndex];
+    if (evOpt && evOpt.value) {
+      config.time_focus = {
+        event_id: parseInt(evOpt.value),
+        title: evOpt.dataset.title || '',
+        from: evOpt.dataset.from || '',
+        to: evOpt.dataset.to || evOpt.dataset.from || '',
+      };
+      if (evOpt.dataset.lat) {
+        config.time_focus.lat = parseFloat(evOpt.dataset.lat);
+        config.time_focus.lon = parseFloat(evOpt.dataset.lon);
+        config.time_focus.location_name = evOpt.dataset.loc || '';
+      }
+    }
+
+    // Aktives Projekt aus Header-Dropdown
+    var _projSel = document.getElementById('hdr-wz-project');
+    var _projectId = _projSel && _projSel.value ? parseInt(_projSel.value) : null;
+
+    fetch('/api/watchzones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name,
+        zone_type: 'telegram_monitor',
+        geometry: { type: 'Point', coordinates: [0, 0] },
+        config: config,
+        project_id: _projectId,
+      }),
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (data.id) {
+        document.getElementById('tgm-create-overlay').style.display = 'none';
+        fetch('/api/watchzones').then(function(r) { return r.json(); }).then(function(zones) {
+          WZ._zones.length = 0;
+          WZ._zones.push.apply(WZ._zones, zones);
+          WZ._renderAllZones();
+          wzSelectPanel('telegram_monitor');
+        });
+      } else {
+        alert(data.error || 'Fehler beim Erstellen');
+      }
+    });
+  });
+  // ── Helpers ──
+  function _esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+  var _t = window._t || function(k, fb) { return fb; };
+  function _tgmProjectId() {
+    var sel = document.getElementById('hdr-wz-project');
+    return sel && sel.value ? sel.value : '';
+  }
+
+  // ── Kanal-Verwaltung ──
+  var _chSection = document.getElementById('tgm-channels-section');
+  var _joinedSet = {};  // username → true for quick lookup
+  window._joinedSet = _joinedSet;
+
+  // Katalog-Beschreibung für einen Username nachschlagen
+  function _catalogDesc(uname) {
+    if (!_tgCatalog || !uname) return '';
+    var key = uname.toLowerCase();
+    var codes = Object.keys(_tgCatalog);
+    for (var i = 0; i < codes.length; i++) {
+      var cats = _tgCatalog[codes[i]].cats || {};
+      var catKeys = Object.keys(cats);
+      for (var j = 0; j < catKeys.length; j++) {
+        var entries = cats[catKeys[j]] || [];
+        for (var k = 0; k < entries.length; k++) {
+          var e = entries[k];
+          var id = typeof e === 'string' ? e : e.id;
+          if (id.toLowerCase() === key) return typeof e === 'object' ? (e.desc || '') : '';
+        }
+      }
+    }
+    return '';
+  }
+
+  function _tgmLoadChannels() {
+    // Katalog laden falls noch nicht vorhanden (für Beschreibungen)
+    if (!_tgCatalog) {
+      fetch('/static/data/tg_channels.json')
+        .then(function(r) { return r.json(); })
+        .then(function(data) { _tgCatalog = data; _tgmLoadChannels(); })
+        .catch(function() { _tgmLoadChannelsInner(); });
+      return;
+    }
+    _tgmLoadChannelsInner();
+  }
+
+  window._tgmLoadChannelsInner = _tgmLoadChannelsInner;
+  function _tgmLoadChannelsInner() {
+    var _pid = _tgmProjectId();
+    fetch('/api/admin/telegram-channels' + (_pid ? '?project_id=' + _pid : ''))
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.ok) { _chSection.style.display = 'none'; return; }
+        _chSection.style.display = '';
+        _joinedSet = {};
+        var list = document.getElementById('tgm-ch-list');
+        if (!d.channels || !d.channels.length) {
+          list.innerHTML = '<span style="color:#f59e0b;">' + _t('wz_tgm_no_channels', 'Keine Kanäle abonniert. Füge Kanäle hinzu, um die globale Suche zu ermöglichen.') + '</span>';
+          return;
+        }
+        var html = '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+        d.channels.forEach(function(ch) {
+          var uname = ch.username || '';
+          if (uname) _joinedSet[uname.toLowerCase()] = true;
+          var title = ch.title || uname || ('ID:' + ch.id);
+          var translated = ch.title_translated || '';
+          var catDesc = _catalogDesc(uname);
+          var members = ch.participants ? ' (' + ch.participants.toLocaleString() + ')' : '';
+          var langBadge = ch.title_lang ? '<span style="font-size:8px;color:var(--muted);margin-left:2px;">' + _esc(ch.title_lang.toUpperCase()) + '</span>' : '';
+          var titleHtml = '';
+          if (translated && translated !== title) {
+            titleHtml = '<span style="color:var(--text);font-weight:500;">' + _esc(translated) + '</span>'
+              + '<span style="color:var(--muted);font-size:10px;font-style:italic;margin-left:2px;">(' + _esc(title) + ')</span>';
+          } else {
+            titleHtml = '<span style="color:var(--text);font-weight:500;">' + _esc(title) + '</span>';
+          }
+          // Tooltip: Katalog-Beschreibung + Originalname
+          var tooltip = catDesc || '';
+          if (translated && translated !== title) tooltip = (tooltip ? tooltip + ' — ' : '') + title;
+          html += '<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid var(--border);border-radius:12px;background:var(--surface);"'
+            + (tooltip ? ' title="' + _esc(tooltip) + '"' : '') + '>'
+            + titleHtml
+            + langBadge
+            + '<span style="color:var(--muted);">' + _esc(members) + '</span>'
+            + (uname ? '<button onclick="_tgmLeaveChannel(\'' + _esc(uname) + '\')" title="Verlassen" '
+              + 'style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:13px;padding:0 2px;line-height:1;">&times;</button>' : '')
+            + '</div>';
+        });
+        html += '</div>';
+        list.innerHTML = html;
+        // Refresh catalog grid if open
+        if (document.getElementById('tgm-join-overlay').style.display === 'flex') _refreshGrid();
+      })
+      .catch(function() { _chSection.style.display = 'none'; });
+  }
+
+  window._tgmLeaveChannel = function(username) {
+    if (!confirm('Kanal @' + username + ' aus diesem Projekt entfernen?')) return;
+    document.getElementById('tgm-ch-list').innerHTML = '<span style="color:var(--muted);">Entferne Kanal...</span>';
+    fetch('/api/admin/telegram-channels', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'leave', channel: username, project_id: _tgmProjectId() || null})
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (!d.ok) alert(d.error || 'Fehler');
+      _tgmLoadChannels();
+    });
+  };
+
+  // ── Join-Popup ──
+  var _tgCatalog = null;
+  var _selCountry = 'RU';
+  var _selCat = 'news';
+  var _CAT_META = [
+    {id: 'news',  label: 'News'},
+    {id: 'blog',  label: 'Blogger'},
+    {id: 'mil',   label: 'Militär'},
+    {id: 'gov',   label: 'Regierung'},
+    {id: 'osint', label: 'OSINT'},
+    {id: 'dis',   label: 'Katastrophen'},
+    {id: 'grp',   label: 'Gruppen'},
+  ];
+
+  window._joinChannel = _joinChannel;
+  function _joinChannel(username) {
+    var status = document.getElementById('tgm-join-status');
+    status.style.display = '';
+    status.innerHTML = '<span style="color:var(--muted);">Pruefe @' + _esc(username) + '...</span>';
+
+    // Step 1: Check if it's a group (visible join) or channel (silent join)
+    fetch('/api/admin/telegram-channels', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'check_before_join', channel: username, project_id: _tgmProjectId() || null})
+    }).then(function(r) { return r.json(); }).then(function(info) {
+      if (!info.ok) {
+        status.innerHTML = '<span style="color:#ef4444;">' + _esc(info.error || 'Fehler') + '</span>';
+        setTimeout(function() { status.style.display = 'none'; }, 4000);
+        return;
+      }
+
+      // If it's a group, warn about visible join
+      if (info.is_group) {
+        var members = info.participants ? info.participants.toLocaleString() + ' Mitglieder' : '';
+        var msg = 'ACHTUNG: "' + (info.title || username) + '" ist eine Gruppe'
+          + (members ? ' (' + members + ')' : '') + '.\n\n'
+          + 'Dein Beitritt ist fuer alle Mitglieder sichtbar als:\n'
+          + '"' + (info.my_name || '?') + ' ist der Gruppe beigetreten"\n\n'
+          + 'Trotzdem beitreten?';
+        if (!confirm(msg)) {
+          status.style.display = 'none';
+          return;
+        }
+      }
+
+      // Step 2: Actually join
+      status.innerHTML = '<span style="color:var(--muted);">Trete @' + _esc(username) + ' bei...</span>';
+      fetch('/api/admin/telegram-channels', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: 'join', channel: username, project_id: _tgmProjectId() || null})
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok) {
+          status.innerHTML = '<span style="color:#4ade80;">' + _esc(d.message || 'Beigetreten!') + '</span>';
+          _tgmLoadChannels();
+        } else {
+          status.innerHTML = '<span style="color:#ef4444;">' + _esc(d.error || 'Fehler') + '</span>';
+        }
+        setTimeout(function() { status.style.display = 'none'; }, 4000);
+      });
+    });
+  }
+
+  function _refreshCountryChips() {
+    if (!_tgCatalog) return;
+    var el = document.getElementById('tgm-cat-countries');
+    var codes = Object.keys(_tgCatalog);
+    el.innerHTML = codes.map(function(c) {
+      var info = _tgCatalog[c];
+      var active = c === _selCountry;
+      return '<button data-cc="' + c + '" style="padding:3px 10px;border:1px solid ' + (active ? '#0e7490' : 'var(--border)') + ';border-radius:14px;'
+        + 'background:' + (active ? '#0e7490' : 'var(--surface)') + ';color:' + (active ? '#fff' : 'var(--text)') + ';'
+        + 'cursor:pointer;font-size:11px;white-space:nowrap;">'
+        + info.flag + ' ' + _esc(info.name) + '</button>';
+    }).join('');
+    el.querySelectorAll('button').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        _selCountry = btn.dataset.cc;
+        _refreshCountryChips();
+        _refreshGrid();
+      });
+    });
+  }
+
+  function _refreshCatTabs() {
+    var el = document.getElementById('tgm-cat-tabs');
+    el.innerHTML = _CAT_META.map(function(cat) {
+      var active = cat.id === _selCat;
+      return '<button data-cat="' + cat.id + '" style="padding:5px 12px;border:none;border-bottom:2px solid ' + (active ? '#0088cc' : 'transparent') + ';'
+        + 'background:none;color:' + (active ? 'var(--text)' : 'var(--muted)') + ';cursor:pointer;font-size:11px;font-weight:' + (active ? '700' : '400') + ';">'
+        + _esc(cat.label) + '</button>';
+    }).join('');
+    el.querySelectorAll('button').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        _selCat = btn.dataset.cat;
+        _refreshCatTabs();
+        _refreshGrid();
+      });
+    });
+  }
+
+  function _refreshGrid() {
+    var el = document.getElementById('tgm-cat-grid');
+    if (!_tgCatalog || !_tgCatalog[_selCountry]) { el.innerHTML = ''; return; }
+    var channels = (_tgCatalog[_selCountry].cats || {})[_selCat] || [];
+    if (!channels.length) {
+      el.innerHTML = '<div style="grid-column:1/-1;padding:16px;text-align:center;color:var(--muted);font-size:11px;">' + _t('wz_tgm_no_cat_entries', 'Keine Kanaele in dieser Kategorie.') + '</div>';
+      return;
+    }
+    el.innerHTML = channels.map(function(entry) {
+      // Entry kann String ("username") oder Objekt ({id:"username", desc:"Beschreibung"}) sein
+      var uname = typeof entry === 'string' ? entry : entry.id;
+      var desc = typeof entry === 'object' ? (entry.desc || '') : '';
+      var joined = _joinedSet[uname.toLowerCase()];
+      return '<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;'
+        + 'background:' + (joined ? 'rgba(74,222,128,.08)' : 'var(--bg)') + ';"'
+        + (desc ? ' title="' + _esc(desc) + '"' : '') + '>'
+        + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+        + '<span style="font-size:12px;color:var(--text);font-weight:500;">@' + _esc(uname) + '</span>'
+        + (desc ? '<br><span style="font-size:10px;color:var(--muted);font-weight:400;">' + _esc(desc) + '</span>' : '')
+        + '</span>'
+        + (joined
+          ? '<span style="font-size:9px;color:#4ade80;font-weight:600;flex-shrink:0;">Joined</span>'
+          : '<button onclick="_tgmJoinFromCatalog(\'' + _esc(uname) + '\',this)" style="padding:2px 10px;border:none;border-radius:5px;background:var(--accent3);color:#fff;cursor:pointer;font-size:10px;font-weight:600;flex-shrink:0;">+</button>')
+        + '<a href="https://t.me/' + _esc(uname) + '" target="_blank" rel="noopener" style="color:var(--muted);font-size:12px;text-decoration:none;flex-shrink:0;" title="Im Browser öffnen">&nearr;</a>'
+        + '</div>';
+    }).join('');
+  }
+
+  window._tgmJoinFromCatalog = function(uname, btn) {
+    btn.disabled = true;
+    btn.textContent = '...';
+    _joinChannel(uname);
+  };
+
+  // Open join popup
+  document.getElementById('tgm-ch-join-btn').addEventListener('click', function() {
+    var ov = document.getElementById('tgm-join-overlay');
+    ov.style.display = 'flex';
+    document.getElementById('tgm-join-input').value = '';
+    document.getElementById('tgm-join-status').style.display = 'none';
+    setTimeout(function() { document.getElementById('tgm-join-input').focus(); }, 50);
+
+    if (!_tgCatalog) {
+      fetch('/static/data/tg_channels.json')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          _tgCatalog = data;
+          _refreshCountryChips();
+          _refreshCatTabs();
+          _refreshGrid();
+        })
+        .catch(function() {
+          document.getElementById('tgm-cat-grid').innerHTML = '<div style="color:var(--muted);font-size:11px;">Katalog nicht verfuegbar.</div>';
+        });
     } else {
-      alert(data.error || "Fehler beim Erstellen");
+      _refreshCountryChips();
+      _refreshCatTabs();
+      _refreshGrid();
     }
   });
-}
+
+  // Free-form join
+  document.getElementById('tgm-join-go').addEventListener('click', function() {
+    var inp = document.getElementById('tgm-join-input');
+    var ch = inp.value.trim().replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '');
+    if (!ch) { inp.focus(); return; }
+    _joinChannel(ch);
+    inp.value = '';
+    document.getElementById('tgm-search-results').style.display = 'none';
+  });
+  document.getElementById('tgm-join-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('tgm-join-go').click();
+    if (e.key === 'Escape') document.getElementById('tgm-search-results').style.display = 'none';
+  });
+
+  // Telegram-Suche
+  window._tgmTelegramSearch = function() {
+    var q = document.getElementById('tgm-tg-search-input').value.trim();
+    if (!q || q.length < 2) return;
+    var box = document.getElementById('tgm-tg-search-results');
+    var btn = document.getElementById('tgm-tg-search-go');
+    box.style.display = 'block';
+    box.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:8px;">Suche auf Telegram …</div>';
+    btn.disabled = true; btn.style.opacity = '.5';
+    fetch('/api/admin/telegram-channels', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'search', query: q})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      btn.disabled = false; btn.style.opacity = '';
+      if (!data.ok) { box.innerHTML = '<div style="color:var(--danger);font-size:11px;padding:8px;">' + (data.error || 'Fehler') + '</div>'; return; }
+      var results = data.results || [];
+      if (!results.length) { box.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:8px;">Keine Ergebnisse.</div>'; return; }
+      box.innerHTML = results.map(function(ch) {
+        var joined = _joinedSet && _joinedSet[(ch.username || '').toLowerCase()];
+        var members = ch.participants ? ch.participants.toLocaleString() : '';
+        var typeBadge = ch.is_group ? '<span style="font-size:10px;color:var(--warn);margin-left:6px;">Gruppe</span>' : '<span style="font-size:10px;color:var(--muted);margin-left:6px;">Kanal</span>';
+        var langBadge = ch.title_lang ? '<span style="font-size:9px;color:var(--muted);margin-left:4px;">' + _esc(ch.title_lang.toUpperCase()) + '</span>' : '';
+        var titleHtml = '';
+        if (ch.title_translated && ch.title_translated !== ch.title) {
+          titleHtml = _esc(ch.title_translated) + '<span style="color:var(--muted);font-size:11px;font-style:italic;margin-left:4px;">(' + _esc(ch.title) + ')</span>';
+        } else {
+          titleHtml = _esc(ch.title);
+        }
+        var createdStr = '';
+        if (ch.created) {
+          var cd = new Date(ch.created);
+          var now = new Date();
+          var diffMs = now - cd;
+          var diffDays = Math.floor(diffMs / 86400000);
+          var years = Math.floor(diffDays / 365);
+          var months = Math.floor((diffDays % 365) / 30);
+          if (years > 0) createdStr = 'seit ' + years + (years === 1 ? ' Jahr' : ' Jahren') + (months > 0 ? ', ' + months + ' Mon.' : '');
+          else if (months > 0) createdStr = 'seit ' + months + ' Mon.';
+          else createdStr = 'seit ' + diffDays + ' Tagen';
+          createdStr = ' · ' + createdStr;
+        }
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);">'
+          + '<div style="flex:1;min-width:0;">'
+          + '<div style="font-size:14px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + titleHtml + langBadge + typeBadge + '</div>'
+          + '<div style="font-size:12px;color:var(--muted);margin-top:2px;">'
+          + (ch.username ? '@' + _esc(ch.username) : '')
+          + (members ? ' · ' + members + ' Mitglieder' : '')
+          + createdStr
+          + '</div></div>'
+          + (joined
+            ? '<span style="font-size:9px;color:var(--success);font-weight:600;">Joined</span>'
+            : '<button onclick="_tgmJoinFromCatalog(\'' + _esc(ch.username || '') + '\',this)" style="padding:2px 10px;border:none;border-radius:5px;background:var(--accent3);color:#fff;cursor:pointer;font-size:10px;font-weight:600;flex-shrink:0;">+</button>')
+          + '</div>';
+      }).join('');
+    }).catch(function(err) {
+      btn.disabled = false; btn.style.opacity = '';
+      box.innerHTML = '<div style="color:var(--danger);font-size:11px;padding:8px;">' + err.message + '</div>';
+    });
+  };
+  document.getElementById('tgm-tg-search-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') _tgmTelegramSearch();
+  });
+  var _tgTranslateTimer = null;
+  document.getElementById('tgm-tg-search-input').addEventListener('input', function() {
+    clearTimeout(_tgTranslateTimer);
+    var q = this.value.trim();
+    var chips = document.getElementById('tgm-tg-translate-chips');
+    if (q.length >= 2) {
+      _tgTranslateTimer = setTimeout(function() {
+        fetch('/api/telegram-translate-kw?text=' + encodeURIComponent(q))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data.ok || !data.translations || !data.translations.length) {
+              chips.style.display = 'none';
+              return;
+            }
+            // Original term as first chip (active by default)
+            var html = '<button onclick="_tgmSearchWithTerm(\'' + _esc(q).replace(/'/g, "\\'") + '\',this)" '
+              + 'style="padding:3px 10px;border:1px solid var(--accent3);border-radius:12px;background:rgba(0,136,204,.15);color:var(--accent3);cursor:pointer;font-size:11px;font-weight:700;">'
+              + _esc(q) + ' <span style="font-size:9px;color:var(--muted);">' + (data.src_lang || '').toUpperCase() + '</span></button>';
+            data.translations.forEach(function(t) {
+              html += '<button onclick="_tgmSearchWithTerm(\'' + _esc(t.text).replace(/'/g, "\\'") + '\',this)" '
+                + 'style="padding:3px 10px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);cursor:pointer;font-size:11px;">'
+                + _esc(t.text) + ' <span style="font-size:9px;color:var(--muted);">' + _esc(t.lang).toUpperCase() + '</span></button>';
+            });
+            chips.innerHTML = html;
+            chips.style.display = 'flex';
+          }).catch(function() { chips.style.display = 'none'; });
+      }, 500);
+    } else {
+      chips.style.display = 'none';
+    }
+  });
+  window._tgmSearchWithTerm = function(term, chipBtn) {
+    document.getElementById('tgm-tg-search-input').value = term;
+    // Highlight active chip
+    var chips = document.getElementById('tgm-tg-translate-chips');
+    if (chips) {
+      chips.querySelectorAll('button').forEach(function(b) {
+        b.style.borderColor = 'var(--border)';
+        b.style.background = 'var(--surface)';
+        b.style.fontWeight = '400';
+        b.style.color = 'var(--text)';
+      });
+      if (chipBtn) {
+        chipBtn.style.borderColor = 'var(--accent3)';
+        chipBtn.style.background = 'rgba(0,136,204,.15)';
+        chipBtn.style.fontWeight = '700';
+        chipBtn.style.color = 'var(--accent3)';
+      }
+    }
+    _tgmTelegramSearch();
+  };
+
+  // Katalog-Suche bei Eingabe
+  var _searchTimer = null;
+  document.getElementById('tgm-join-input').addEventListener('input', function() {
+    clearTimeout(_searchTimer);
+    var q = this.value.trim().replace(/^@/, '').toLowerCase();
+    var box = document.getElementById('tgm-search-results');
+    if (!q || q.length < 2 || !_tgCatalog) { box.style.display = 'none'; return; }
+    _searchTimer = setTimeout(function() { _searchCatalog(q); }, 150);
+  });
+
+  function _searchCatalog(q) {
+    var box = document.getElementById('tgm-search-results');
+    var hits = [];
+    var codes = Object.keys(_tgCatalog);
+    for (var ci = 0; ci < codes.length; ci++) {
+      var cc = codes[ci];
+      var country = _tgCatalog[cc];
+      var cats = country.cats || {};
+      var catKeys = Object.keys(cats);
+      for (var ki = 0; ki < catKeys.length; ki++) {
+        var entries = cats[catKeys[ki]] || [];
+        for (var ei = 0; ei < entries.length; ei++) {
+          var entry = entries[ei];
+          var uname = typeof entry === 'string' ? entry : entry.id;
+          var desc = typeof entry === 'object' ? (entry.desc || '') : '';
+          if (uname.toLowerCase().indexOf(q) !== -1 || desc.toLowerCase().indexOf(q) !== -1) {
+            // Deduplizieren
+            if (!hits.some(function(h) { return h.uname === uname; })) {
+              hits.push({uname: uname, desc: desc, flag: country.flag, country: country.name});
+            }
+          }
+          if (hits.length >= 15) break;
+        }
+        if (hits.length >= 15) break;
+      }
+      if (hits.length >= 15) break;
+    }
+    if (!hits.length) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    box.innerHTML = hits.map(function(h) {
+      var joined = _joinedSet[h.uname.toLowerCase()];
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);cursor:pointer;"'
+        + ' onmouseenter="this.style.background=\'rgba(255,255,255,.05)\'" onmouseleave="this.style.background=\'none\'">'
+        + '<span style="flex-shrink:0;">' + h.flag + '</span>'
+        + '<span style="flex:1;overflow:hidden;">'
+        + '<span style="font-size:12px;color:var(--text);font-weight:500;">@' + _esc(h.uname) + '</span>'
+        + (h.desc ? '<br><span style="font-size:10px;color:var(--muted);">' + _esc(h.desc) + '</span>' : '')
+        + '</span>'
+        + (joined
+          ? '<span style="font-size:9px;color:#4ade80;font-weight:600;flex-shrink:0;">Joined</span>'
+          : '<button onclick="event.stopPropagation();_tgmJoinFromCatalog(\'' + _esc(h.uname) + '\',this)" style="padding:2px 10px;border:none;border-radius:5px;background:var(--accent3);color:#fff;cursor:pointer;font-size:10px;font-weight:600;flex-shrink:0;">+</button>')
+        + '</div>';
+    }).join('');
+  }
+
+  // Initial laden wenn Panel sichtbar wird
+  var _chLoaded = false;
+  var _obs = new MutationObserver(function() {
+    var panel = document.getElementById('panel-telegram_monitor');
+    if (panel && panel.style.display !== 'none' && !_chLoaded) {
+      _chLoaded = true;
+      _tgmLoadChannels();
+    }
+  });
+  var _panelEl = document.getElementById('panel-telegram_monitor');
+
+  // Kanalliste neu laden bei Projektwechsel
+  var _projSel = document.getElementById('hdr-wz-project');
+  if (_projSel) {
+    _projSel.addEventListener('change', function() {
+      if (_chLoaded) _tgmLoadChannels();
+    });
+  }
+  if (_panelEl) _obs.observe(_panelEl, {attributes: true, attributeFilter: ['style']});
+})();
 </script>

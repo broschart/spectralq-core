@@ -28,6 +28,7 @@ class WatchZonePlugin(BasePlugin):
         "live_map_inset_template": "",     # Elemente innerhalb der Live-Map
         "live_side_panels_template": "",   # Seitenpanels neben der Map
         "live_undermap_template": "",      # Buttons unter der Map
+        "apa_action": "",                  # APA-Aktionsname z.B. "vessel_traffic"
     }
 
     # Gemeinsame WZ-Core-Uebersetzungen (Subnav, Global-Panel, Live-Popup etc.)
@@ -48,7 +49,7 @@ class WatchZonePlugin(BasePlugin):
             "wz_unknown": "Unbekannt", "wz_show_details_arrow": "Details anzeigen \u2192", "wz_show_details": "Details anzeigen",
             "wz_sidebar_global": "Globale Zonen",
             "wz_global_title": "Globale Zonen", "wz_global_subtitle": "Kategorien\u00fcbergreifende Zonen f\u00fcr alle Beobachtungstypen",
-            "wz_global_desc": "Globale Zonen gelten gleichzeitig f\u00fcr alle Beobachtungskategorien. Einmal gezeichnet, erscheint die Zone automatisch in jeder aktiven Kategorie \u2013 ideal f\u00fcr ein dauerhaftes Beobachtungsgebiet, das nicht mehrfach definiert werden soll.",
+            "wz_global_desc": "Globale Zonen gelten gleichzeitig f\u00fcr alle Beobachtungskategorien. Einmal gezeichnet, erscheint die Zone automatisch in jeder aktiven Kategorie \u2013 ideal f\u00fcr ein dauerhaftes Beobachtungsgebiet, das nicht mehrfach definiert werden soll.<br><br><b>Time Focus:</b> \u00dcber das Zonen-Men\u00fc (\u00b7\u00b7\u00b7 \u2192 Time Focus) kann einer globalen Zone ein Ereignis zugewiesen werden. Alle Plugins richten ihre Analyse dann automatisch um das Ereignisdatum aus \u2013 Daten vor, w\u00e4hrend und nach dem Ereignis werden vergleichend dargestellt.<br><br><b>Daten sammeln:</b> Mit dem Button \u201eSammeln\u201c k\u00f6nnen Daten aus mehreren Plugins gleichzeitig abgerufen werden. Plugin-spezifische Parameter (z.B. L\u00e4nder f\u00fcr Internet Health, Rohstoffe, Telegram-Suchbegriffe) lassen sich individuell konfigurieren. Die Ergebnisse werden in einer Gesamt\u00fcbersicht mit Karten, Graphen, Bildern und Tabellen angezeigt \u2013 und automatisch f\u00fcr sp\u00e4teren Abruf gespeichert.<br><br><b>Typischer Ablauf:</b><ol style='margin:6px 0 0 18px;font-size:inherit;'><li>Globale Zone auf der Karte zeichnen (Rechteck oder Polygon)</li><li>Benennen und optional ein Time-Focus-Ereignis zuweisen</li><li>\u201eSammeln\u201c klicken \u2192 Plugins ausw\u00e4hlen und konfigurieren \u2192 sammeln</li><li>Aggregierte Ergebnisse aller Datenquellen pr\u00fcfen</li><li>\u201eLive \u00f6ffnen\u201c auf einzelnen Plugin-Cards f\u00fcr Detailanalyse</li></ol>",
             "wz_global_hint": "Hier kategorien\u00fcbergreifende Beobachtungszonen definieren, die in allen aktiven Kategorien wiederverwendet werden k\u00f6nnen \u2013 ohne die Zone jedes Mal neu zeichnen zu m\u00fcssen.",
             "wz_clock_suffix": " Uhr", "wz_fetch_time_suffix": " (Abrufzeit)",
             "wz_live_title_default": "Live-Daten", "wz_live_prefix_live": "Live-Daten:",
@@ -71,7 +72,7 @@ class WatchZonePlugin(BasePlugin):
             "wz_unknown": "Unknown", "wz_show_details_arrow": "Show details \u2192", "wz_show_details": "Show details",
             "wz_sidebar_global": "Global Zones",
             "wz_global_title": "Global Zones", "wz_global_subtitle": "Cross-category zones for all observation types",
-            "wz_global_desc": "Global zones apply simultaneously to all observation categories. Once drawn, the zone automatically appears in every active category \u2013 ideal for a permanent observation area you don\u2019t want to define multiple times.",
+            "wz_global_desc": "Global zones apply simultaneously to all observation categories. Once drawn, the zone automatically appears in every active category \u2013 ideal for a permanent observation area you don\u2019t want to define multiple times.<br><br><b>Time Focus:</b> Assign an event (Time Focus) to a global zone via the zone menu (\u00b7\u00b7\u00b7 \u2192 Time Focus). All plugins will automatically align their analysis around the event date \u2013 showing data before, during and after for comparative analysis.<br><br><b>Data Collection:</b> Click \u201cSammeln\u201d to collect data from multiple plugins simultaneously. Configure plugin-specific parameters, then collect all data in one step. Results are displayed in a comprehensive overview with maps, charts, images and tables \u2013 and automatically saved for later review.<br><br><b>Typical workflow:</b><ol style='margin:6px 0 0 18px;font-size:inherit;'><li>Draw a global zone on the map</li><li>Name it and optionally assign a Time Focus event</li><li>Click \u201cSammeln\u201d \u2192 select and configure plugins \u2192 collect</li><li>Review aggregated results across all data sources</li><li>Use \u201cLive \u00f6ffnen\u201d on individual cards for deep analysis</li></ol>",
             "wz_global_hint": "Define cross-category observation zones here that you can reuse across all active categories \u2013 without having to redraw the zone each time.",
             "wz_clock_suffix": "", "wz_fetch_time_suffix": " (fetch time)",
             "wz_live_title_default": "Live Data", "wz_live_prefix_live": "Live Data:",
@@ -146,6 +147,12 @@ class WatchZonePlugin(BasePlugin):
         """
         raise NotImplementedError(f"{self.plugin_id}: live_handler nicht implementiert")
 
+    def scheduler_jobs(self):
+        """Returns a list of scheduler job dicts to register at startup.
+        Each dict: {"func": callable, "trigger": ..., "id": str, **kwargs}
+        """
+        return []
+
     def api_routes(self):
         """Standalone API-Routen die dieses Plugin bereitstellt.
 
@@ -182,6 +189,21 @@ class WatchZonePlugin(BasePlugin):
             dict mit Ergebnis
         """
         return {"error": f"Tool nicht implementiert: {tool_name}"}
+
+    def apa_action_handler(self, action):
+        """Fuehrt eine APA-Aktion aus (aufgerufen ueber apa_stream.py).
+
+        Args:
+            action: dict mit Aktionsparametern (bbox, days, label, etc.)
+
+        Returns:
+            dict mit:
+                status_msg: str — Status-Nachricht waehrend Ausfuehrung
+                report: str — Detailbericht fuer researcher_reports
+                data_msg: str — Kurzzusammenfassung fuer SSE-Data-Event
+                error: str|None — Fehlermeldung falls fehlgeschlagen
+        """
+        return {"error": f"apa_action_handler nicht implementiert: {self.plugin_id}"}
 
     def analysis_provider(self):
         """Konfiguration fuer Analyse-Triangulation.

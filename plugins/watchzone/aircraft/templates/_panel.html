@@ -1,12 +1,11 @@
 <div id="panel-aircraft" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_aircraft_title">Aircraft Tracking</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_aircraft_source">Source: ADS-B Exchange / airplanes.live</span>
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_aircraft_desc">Tracks aircraft via ADS-B within a defined airspace. "Live" opens the real-time map with altitude, heading and speed – critical proximity between aircraft is colour-coded. Click on a pair to zoom the map directly to them.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_aircraft_help">Tracks aircraft in real time via ADS-B transponder data within a defined airspace.<br><br><b>How to use:</b> Draw a zone on the map and click "Live". All aircraft in the area are listed with callsign, altitude, heading and speed. The map shows positions with colour-coded proximity warnings when aircraft are critically close.<br><br><b>Advanced features:</b> Hourly projection calculates future positions. The heatmap visualises traffic density. Parallel coordinates allow multidimensional filtering by altitude, speed, heading and distance. Formation flight patterns and collision risks are automatically detected.<br><br><b>Forensic relevance:</b> Useful for monitoring military airspace activity, detecting surveillance aircraft patterns, verifying no-fly zone compliance or reconstructing aerial incidents.<br><br><b>Data source:</b> ADS-B Exchange / airplanes.live — no API key required.</div>
   </div>
   <div class="wz-main-body">
-    <div id="wz-map-aircraft" class="wz-map-container" style="height:500px;"></div>
+    <div id="wz-map-aircraft" class="wz-map-container" ></div>
     <div class="wz-hint" id="wz-hint-aircraft" data-i18n="wz_aircraft_hint">
       Draw airspace zones on the map. ADS-B data (airplanes.live) shows
       flight movements in real time and enables anomaly detection.

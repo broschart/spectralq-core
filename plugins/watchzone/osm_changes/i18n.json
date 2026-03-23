@@ -12,7 +12,8 @@
     "wz_osm_modified": "Bearbeitet",
     "wz_osm_users": "Mapper",
     "wz_osm_version": "Version",
-    "wz_osm_more": "weitere"
+    "wz_osm_more": "weitere",
+    "wz_osm_help": "Überwacht OpenStreetMap-Bearbeitungen in der definierten Region über die letzten 30 Tage: neu gezeichnete oder geänderte Straßen, Gebäude, militärische Infrastruktur, Flughäfen und andere Kartenelemente.<br><br><b>Bedienung:</b> Zone auf der Karte einzeichnen und auf „Live“ klicken. Alle Änderungen werden mit Benutzername, Bearbeitungsdatum, Objekttyp (neu vs. geändert) und Versionshistorie aufgelistet. Klick auf einen Eintrag zeigt den genauen Standort auf der Karte.<br><br><b>Forensische Relevanz:</b> Obwohl crowdsourced, sind OSM-Bearbeitungen forensisch relevant, wenn lokale Mapper Veränderungen vor Ort dokumentieren — neue Militärcheckpoints, zerstörte Brücken, Flüchtlingslager oder Straßensperrungen. Koordinierte Bearbeitungsaktivität durch neue Accounts kann auch auf Informationsoperationen hindeuten.<br><br><b>Datenquelle:</b> OpenStreetMap / Overpass API — kein API-Key erforderlich."
   },
   "en": {
     "wz_sidebar_osm_changes": "OSM Changes",
@@ -27,7 +28,8 @@
     "wz_osm_modified": "Modified",
     "wz_osm_users": "Mappers",
     "wz_osm_version": "Version",
-    "wz_osm_more": "more"
+    "wz_osm_more": "more",
+    "wz_osm_help": "Monitors OpenStreetMap edits in the defined region over the last 30 days, tracking newly drawn or modified roads, buildings, military infrastructure, airports and other map features.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All changes are listed with the mapper's username, edit date, object type (new vs. modified) and version history. Click on an entry to see the exact location on the map.<br><br><b>Forensic relevance:</b> While crowdsourced, OSM edits are forensically relevant when local mappers document changes on the ground — new military checkpoints, destroyed bridges, refugee camps or road closures. Coordinated editing activity by new accounts can also indicate information operations.<br><br><b>Data source:</b> OpenStreetMap / Overpass API — no API key required."
   },
   "fr": {
     "wz_sidebar_osm_changes": "Modif. OSM",
@@ -35,7 +37,8 @@
     "wz_osm_source": "Source : OpenStreetMap / Overpass API",
     "wz_osm_desc": "Surveille les modifications de la carte dans une region.",
     "wz_osm_hint": "Dessinez des zones d'observation sur la carte.",
-    "wz_osm_empty": "Aucune modification dans cette region."
+    "wz_osm_empty": "Aucune modification dans cette region.",
+    "wz_osm_help": "Monitors OpenStreetMap edits in the defined region over the last 30 days, tracking newly drawn or modified roads, buildings, military infrastructure, airports and other map features.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All changes are listed with the mapper's username, edit date, object type (new vs. modified) and version history. Click on an entry to see the exact location on the map.<br><br><b>Forensic relevance:</b> While crowdsourced, OSM edits are forensically relevant when local mappers document changes on the ground — new military checkpoints, destroyed bridges, refugee camps or road closures. Coordinated editing activity by new accounts can also indicate information operations.<br><br><b>Data source:</b> OpenStreetMap / Overpass API — no API key required."
   },
   "es": {
     "wz_sidebar_osm_changes": "Cambios OSM",
@@ -43,6 +46,7 @@
     "wz_osm_source": "Fuente: OpenStreetMap / Overpass API",
     "wz_osm_desc": "Monitorea cambios en el mapa en una region.",
     "wz_osm_hint": "Dibuje areas de observacion en el mapa.",
-    "wz_osm_empty": "Sin cambios en esta region."
+    "wz_osm_empty": "Sin cambios en esta region.",
+    "wz_osm_help": "Monitors OpenStreetMap edits in the defined region over the last 30 days, tracking newly drawn or modified roads, buildings, military infrastructure, airports and other map features.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All changes are listed with the mapper's username, edit date, object type (new vs. modified) and version history. Click on an entry to see the exact location on the map.<br><br><b>Forensic relevance:</b> While crowdsourced, OSM edits are forensically relevant when local mappers document changes on the ground — new military checkpoints, destroyed bridges, refugee camps or road closures. Coordinated editing activity by new accounts can also indicate information operations.<br><br><b>Data source:</b> OpenStreetMap / Overpass API — no API key required."
   }
 }

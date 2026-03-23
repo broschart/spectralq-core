@@ -28,7 +28,7 @@
     "wz_website_server_location": "Server-Standort",
     "wz_website_server_city": "Stadt:",
     "wz_website_server_country": "Land:",
-    "wz_website_wb_calendar": "Wayback-Kalender – letzte 30 Tage",
+    "wz_website_wb_calendar": "Wayback-Kalender",
     "wz_website_page_size": "Seitengröße (KB)",
     "wz_wb_day_labels": "Mo,Di,Mi,Do,Fr,Sa,So",
     "wz_wb_legend_less": "Weniger",
@@ -45,14 +45,15 @@
     "wz_wb_show_more_snaps": "weitere Snapshots anzeigen",
     "wz_btn_server": "Server (Live)",
     "wz_tt_server": "Server analysieren (Traceroute)",
-    "wz_btn_history": "Verlauf (30 Tage)",
+    "wz_btn_history": "Verlauf",
     "wz_live_prefix_wayback": "Wayback:",
     "wz_live_prefix_server": "Server:",
     "wz_btn_traceroute": "▶ Traceroute",
     "wz_btn_historical": "📊 Historische Analyse",
     "wz_web_hist_title": "📊 Historische Analyse – Traceroute",
     "wz_web_hist_reset": "↺ Achsen & Filter zurücksetzen",
-    "wz_web_hist_legend": "Jede Linie = ein Traceroute-Durchlauf. Grau = ältere Läufe, Lila = neueste. Hover für Details."
+    "wz_web_hist_legend": "Jede Linie = ein Traceroute-Durchlauf. Grau = ältere Läufe, Lila = neueste. Hover für Details.",
+    "wz_website_help": "Verfolgt Inhaltsänderungen einer Website über die Zeit mittels der Wayback Machine des Internet Archive — kombiniert mit einer forensischen Traceroute-Analyse der Hosting-Infrastruktur.<br><br><b>Wayback-Monitoring:</b> URL hinzufügen und auf „Live“ klicken. Eine chronologische Liste aller gespeicherten Snapshots wird angezeigt, mit Seitengröße, Titeländerungen und Direktlinks zur archivierten Version. Die Kalenderansicht visualisiert die Archivierungsaktivität über die Zeit. Tags (Militär, Politik, Katastrophe etc.) helfen bei der Kategorisierung.<br><br><b>Traceroute — Server (Live):</b> Auf „Server“ klicken, um einen Traceroute zum Webserver auszuführen. Jeder Hop wird in Echtzeit auf einem 3D-Globus (Cesium) angezeigt mit IP-Adresse, geografischem Standort, ASN, Reverse-DNS und Round-Trip-Time (RTT). Nach Abschluss werden WHOIS-Daten, BGP-Prefix-Informationen und Abuse-Kontakte ergänzt.<br><br><b>Playback:</b> Nach Abschluss des Traceroutes spielt der Slow-Motion-Button die Route auf dem 3D-Globus ab. Die Animation pausiert an jedem Hop proportional zur gemessenen Latenz — ein Hop mit 80 ms RTT dauert visuell doppelt so lang wie einer mit 40 ms. So werden Latenzengpässe und Kontinentalüberquerungen sofort sichtbar.<br><br><b>Automatische Anomalie-Erkennung:</b><ul><li><b>RTT-Sprünge:</b> Ein Latenzanstieg von 80+ ms zwischen aufeinanderfolgenden Hops wird gelb markiert. Sprünge von 150+ ms deuten auf einen Kontinentalwechsel hin (rot).</li><li><b>Geografische Umwege:</b> Wenn der Routenpfad 2,5× länger als die Direktstrecke ist (und 800 km übersteigt), wird ein Routing-Umweg markiert — der Verkehr wird möglicherweise durch ein Drittland geleitet.</li><li><b>Anonyme Hop-Sequenzen:</b> Zwei oder mehr aufeinanderfolgende Hops ohne Antwort werden markiert. Vier oder mehr deuten auf ein geschlossenes oder militärisches Netzwerk hin.</li><li><b>BGP-Anomalien:</b> Wenn das BGP-angekündigte Origin-AS eines Hops vom beobachteten AS abweicht, wird mögliches BGP-Hijacking oder Anycast markiert.</li><li><b>Plausibilitätsprüfung:</b> Die finale RTT wird mit dem physikalischen Minimum verglichen (Lichtgeschwindigkeit in Glasfaser ≈ 200.000 km/s). Wenn die gemessene RTT für die Distanz physikalisch nicht erreichbar ist, ist CDN oder Anycast wahrscheinlich.</li></ul><br><b>Historische Analyse (Parallele Koordinaten):</b> Nach mehreren Traceroute-Durchläufen auf „Historische Analyse“ klicken. Jeder Durchlauf wird als Linie über neun Achsen dargestellt: Zeit, Gesamthops, sichtbare Hops, anonyme Hops, RTT (ms), Distanz (km), RTT-Sprünge, geografische Umwege und anonyme Sequenzen. Achsen können per Drag umgeordnet werden. Brush (Klick und Ziehen auf einer Achse) zum Filtern — z. B. nur Durchläufe mit hoher RTT selektieren. Grau = ältere Durchläufe, Lila = neuester. Hover zeigt Details.<br><br><b>Worauf achten:</b><ul><li>Plötzliche Änderungen bei Hop-Anzahl oder Routenpfad → Infrastrukturänderung oder BGP-Rerouting</li><li>RTT steigt über die Zeit → verschlechterte Konnektivität oder Routenänderung</li><li>Anonyme Hops tauchen auf, wo vorher keine waren → neue Filter- oder Zensurinfrastruktur</li><li>Geografische Umwege durch unerwartete Länder → Risiko der Verkehrsabfangung</li><li>Server-Standort-Diskrepanz zwischen GeoIP und letztem Traceroute-Hop → CDN, Anycast oder bewusste Falschdarstellung</li></ul><br><b>Datenquelle:</b> Wayback Machine (Internet Archive) + System-Traceroute + ip-api.com (GeoIP) + RIPE Stat (BGP/WHOIS) — kein API-Key erforderlich."
   },
   "en": {
     "wz_sidebar_website": "Websites",
@@ -83,7 +84,7 @@
     "wz_website_server_location": "Server Location",
     "wz_website_server_city": "City:",
     "wz_website_server_country": "Country:",
-    "wz_website_wb_calendar": "Wayback Calendar – last 30 days",
+    "wz_website_wb_calendar": "Wayback Calendar",
     "wz_website_page_size": "Page Size (KB)",
     "wz_wb_day_labels": "Mo,Tu,We,Th,Fr,Sa,Su",
     "wz_wb_legend_less": "Less",
@@ -100,14 +101,15 @@
     "wz_wb_show_more_snaps": "more snapshots",
     "wz_btn_server": "Server (Live)",
     "wz_tt_server": "Server analysis (traceroute)",
-    "wz_btn_history": "History (30 days)",
+    "wz_btn_history": "History",
     "wz_live_prefix_wayback": "Wayback:",
     "wz_live_prefix_server": "Server:",
     "wz_btn_traceroute": "▶ Traceroute",
     "wz_btn_historical": "📊 Historical Analysis",
     "wz_web_hist_title": "📊 Historical Analysis – Traceroute",
     "wz_web_hist_reset": "↺ Reset Axes & Filters",
-    "wz_web_hist_legend": "Each line = one traceroute run. Grey = older runs, purple = latest. Hover for details."
+    "wz_web_hist_legend": "Each line = one traceroute run. Grey = older runs, purple = latest. Hover for details.",
+    "wz_website_help": "Tracks content changes of a website over time using the Internet Archive's Wayback Machine — combined with a forensic traceroute analysis of the hosting infrastructure.<br><br><b>Wayback Monitoring:</b> Add a URL and click \"Live\". A chronological list of all saved snapshots is shown, including page size, title changes and direct links to the archived version. The calendar view visualises archiving activity over time. Tags (military, politics, disaster, etc.) help categorise monitored sites.<br><br><b>Traceroute — Server (Live):</b> Click \"Server\" to run a traceroute to the website's server. Each hop is displayed in real time on a 3D globe (Cesium) with IP address, geographic location, ASN, reverse DNS and round-trip time (RTT). After completion, a forensic enrichment step adds WHOIS data, BGP prefix information and abuse contacts for each hop.<br><br><b>Playback:</b> After the traceroute completes, the slow-motion playback button replays the route on the 3D globe. The animation pauses at each hop proportionally to the measured latency — a hop with 80 ms RTT takes visually twice as long as one with 40 ms. This makes latency bottlenecks and continental crossings immediately visible.<br><br><b>Automatic anomaly detection:</b><ul><li><b>RTT jumps:</b> A latency increase of 80+ ms between consecutive hops is flagged (yellow). Jumps of 150+ ms suggest a continental crossing (red).</li><li><b>Geographic detours:</b> If the route path is 2.5× longer than the direct distance (and exceeds 800 km), a routing detour is flagged — the traffic may be routed through a third country.</li><li><b>Anonymous hop sequences:</b> Two or more consecutive hops that don't respond are flagged. Four or more suggest a closed or military network.</li><li><b>BGP anomalies:</b> If a hop's BGP-announced origin AS differs from the observed AS, possible BGP hijacking or anycast is flagged.</li><li><b>Plausibility check:</b> The final RTT is compared against the physical minimum (speed of light in fibre ≈ 200,000 km/s). If the measured RTT is faster than physically possible for the distance, CDN or anycast is likely.</li></ul><br><b>Historical Analysis (Parallel Coordinates):</b> After multiple traceroute runs, click \"Historical Analysis\" to compare them. Each run becomes a line across nine axes: time, total hops, visible hops, anonymous hops, RTT (ms), distance (km), RTT jumps, geographic detours and anonymous sequences. Axes can be dragged to reorder them. Brush (click and drag on an axis) to filter — e.g. select only runs with high RTT to see if they also had more anonymous hops. Grey lines = older runs, purple = most recent. Hover shows details.<br><br><b>What to look for:</b><ul><li>Sudden changes in hop count or route path between runs → infrastructure change or BGP re-routing</li><li>RTT increasing over time → degraded connectivity or route change</li><li>Anonymous hops appearing where there were none before → new filtering or censorship infrastructure</li><li>Geographic detours through unexpected countries → traffic interception risk</li><li>Server location mismatch between GeoIP and last traceroute hop → CDN, anycast, or deliberate misrepresentation</li></ul><br><b>Data source:</b> Wayback Machine (Internet Archive) + system traceroute + ip-api.com (GeoIP) + RIPE Stat (BGP/WHOIS) — no API key required."
   },
   "fr": {
     "wz_sidebar_website": "Sites web",
@@ -138,7 +140,7 @@
     "wz_website_server_location": "Emplacement du serveur",
     "wz_website_server_city": "Ville :",
     "wz_website_server_country": "Pays :",
-    "wz_website_wb_calendar": "Calendrier Wayback – 30 derniers jours",
+    "wz_website_wb_calendar": "Calendrier Wayback",
     "wz_website_page_size": "Taille de page (Ko)",
     "wz_wb_day_labels": "Lu,Ma,Me,Je,Ve,Sa,Di",
     "wz_wb_legend_less": "Moins",
@@ -162,7 +164,8 @@
     "wz_btn_historical": "📊 Analyse historique",
     "wz_web_hist_title": "📊 Analyse historique – Traceroute",
     "wz_web_hist_reset": "↺ Réinitialiser axes et filtres",
-    "wz_web_hist_legend": "Chaque ligne = un parcours traceroute. Gris = parcours antérieurs, violet = le plus récent. Survolez pour les détails."
+    "wz_web_hist_legend": "Chaque ligne = un parcours traceroute. Gris = parcours antérieurs, violet = le plus récent. Survolez pour les détails.",
+    "wz_website_help": "Tracks content changes of a website over time using the Internet Archive's Wayback Machine — combined with a forensic traceroute analysis of the hosting infrastructure.<br><br><b>Wayback Monitoring:</b> Add a URL and click \"Live\". A chronological list of all saved snapshots is shown, including page size, title changes and direct links to the archived version. The calendar view visualises archiving activity over time. Tags (military, politics, disaster, etc.) help categorise monitored sites.<br><br><b>Traceroute — Server (Live):</b> Click \"Server\" to run a traceroute to the website's server. Each hop is displayed in real time on a 3D globe (Cesium) with IP address, geographic location, ASN, reverse DNS and round-trip time (RTT). After completion, a forensic enrichment step adds WHOIS data, BGP prefix information and abuse contacts for each hop.<br><br><b>Playback:</b> After the traceroute completes, the slow-motion playback button replays the route on the 3D globe. The animation pauses at each hop proportionally to the measured latency — a hop with 80 ms RTT takes visually twice as long as one with 40 ms. This makes latency bottlenecks and continental crossings immediately visible.<br><br><b>Automatic anomaly detection:</b><ul><li><b>RTT jumps:</b> A latency increase of 80+ ms between consecutive hops is flagged (yellow). Jumps of 150+ ms suggest a continental crossing (red).</li><li><b>Geographic detours:</b> If the route path is 2.5× longer than the direct distance (and exceeds 800 km), a routing detour is flagged — the traffic may be routed through a third country.</li><li><b>Anonymous hop sequences:</b> Two or more consecutive hops that don't respond are flagged. Four or more suggest a closed or military network.</li><li><b>BGP anomalies:</b> If a hop's BGP-announced origin AS differs from the observed AS, possible BGP hijacking or anycast is flagged.</li><li><b>Plausibility check:</b> The final RTT is compared against the physical minimum (speed of light in fibre ≈ 200,000 km/s). If the measured RTT is faster than physically possible for the distance, CDN or anycast is likely.</li></ul><br><b>Historical Analysis (Parallel Coordinates):</b> After multiple traceroute runs, click \"Historical Analysis\" to compare them. Each run becomes a line across nine axes: time, total hops, visible hops, anonymous hops, RTT (ms), distance (km), RTT jumps, geographic detours and anonymous sequences. Axes can be dragged to reorder them. Brush (click and drag on an axis) to filter — e.g. select only runs with high RTT to see if they also had more anonymous hops. Grey lines = older runs, purple = most recent. Hover shows details.<br><br><b>What to look for:</b><ul><li>Sudden changes in hop count or route path between runs → infrastructure change or BGP re-routing</li><li>RTT increasing over time → degraded connectivity or route change</li><li>Anonymous hops appearing where there were none before → new filtering or censorship infrastructure</li><li>Geographic detours through unexpected countries → traffic interception risk</li><li>Server location mismatch between GeoIP and last traceroute hop → CDN, anycast, or deliberate misrepresentation</li></ul><br><b>Data source:</b> Wayback Machine (Internet Archive) + system traceroute + ip-api.com (GeoIP) + RIPE Stat (BGP/WHOIS) — no API key required."
   },
   "es": {
     "wz_sidebar_website": "Sitios web",
@@ -193,7 +196,7 @@
     "wz_website_server_location": "Ubicación del servidor",
     "wz_website_server_city": "Ciudad:",
     "wz_website_server_country": "País:",
-    "wz_website_wb_calendar": "Calendario Wayback – últimos 30 días",
+    "wz_website_wb_calendar": "Calendario Wayback",
     "wz_website_page_size": "Tamaño de página (KB)",
     "wz_wb_day_labels": "Lu,Ma,Mi,Ju,Vi,Sá,Do",
     "wz_wb_legend_less": "Menos",
@@ -217,6 +220,7 @@
     "wz_btn_historical": "📊 Análisis histórico",
     "wz_web_hist_title": "📊 Análisis histórico – Traceroute",
     "wz_web_hist_reset": "↺ Restablecer ejes y filtros",
-    "wz_web_hist_legend": "Cada línea = una ejecución de traceroute. Gris = ejecuciones anteriores, violeta = la más reciente. Pase el cursor para ver detalles."
+    "wz_web_hist_legend": "Cada línea = una ejecución de traceroute. Gris = ejecuciones anteriores, violeta = la más reciente. Pase el cursor para ver detalles.",
+    "wz_website_help": "Tracks content changes of a website over time using the Internet Archive's Wayback Machine — combined with a forensic traceroute analysis of the hosting infrastructure.<br><br><b>Wayback Monitoring:</b> Add a URL and click \"Live\". A chronological list of all saved snapshots is shown, including page size, title changes and direct links to the archived version. The calendar view visualises archiving activity over time. Tags (military, politics, disaster, etc.) help categorise monitored sites.<br><br><b>Traceroute — Server (Live):</b> Click \"Server\" to run a traceroute to the website's server. Each hop is displayed in real time on a 3D globe (Cesium) with IP address, geographic location, ASN, reverse DNS and round-trip time (RTT). After completion, a forensic enrichment step adds WHOIS data, BGP prefix information and abuse contacts for each hop.<br><br><b>Playback:</b> After the traceroute completes, the slow-motion playback button replays the route on the 3D globe. The animation pauses at each hop proportionally to the measured latency — a hop with 80 ms RTT takes visually twice as long as one with 40 ms. This makes latency bottlenecks and continental crossings immediately visible.<br><br><b>Automatic anomaly detection:</b><ul><li><b>RTT jumps:</b> A latency increase of 80+ ms between consecutive hops is flagged (yellow). Jumps of 150+ ms suggest a continental crossing (red).</li><li><b>Geographic detours:</b> If the route path is 2.5× longer than the direct distance (and exceeds 800 km), a routing detour is flagged — the traffic may be routed through a third country.</li><li><b>Anonymous hop sequences:</b> Two or more consecutive hops that don't respond are flagged. Four or more suggest a closed or military network.</li><li><b>BGP anomalies:</b> If a hop's BGP-announced origin AS differs from the observed AS, possible BGP hijacking or anycast is flagged.</li><li><b>Plausibility check:</b> The final RTT is compared against the physical minimum (speed of light in fibre ≈ 200,000 km/s). If the measured RTT is faster than physically possible for the distance, CDN or anycast is likely.</li></ul><br><b>Historical Analysis (Parallel Coordinates):</b> After multiple traceroute runs, click \"Historical Analysis\" to compare them. Each run becomes a line across nine axes: time, total hops, visible hops, anonymous hops, RTT (ms), distance (km), RTT jumps, geographic detours and anonymous sequences. Axes can be dragged to reorder them. Brush (click and drag on an axis) to filter — e.g. select only runs with high RTT to see if they also had more anonymous hops. Grey lines = older runs, purple = most recent. Hover shows details.<br><br><b>What to look for:</b><ul><li>Sudden changes in hop count or route path between runs → infrastructure change or BGP re-routing</li><li>RTT increasing over time → degraded connectivity or route change</li><li>Anonymous hops appearing where there were none before → new filtering or censorship infrastructure</li><li>Geographic detours through unexpected countries → traffic interception risk</li><li>Server location mismatch between GeoIP and last traceroute hop → CDN, anycast, or deliberate misrepresentation</li></ul><br><b>Data source:</b> Wayback Machine (Internet Archive) + system traceroute + ip-api.com (GeoIP) + RIPE Stat (BGP/WHOIS) — no API key required."
   }
 }

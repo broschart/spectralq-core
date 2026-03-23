@@ -23,7 +23,8 @@
     "wz_ct_first_seen": "Erstmals gesehen",
     "wz_ct_open_crtsh": "Auf crt.sh öffnen",
     "wz_ct_valid_from": "Gültig ab",
-    "wz_ct_valid_until": "Gültig bis"
+    "wz_ct_valid_until": "Gültig bis",
+    "wz_ct_help": "Überwacht Certificate-Transparency-Logs (CT) für angegebene Domains und verfolgt alle ausgestellten TLS/SSL-Zertifikate sowie neu entdeckte Subdomains.<br><br><b>Bedienung:</b> Domain hinzufügen und auf „Live“ klicken. Das System fragt crt.sh ab und listet alle Zertifikate mit Aussteller, Gültigkeitsdaten und zugehörigen Subdomains. Neue Subdomains der letzten 30 Tage werden hervorgehoben.<br><br><b>Forensische Relevanz:</b> Neue Zertifikate und Subdomains sind Frühindikatoren für Kampagnenvorbereitung — Phishing-Seiten, neue Infrastruktur oder Service-Deployments. Die Überwachung der Zertifikatshistorie einer Zieldomain enthüllt Hosting-Wechsel, CDN-Migrationen und Schatten-IT. Wildcard-Zertifikate können auf schnelle Infrastrukturskalierung hindeuten.<br><br><b>Datenquelle:</b> crt.sh (Certificate Transparency Logs) — kein API-Key erforderlich."
   },
   "en": {
     "wz_sidebar_certwatch": "DNS / CT",
@@ -49,7 +50,8 @@
     "wz_ct_first_seen": "First seen",
     "wz_ct_open_crtsh": "Open on crt.sh",
     "wz_ct_valid_from": "Valid from",
-    "wz_ct_valid_until": "Valid until"
+    "wz_ct_valid_until": "Valid until",
+    "wz_ct_help": "Monitors Certificate Transparency (CT) logs for specified domains, tracking all issued TLS/SSL certificates and newly discovered subdomains.<br><br><b>How to use:</b> Add a domain and click \"Live\". The system queries crt.sh and lists all certificates with issuer, validity dates and associated subdomains. New subdomains discovered within the last 30 days are highlighted.<br><br><b>Forensic relevance:</b> New certificates and subdomains are early indicators of campaign preparation — phishing sites, new infrastructure or service deployments. Monitoring a target domain's certificate history reveals hosting changes, CDN migrations and shadow IT. Wildcard certificates may indicate rapid infrastructure scaling.<br><br><b>Data source:</b> crt.sh (Certificate Transparency Logs) — no API key required."
   },
   "fr": {
     "wz_sidebar_certwatch": "DNS / CT",
@@ -75,7 +77,8 @@
     "wz_ct_first_seen": "Première apparition",
     "wz_ct_open_crtsh": "Ouvrir sur crt.sh",
     "wz_ct_valid_from": "Valide depuis",
-    "wz_ct_valid_until": "Valide jusqu’au"
+    "wz_ct_valid_until": "Valide jusqu’au",
+    "wz_ct_help": "Monitors Certificate Transparency (CT) logs for specified domains, tracking all issued TLS/SSL certificates and newly discovered subdomains.<br><br><b>How to use:</b> Add a domain and click \"Live\". The system queries crt.sh and lists all certificates with issuer, validity dates and associated subdomains. New subdomains discovered within the last 30 days are highlighted.<br><br><b>Forensic relevance:</b> New certificates and subdomains are early indicators of campaign preparation — phishing sites, new infrastructure or service deployments. Monitoring a target domain's certificate history reveals hosting changes, CDN migrations and shadow IT. Wildcard certificates may indicate rapid infrastructure scaling.<br><br><b>Data source:</b> crt.sh (Certificate Transparency Logs) — no API key required."
   },
   "es": {
     "wz_sidebar_certwatch": "DNS / CT",
@@ -101,6 +104,7 @@
     "wz_ct_first_seen": "Primera aparición",
     "wz_ct_open_crtsh": "Abrir en crt.sh",
     "wz_ct_valid_from": "Válido desde",
-    "wz_ct_valid_until": "Válido hasta"
+    "wz_ct_valid_until": "Válido hasta",
+    "wz_ct_help": "Monitors Certificate Transparency (CT) logs for specified domains, tracking all issued TLS/SSL certificates and newly discovered subdomains.<br><br><b>How to use:</b> Add a domain and click \"Live\". The system queries crt.sh and lists all certificates with issuer, validity dates and associated subdomains. New subdomains discovered within the last 30 days are highlighted.<br><br><b>Forensic relevance:</b> New certificates and subdomains are early indicators of campaign preparation — phishing sites, new infrastructure or service deployments. Monitoring a target domain's certificate history reveals hosting changes, CDN migrations and shadow IT. Wildcard certificates may indicate rapid infrastructure scaling.<br><br><b>Data source:</b> crt.sh (Certificate Transparency Logs) — no API key required."
   }
 }

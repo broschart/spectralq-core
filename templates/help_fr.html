@@ -846,6 +846,7 @@
         <li><strong>Radioactivité</strong> – BfS ODL (Allemagne) + EURDEP (Europe) : débit de dose gamma, respectivement ~1 600 et ~37 000 stations de mesure. Triangulable.</li>
         <li><strong>Aéronefs</strong> – Trafic aérien en direct via OpenSky Network avec score d'anomalie, globe 3D et analyse de proximité.</li>
         <li><strong>Navires</strong> – Trafic maritime AIS via aisstream.io.</li>
+        <li><strong>Survol Satellite</strong> – Calcule les survols de satellites d'observation terrestre, militaires et m&eacute;t&eacute;orologiques au-dessus d'une Watch Zone. Bas&eacute; sur les donn&eacute;es orbitales TLE publiques (CelesTrak) et la propagation SGP4. Animation 24h, corridors d'imagerie, heatmap de densit&eacute;, base de donn&eacute;es de r&eacute;solution (~100 satellites connus), d&eacute;tection de chevauchements d'observation et risque de collision. Pas de cl&eacute; API requise.</li>
       </ul>
 
       <h4>Infrastructure &amp; Environnement</h4>
@@ -854,6 +855,12 @@
         <li><strong>Antennes relais (OpenCelliD)</strong> – Inventaire des antennes relais (GSM, UMTS, LTE, 5G NR) avec portée, puissance du signal et indicateur de couverture LTE/5G. 1 000 requêtes/jour gratuites. Nécessite une clé API OpenCelliD.</li>
         <li><strong>Qualité de l'air (OpenAQ)</strong> – PM2.5, PM10, ozone, NO₂, SO₂, CO dans le monde entier. Codage couleur selon l'échelle EPA. Les pics indiquent des incendies, explosions ou accidents industriels. Triangulable. Nécessite une clé API OpenAQ (gratuite).</li>
         <li><strong>Réseau électrique (ENTSO-E)</strong> – Charge du réseau dans plus de 30 pays européens. Courbe de charge sur 48h avec détection d'anomalies (indicateur de panne à &gt;30% de baisse de charge). Triangulable. Nécessite un jeton de sécurité ENTSO-E (gratuit, demande par e-mail).</li>
+        <li><strong>Santé Internet (IODA)</strong> – Surveillance backbone et connectivité via IODA (Georgia Tech). Routes BGP, sondage actif, Merit darknet et trafic Google pour 30+ pays. Détecte les pannes Internet, les coupures de câbles et les coupures gouvernementales. Triangulable. Aucune clé API requise.</li>
+      </ul>
+
+      <h4>Finance &amp; Matières premières</h4>
+      <ul>
+        <li><strong>Prix des matières premières</strong> – Surveillance en temps réel des prix des matières premières via Yahoo Finance : énergie (WTI, Brent, gaz naturel), métaux (or, argent, cuivre, palladium), agriculture (blé, maïs, soja, café, cacao) et bétail. Affichage catégorisé avec courbes de prix. Triangulable. Aucune clé API requise.</li>
       </ul>
 
       <h4>Conflits &amp; Migration</h4>
@@ -869,7 +876,7 @@
         <li><strong>Telegram Monitor</strong> – Surveillance par mots-clés des canaux Telegram publics. Affiche le volume de mentions sur 90 jours avec résolution journalière. Triangulable. Nécessite des identifiants API Telegram + session authentifiée.</li>
         <li><strong>Bluesky Monitor</strong> – Surveillance par mots-clés sur Bluesky (AT Protocol). Volume de publications sur 180 jours. Triangulable. Nécessite un identifiant Bluesky + mot de passe d'application.</li>
         <li><strong>Wayback Frequency</strong> – À quelle fréquence une URL a-t-elle été mise en cache par l'Internet Archive ? Fréquence élevée = attention médiatique ou archivage coordonné. Triangulable. Aucune clé API requise.</li>
-        <li><strong>CertWatch</strong> – Surveillance du Certificate Transparency Log pour les domaines.</li>
+        <li><strong>DNS / CT (CertWatch)</strong> – Surveillance du Certificate Transparency Log via crt.sh. Affiche pour les domaines configur&eacute;s : nombre total de certificats, nouveaux sous-domaines, distribution des &eacute;metteurs, chronologie. Pas de cl&eacute; API requise.</li>
         <li><strong>Wikipedia</strong> – Surveille les articles Wikipedia pour détecter les modifications.</li>
         <li><strong>Censys</strong> – Recherche d'actifs Internet (nécessite des identifiants Censys).</li>
       </ul>

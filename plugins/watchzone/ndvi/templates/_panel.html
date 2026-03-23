@@ -1,12 +1,11 @@
 <div id="panel-ndvi" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_ndvi_title">NDVI / Vegetation</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_ndvi_source">Source: Copernicus Sentinel-2 NDVI</span>
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_ndvi_desc">Measures vegetation density via satellite (NDVI index). Decreases may indicate deforestation, drought or agricultural change. The time series appears in the analysis timeline under "Additional Sources".</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_ndvi_help">Measures vegetation density via satellite using the NDVI index (Normalized Difference Vegetation Index), which ranges from -1 (no vegetation) to +1 (dense, healthy vegetation).<br><br><b>How to use:</b> Draw a zone on the map and click "Live". The system calculates the NDVI trend over the last 90 days, showing current, maximum, minimum and average values. The time series is automatically integrated into the analysis timeline under "Additional Sources".<br><br><b>Forensic relevance:</b> Sudden NDVI decreases can indicate deforestation, bombing damage, wildfire aftermath or agricultural collapse. Gradual declines may point to drought or desertification. Comparing NDVI with conflict data helps assess environmental impact of military operations.<br><br><b>Data source:</b> Copernicus Sentinel-2 — requires Copernicus credentials.</div>
   </div>
   <div class="wz-main-body">
-    <div id="wz-map-ndvi" class="wz-map-container" style="height:500px;"></div>
+    <div id="wz-map-ndvi" class="wz-map-container" ></div>
     <div class="wz-hint" id="wz-hint-ndvi" data-i18n="wz_ndvi_hint">
       Draw observation areas on the map for which NDVI vegetation data
       will be displayed in the analysis timeline (under "Additional Sources").

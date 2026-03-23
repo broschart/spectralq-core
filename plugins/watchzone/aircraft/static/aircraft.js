@@ -5,67 +5,86 @@
 "use strict";
 var WZ = window.WZ;
 
-  // ── Plugin-Elemente aus dem Store in den Popup verschieben ──────────────
-  function _acInjectElements() {
+  // ── Plugin-Elemente aus dem Store klonen und in den Popup-Kontext einhängen ──
+  // Store-Elemente klonen und ins Popup verschieben.
+  // Original im Store behält eine Backup-ID, Klon bekommt die echte ID.
+  var _acClonedIds = [];
+  function _cloneStoreEl(id) {
+    var el = document.getElementById(id);
+    if (!el) return null;
     var store = document.getElementById("wz-plugin-store");
-    if (!store) return;
-    var header = document.getElementById("wz-live-header");
-    var fsBtn = document.getElementById("wz-live-fs-btn");
-    // Header-Buttons (Projection, Heatmap) vor den Fullscreen-Button
-    var projBtn = document.getElementById("wz-projection-btn");
-    if (projBtn && projBtn.parentNode === store) header.insertBefore(projBtn, fsBtn);
-    var heatBtn = document.getElementById("wz-heatmap-btn");
-    if (heatBtn && heatBtn.parentNode === store) header.insertBefore(heatBtn, fsBtn);
-    // Refresh-Bar nach dem Header
-    var refreshBar = document.getElementById("wz-refresh-bar");
-    if (refreshBar && refreshBar.parentNode === store) header.parentNode.insertBefore(refreshBar, header.nextSibling);
-    // Seitenpanels in die Map-Row
-    var mapRow = document.getElementById("wz-map-row");
-    var proxPanel = document.getElementById("wz-proximity-panel");
-    if (proxPanel && proxPanel.parentNode === store) mapRow.appendChild(proxPanel);
-    var projPanel = document.getElementById("wz-projection-panel");
-    if (projPanel && projPanel.parentNode === store) mapRow.appendChild(projPanel);
-    // ParCoords + Resize-Handle nach wz-resize-map
-    var resizeMap = document.getElementById("wz-resize-map");
-    var pcInline = document.getElementById("wz-parcoords-inline");
-    if (pcInline && pcInline.parentNode === store) resizeMap.parentNode.insertBefore(pcInline, resizeMap.nextSibling);
-    var pcResize = document.getElementById("wz-resize-parcoords");
-    if (pcResize && pcResize.parentNode === store) {
-      var afterPc = pcInline.nextSibling;
-      pcInline.parentNode.insertBefore(pcResize, afterPc);
-    }
+    // Wenn das Element nicht im Store ist (sondern schon im Popup), direkt zurückgeben
+    if (!store || !store.contains(el)) return el;
+    var clone = el.cloneNode(true);
+    // Original umbenennen, Klon bekommt die echte ID
+    el.id = id + "--store-backup";
+    clone.id = id;
+    _acClonedIds.push(id);
+    return clone;
   }
-
-  function _acReturnToStore() {
-    var store = document.getElementById("wz-plugin-store");
-    if (!store) return;
-    ["wz-projection-btn","wz-heatmap-btn","wz-refresh-bar",
-     "wz-proximity-panel","wz-projection-panel",
-     "wz-parcoords-inline","wz-resize-parcoords"].forEach(function(id) {
-      var el = document.getElementById(id);
-      if (el && el.parentNode !== store) store.appendChild(el);
+  // Nach Popup-Close: Store-IDs wiederherstellen
+  WZ._onLiveClose.push(function() {
+    _acClonedIds.forEach(function(id) {
+      var backup = document.getElementById(id + "--store-backup");
+      if (backup) backup.id = id;
     });
+    _acClonedIds = [];
+  });
+
+  function _acInjectElements() {
+    var ctx = WZ._currentCtx;
+    if (!ctx) return;
+    var header = ctx.headerEl;
+    var fsBtn = ctx.fsBtnEl;
+    // Header-Buttons (Projection, Heatmap) vor den Fullscreen-Button
+    var projBtn = _cloneStoreEl("wz-projection-btn");
+    if (projBtn && header) header.insertBefore(projBtn, fsBtn);
+    var heatBtn = _cloneStoreEl("wz-heatmap-btn");
+    if (heatBtn && header) header.insertBefore(heatBtn, fsBtn);
+    // Refresh-Bar ins Body (vor Content)
+    var refreshBar = _cloneStoreEl("wz-refresh-bar");
+    if (refreshBar && ctx.boxEl) {
+      // Refresh-Bar nach dem Header einfügen
+      var headerEl = ctx.headerEl;
+      if (headerEl && headerEl.nextSibling) {
+        ctx.boxEl.insertBefore(refreshBar, headerEl.nextSibling);
+      }
+    }
+    // Seitenpanels in die Map-Row
+    var mapRow = ctx.mapRowEl;
+    var proxPanel = _cloneStoreEl("wz-proximity-panel");
+    if (proxPanel && mapRow) mapRow.appendChild(proxPanel);
+    var projPanel = _cloneStoreEl("wz-projection-panel");
+    if (projPanel && mapRow) mapRow.appendChild(projPanel);
+    // ParCoords + Resize-Handle zwischen Map-Row und Sticky einfügen
+    var pcInline = _cloneStoreEl("wz-parcoords-inline");
+    var pcResize = _cloneStoreEl("wz-resize-parcoords");
+    if (pcInline && ctx.stickyEl) {
+      ctx.boxEl.insertBefore(pcInline, ctx.stickyEl);
+      if (pcResize) ctx.boxEl.insertBefore(pcResize, ctx.stickyEl);
+    }
   }
 
   // ── Flugzeuge rendern ──────────────────────────────────────────────────
   function _renderAircraftLive(data) {
+    var ctx = WZ._currentCtx;
+    var _countEl = ctx.countEl;
+    var _contentEl = ctx.contentEl;
+    var _stickyEl = ctx.stickyEl;
     _acInjectElements();
     const items = data.items || [];
     WZ._liveAircraftItems = items;
     const anomCount = items.filter(a => a.anomaly_score > 0).length;
-    document.getElementById("wz-live-count").textContent =
+    _countEl.textContent =
       items.length + " aircraft" + (anomCount ? ` · ${anomCount} anomalies` : "");
     if (WZ._liveMarkers) WZ._liveMarkers.clearLayers();
     _acMarkerByIdx = [];
     // 3D-Button einblenden
-    const _btn3d = document.getElementById('wz-3d-btn');
-    if (_btn3d) _btn3d.style.display = items.length ? 'block' : 'none';
-    // 3D-View aktualisieren falls aktiv
-    _wzUpdate3DEntities();
+    // (3D entfernt)
 
     items.forEach((a, idx) => {
-      const color = WZ._anomalyColor(a.anomaly_score || 0);
-      const size = a.anomaly_score >= 30 ? 24 : a.anomaly_score >= 15 ? 21 : 18;
+      const color = _acGetMarkerColor(a);
+      const size = _acGetMarkerSize(a);
       const icon = L.divIcon({
         className: "",
         html: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="transform:rotate(${a.heading || 0}deg);filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));cursor:pointer;">
@@ -90,24 +109,32 @@ var WZ = window.WZ;
       if (WZ._liveMarkers) WZ._liveMarkers.addLayer(m);
     });
 
-    if (WZ._liveMap && WZ._liveMarkers && WZ._liveMarkers.getLayers().length) {
+    if (WZ._liveMap && WZ._liveMarkers && typeof WZ._liveMarkers.getBounds === 'function' && WZ._liveMarkers.getLayers().length) {
       WZ._liveMap.fitBounds(WZ._liveMarkers.getBounds(), { padding: [30, 30], maxZoom: 12 });
     }
     WZ._updateZoneTimeLabel(items);
 
     // Tabelle
-    const content = document.getElementById("wz-live-content");
+    const content = _contentEl;
     if (!items.length) {
-      content.innerHTML = `<p style="color:var(--muted);text-align:center;padding:12px;">${t('wz_aircraft_empty','No aircraft found in this zone.')}</p>`;
+      const isApiWarn = data.warning === "api_empty";
+      content.innerHTML = isApiWarn
+        ? `<div style="text-align:center;padding:20px 12px;">
+            <p style="color:#f59e0b;font-weight:600;">Data source returned 0 aircraft</p>
+            <p style="color:var(--muted);font-size:12px;margin-top:4px;">
+              airplanes.live may be temporarily unavailable or rate-limited.<br>
+              Try again in a few seconds.</p>
+           </div>`
+        : `<p style="color:var(--muted);text-align:center;padding:12px;">${t('wz_aircraft_empty','No aircraft found in this zone.')}</p>`;
       return;
     }
     // Sticky-Header: Button + Tabellenkopf außerhalb des Scrollbereichs
-    const stickyEl = document.getElementById("wz-live-sticky");
+    const stickyEl = _stickyEl;
     stickyEl.innerHTML = `
       <div style="display:flex;align-items:center;padding:6px 8px 4px;gap:10px;">
-        <button data-parcoords-btn onclick="wzToggleParCoords()" style="background:var(--accent1);color:#fff;border:none;border-radius:6px;
+        <button data-parcoords-btn onclick="wzToggleParCoords()" style="background:var(--accent3);color:#fff;border:none;border-radius:6px;
           padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
-          ${t('wz_aircraft_analyse','⫼ Analyse Air Traffic')}
+          ${t('wz_aircraft_analyse','Analyse Air Traffic')}
         </button>
         <span id="wz-ac-count" style="font-size:12px;color:var(--muted);">${items.length} ${t('wz_aircraft_count_zone','aircraft in zone')}</span>
       </div>
@@ -168,6 +195,10 @@ var WZ = window.WZ;
         }).join("")}
         </tbody>
       </table>`;
+    // ── ParCoords nach Daten-Refresh neu zeichnen (Closure synchronisieren) ──
+    if (WZ._parCoordsOpen) {
+      setTimeout(() => _drawParallelCoords(items), 50);
+    }
     // ── Auto-Kollisionscheck beim Laden ──────────────────────────────────
     setTimeout(() => _autoCollisionCheck(items), 100);
   }
@@ -354,8 +385,7 @@ var WZ = window.WZ;
     const a = WZ._liveAircraftItems[idx];
     if (!a) return;
 
-    // 3D-Ansicht: Cesium-Entity hervorheben
-    if (_cesium3DActive && _cesiumViewer) {
+    if (false) { // 3D entfernt
       const entity = _cesiumEntitiesByIdx[idx];
       if (entity && entity.billboard) {
         const svgHL = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24'><path d='M12 2 L16 20 L12 16 L8 20 Z' fill='white' stroke='%233b82f6' stroke-width='1.5'/></svg>`;
@@ -395,8 +425,7 @@ var WZ = window.WZ;
     // Clear parallel coords highlight
     if (_parCoordsHighlightByIdx) _parCoordsHighlightByIdx(-1);
 
-    // 3D-Ansicht: Cesium-Entity zurücksetzen
-    if (_cesium3DActive && _cesiumViewer) {
+    if (false) { // 3D entfernt
       const entity = _cesiumEntitiesByIdx[idx];
       if (entity && entity.billboard) {
         entity.billboard.image = entity._origSvg;
@@ -440,217 +469,77 @@ var WZ = window.WZ;
     if (WZ._liveMap) WZ._liveMap.getContainer().style.cursor = "";
   }
 
-  // ── 3D-Modus (Cesium.js) ──────────────────────────────────────────────
-  let _cesiumViewer = null;
-  let _cesium3DActive = false;
-  let _cesiumEntitiesByIdx = [];
+  // ParCoords Standard-Opacity
+  WZ._pcOpacity = 0.1;
 
-  function _loadCesiumLib(cb, errcb) {
-    if (window.Cesium) { cb(); return; }
-    // unpkg mit pinned Version – zuverlässig verfügbar
-    const BASE = 'https://unpkg.com/cesium@1.111.0/Build/Cesium/';
-    window.CESIUM_BASE_URL = BASE;
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = BASE + 'Widgets/widgets.css';
-    document.head.appendChild(link);
-    const script = document.createElement('script');
-    script.src = BASE + 'Cesium.js';
-    script.onload = cb;
-    script.onerror = errcb || (() => {});
-    document.head.appendChild(script);
+  // Map-Modus: "score" (Anomalie-Score) oder "height" (Höhe)
+  var _acMapMode = "score";
+
+  function _acHeightColor(alt_m) {
+    if (alt_m == null || alt_m <= 0) return "#ef4444"; // am Boden → rot
+    if (alt_m < 500) return "#f97316";   // sehr niedrig → orange
+    if (alt_m < 2000) return "#eab308";  // niedrig → gelb
+    if (alt_m < 5000) return "#22c55e";  // mittel → grün
+    if (alt_m < 8000) return "#3b82f6";  // hoch → blau
+    if (alt_m < 11000) return "#6366f1"; // sehr hoch → indigo
+    return "#312e81";                     // FL350+ → dunkel
   }
 
-  window.wzToggle3D = function() {
-    const cesiumEl = document.getElementById('wz-cesium-container');
-    const btn = document.getElementById('wz-3d-btn');
-    if (_cesium3DActive) {
-      _cesium3DActive = false;
-      if (cesiumEl) cesiumEl.style.display = 'none';
-      if (btn) { btn.textContent = '⬡ 3D'; btn.style.background = 'rgba(15,23,42,.85)'; }
-      if (WZ._liveMap) WZ._liveMap.invalidateSize();
-      return;
+  function _acGetMarkerColor(a) {
+    if (_acMapMode === "height") return _acHeightColor(a.alt_m);
+    return WZ._anomalyColor(a.anomaly_score || 0);
+  }
+
+  function _acGetMarkerSize(a) {
+    if (_acMapMode === "height") {
+      if (a.alt_m == null || a.alt_m <= 0) return 22; // am Boden → größer
+      return 18;
     }
-    if (btn) { btn.textContent = t('wz_3d_loading','⌛ Loading…'); btn.style.background = 'rgba(30,30,60,.9)'; btn.disabled = true; }
-    _loadCesiumLib(
-      () => {  // success
-        _cesium3DActive = true;
-        if (cesiumEl) cesiumEl.style.display = '';
-        if (btn) { btn.textContent = '⬡ 2D'; btn.style.background = 'rgba(124,58,237,.85)'; btn.disabled = false; }
-        // requestAnimationFrame: Container erst rendern lassen, dann Cesium init
-        requestAnimationFrame(() => requestAnimationFrame(() => _wzInitCesium(cesiumEl)));
-      },
-      () => {  // error
-        if (btn) { btn.textContent = '⬡ 3D'; btn.style.background = 'rgba(15,23,42,.85)'; btn.disabled = false; }
-        alert(t('wz_cesium_error','Could not load Cesium.js. Please check your internet connection.'));
-      }
-    );
+    return a.anomaly_score >= 30 ? 24 : a.anomaly_score >= 15 ? 21 : 18;
+  }
+
+  function _acRefreshMarkers() {
+    var items = WZ._liveAircraftItems || [];
+    items.forEach(function(a, idx) {
+      var m = _acMarkerByIdx[idx];
+      if (!m) return;
+      var color = _acGetMarkerColor(a);
+      var size = _acGetMarkerSize(a);
+      var isGround = _acMapMode === "height" && (a.alt_m == null || a.alt_m <= 0);
+      var groundRing = isGround ? 'stroke-width="2" stroke="#fff"' : 'stroke-width=".5" stroke="rgba(0,0,0,.3)"';
+      var icon = L.divIcon({
+        className: "",
+        html: '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" style="transform:rotate(' + (a.heading || 0) + 'deg);filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));cursor:pointer;">' +
+          '<path d="M12 2 L16 20 L12 16 L8 20 Z" fill="' + color + '" ' + groundRing + '/>' +
+          (isGround ? '<circle cx="12" cy="12" r="10" fill="none" stroke="#fff" stroke-width="1.5" stroke-dasharray="3,3"/>' : '') +
+          '</svg>',
+        iconSize: [size, size],
+        iconAnchor: [size/2, size/2],
+      });
+      m.setIcon(icon);
+    });
+  }
+
+  window.wzToggleMapMode = function(mode) {
+    _acMapMode = mode;
+    _acRefreshMarkers();
+    // Button-Styles
+    var btnS = document.getElementById("wz-ac-mode-score");
+    var btnH = document.getElementById("wz-ac-mode-height");
+    if (btnS) { btnS.style.background = mode === "score" ? "var(--accent3)" : "none"; btnS.style.color = mode === "score" ? "#fff" : "var(--muted)"; }
+    if (btnH) { btnH.style.background = mode === "height" ? "#3b82f6" : "none"; btnH.style.color = mode === "height" ? "#fff" : "var(--muted)"; }
+    // Legende
+    var leg = document.getElementById("wz-ac-height-legend");
+    if (leg) leg.style.display = mode === "height" ? "flex" : "none";
   };
 
-  function _wzInitCesium(container) {
-    if (_cesiumViewer) {
-      _wzUpdate3DEntities();
-      return;
-    }
-    try {
-      // Dummy-Token damit Cesium nicht sofort abbricht; Ion-Ressourcen werden
-      // nicht genutzt, da wir eigene Imagery + Terrain setzen.
-      Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder';
+  let _cesium3DActive = false;
 
-      _cesiumViewer = new Cesium.Viewer(container, {
-        terrainProvider: new Cesium.EllipsoidTerrainProvider(),
-        baseLayerPicker: false, geocoder: false, homeButton: false,
-        sceneModePicker: false, navigationHelpButton: false,
-        animation: false, timeline: false, fullscreenButton: false,
-        infoBox: false, selectionIndicator: false,
-      });
-
-      // Eigene OSM-Imagery einsetzen (Ion-Bildlayer entfernen)
-      _cesiumViewer.imageryLayers.removeAll();
-      _cesiumViewer.imageryLayers.addImageryProvider(
-        new Cesium.UrlTemplateImageryProvider({
-          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          maximumLevel: 19,
-          credit: '© OpenStreetMap contributors',
-        })
-      );
-
-      // Kredite und UI-Extras ausblenden
-      const creditContainer = _cesiumViewer.cesiumWidget.creditContainer;
-      if (creditContainer) creditContainer.style.display = 'none';
-
-      _cesiumViewer.scene.skyBox.show = false;
-      _cesiumViewer.scene.sun.show = false;
-      _cesiumViewer.scene.moon.show = false;
-      _cesiumViewer.scene.skyAtmosphere.show = false;
-      _cesiumViewer.scene.globe.enableLighting = false;
-      _cesiumViewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#1e293b');
-    } catch(e) {
-      console.error('Cesium init Fehler:', e);
-      const btn = document.getElementById('wz-3d-btn');
-      if (btn) { btn.textContent = '⬡ 3D'; btn.style.background = 'rgba(15,23,42,.85)'; btn.disabled = false; }
-      _cesium3DActive = false;
-      container.style.display = 'none';
-      return;
-    }
-    _wzUpdate3DEntities();
-  }
-
-  function _wzUpdate3DEntities() {
-    if (!_cesiumViewer || !_cesium3DActive) return;
-    _cesiumViewer.entities.removeAll();
-    _cesiumEntitiesByIdx = [];
-    const items = WZ._liveAircraftItems;
-    if (!items.length) return;
-
-    items.forEach((ac, idx) => {
-      if (ac.lat == null || ac.lon == null) return;
-      const alt   = ac.alt_m || 0;
-      const sc    = ac.anomaly_score || 0;
-      const color = sc >= 30 ? '#ef4444' : sc >= 15 ? '#f97316' : sc >= 5 ? '#eab308' : '#f59e0b';
-      const hdg   = ac.heading || 0;
-      const pos   = Cesium.Cartesian3.fromDegrees(ac.lon, ac.lat, alt);
-      const posG  = Cesium.Cartesian3.fromDegrees(ac.lon, ac.lat, 0);
-      const c     = Cesium.Color.fromCssColorString(color);
-      const enc   = color.replace('#', '%23');
-      const svg   = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M12 2 L16 20 L12 16 L8 20 Z' fill='${enc}' stroke='rgba(0,0,0,0.6)' stroke-width='0.8'/></svg>`;
-
-      const entity = _cesiumViewer.entities.add({
-        position: pos,
-        billboard: {
-          image: svg, scale: 1.3,
-          rotation: Cesium.Math.toRadians(-hdg),
-          alignedAxis: Cesium.Cartesian3.UNIT_Z,
-          verticalOrigin: Cesium.VerticalOrigin.CENTER,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        },
-        label: {
-          text: (ac.callsign || ac.icao24 || '?').trim(),
-          font: '11px monospace',
-          fillColor: Cesium.Color.WHITE,
-          outlineColor: Cesium.Color.BLACK,
-          outlineWidth: 2,
-          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          pixelOffset: new Cesium.Cartesian2(0, -18),
-          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 600000),
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        },
-        polyline: {
-          positions: [posG, pos],
-          width: 1,
-          material: new Cesium.ColorMaterialProperty(c.withAlpha(0.3)),
-          arcType: Cesium.ArcType.NONE,
-        },
-      });
-      entity._origSvg = svg;
-      entity._origColor = color;
-      _cesiumEntitiesByIdx[idx] = entity;
-    });
-
-    // Zone-Umriss einzeichnen
-    const zone3d = WZ._zones.find(z => z.id === WZ._liveZoneId);
-    let zoneBounds = null;
-    if (zone3d && zone3d.geometry) {
-      try {
-        const b = L.geoJSON(zone3d.geometry).getBounds();
-        zoneBounds = { south: b.getSouth(), north: b.getNorth(),
-                       west: b.getWest(), east: b.getEast(),
-                       cLat: b.getCenter().lat, cLon: b.getCenter().lng };
-        const zCol = Cesium.Color.fromCssColorString(WZ.ZONE_COLORS[zone3d.zone_type] || '#3b82f6').withAlpha(0.85);
-        const geom = zone3d.geometry;
-        const rings = geom.type === 'Polygon'      ? [geom.coordinates[0]]
-                    : geom.type === 'MultiPolygon' ? geom.coordinates.map(p => p[0])
-                    : null;
-        if (rings) rings.forEach(ring => {
-          _cesiumViewer.entities.add({
-            polyline: {
-              positions: ring.map(([ln, lt]) => Cesium.Cartesian3.fromDegrees(ln, lt, 0)),
-              width: 2,
-              material: new Cesium.PolylineDashMaterialProperty({ color: zCol, dashLength: 18 }),
-              clampToGround: true,
-            }
-          });
-        });
-      } catch(_) {}
-    }
-
-    // Kamera: Zone + Maschinen gemeinsam in den Blick nehmen, Blick zum Horizont
-    const validAc = items.filter(a => a.lat != null && a.lon != null);
-    const allLats = validAc.map(a => a.lat);
-    const allLons = validAc.map(a => a.lon);
-    if (zoneBounds) {
-      allLats.push(zoneBounds.south, zoneBounds.north);
-      allLons.push(zoneBounds.west, zoneBounds.east);
-    }
-    if (!allLats.length) return;
-
-    const centerLat = (Math.min(...allLats) + Math.max(...allLats)) / 2;
-    const centerLon = (Math.min(...allLons) + Math.max(...allLons)) / 2;
-    const span      = Math.max(Math.max(...allLats) - Math.min(...allLats),
-                               Math.max(...allLons) - Math.min(...allLons));
-    const altM      = Math.max(span * 111000 * 0.35, 8000);
-    const offsetDeg = span * 0.9 + 1.0;
-
-    _cesiumViewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - offsetDeg, altM),
-      orientation: {
-        heading: 0,
-        pitch: Cesium.Math.toRadians(-6),   // flacher Blick – Horizont sichtbar
-        roll: 0,
-      },
-      duration: 1.5,
-    });
-  }
-
-  function _wzDestroyCesium() {
-    if (_cesiumViewer) { try { _cesiumViewer.destroy(); } catch(_) {} _cesiumViewer = null; }
-    _cesium3DActive = false;
-    const cesiumEl = document.getElementById('wz-cesium-container');
-    if (cesiumEl) cesiumEl.style.display = 'none';
-    const btn = document.getElementById('wz-3d-btn');
-    if (btn) { btn.textContent = '⬡ 3D'; btn.style.background = 'rgba(15,23,42,.85)'; btn.style.display = 'none'; }
-  }
+  // 3D-Funktionen entfernt
+  window.wzToggle3D = function() {};
+  function _wzUpdate3DEntities() {}
+  function _wzDestroyCesium() {}
+  var _cesiumEntitiesByIdx = [];
 
   function _wzDistItems() {
     return WZ._liveAircraftItems.length ? WZ._liveAircraftItems : (WZ._liveVesselItems || []);
@@ -1515,7 +1404,7 @@ WZ._heatActive = false;
     // Echte Maschinen wieder einblenden
     if (WZ._liveMarkers && WZ._liveMap) WZ._liveMarkers.addTo(WZ._liveMap);
     const btn = document.getElementById("wz-projection-btn");
-    if (btn) { btn.style.background = "var(--accent1)"; btn.textContent = t('wz_btn_projection_on','🕐 Hourly Projection'); }
+    if (btn) { btn.style.background = "var(--accent3)"; btn.textContent = t('wz_btn_projection_on','🕐 Hourly Projection'); }
   }
 
   window.wzToggleProjection = function() {
@@ -1719,12 +1608,15 @@ WZ._heatActive = false;
         const simSec  = Math.min(realSec * _PROJ_SPEED, _PROJ_SIM_S);
         const simWall = _projAnimStartWall + simSec * 1000;
 
-        // Ghost-Marker bewegen
+        // Ghost-Marker bewegen (Position immer aktuell, Sichtbarkeit per Filter)
         ghostMarkers.forEach((m, i) => {
           const a   = m._projAc;
           const pos = _projCalcPos(a.lat, a.lon, a.heading, a.velocity * simSec);
           m.setLatLng([pos.lat, pos.lon]);
-          trails[i].addLatLng([pos.lat, pos.lon]);
+          const idx = (WZ._liveAircraftItems || []).indexOf(a);
+          const visible = !_parCoordsActiveSet || _parCoordsActiveSet.has(idx);
+          m.setOpacity(visible ? 1 : 0);
+          if (visible) trails[i].addLatLng([pos.lat, pos.lon]);
         });
 
         // Zonenzeit-Label auf simulierte Uhrzeit setzen
@@ -1733,6 +1625,12 @@ WZ._heatActive = false;
         // Kollisionsmarker setzen sobald Simzeit den Kollisionszeitpunkt erreicht
         collisions.forEach((c, ci) => {
           if (triggered.has(ci) || simSec < c.t) return;
+          // Kollision nur anzeigen wenn beide Maschinen im aktiven Filter sind
+          if (_parCoordsActiveSet) {
+            const idxA = (WZ._liveAircraftItems || []).indexOf(c.a);
+            const idxB = (WZ._liveAircraftItems || []).indexOf(c.b);
+            if (!_parCoordsActiveSet.has(idxA) || !_parCoordsActiveSet.has(idxB)) return;
+          }
           triggered.add(ci);
           const listEl = document.querySelector(`#wz-proj-collision-list [data-ci="${ci}"]`);
           if (listEl) listEl.style.background = c.dist3dKm < 0.1 ? "rgba(239,68,68,.45)" : "rgba(249,115,22,.45)";
@@ -1808,18 +1706,21 @@ WZ._parCoordsOpen = false;
   let _projBlinkInterval = null;   // setInterval-Handle
 
   window.wzToggleParCoords = function() {
-    const panel = document.getElementById("wz-parcoords-inline");
+    var _tCtx = WZ._currentCtx;
+    var _tRoot = (_tCtx && _tCtx.overlayEl) || document;
+    const panel = _tRoot.querySelector("#wz-parcoords-inline") || document.getElementById("wz-parcoords-inline");
     if (WZ._parCoordsOpen) {
       // Im Side-by-Side-Modus nicht schließen
       if (WZ._fsSideBySide) return;
       panel.style.display = "none";
-      document.getElementById("wz-resize-parcoords").style.display = "none";
+      var _rpc = _tRoot.querySelector("#wz-resize-parcoords") || document.getElementById("wz-resize-parcoords");
+      if (_rpc) _rpc.style.display = "none";
       WZ._parCoordsOpen = false;
       _parCoordsFilterFn = null;
       _parCoordsHighlightByIdx = null;
       _applyParCoordsFilter(null);  // remove filter
       const btn = document.querySelector("[data-parcoords-btn]");
-      if (btn) { btn.style.background = "var(--accent1)"; btn.textContent = "⫼ Analyse Air Traffic"; }
+      if (btn) { btn.style.background = "var(--accent3)"; btn.textContent = "Analyse Air Traffic"; }
     } else {
       wzShowParallelCoords();
     }
@@ -1829,13 +1730,19 @@ WZ._parCoordsOpen = false;
     const items = WZ._liveAircraftItems;
     if (!items || !items.length) return;
 
-    const panel = document.getElementById("wz-parcoords-inline");
-    panel.style.display = "";
-    document.getElementById("wz-resize-parcoords").style.display = "";
+    // Panel im aktuellen Popup-Context suchen (nicht im Store)
+    var ctx = WZ._currentCtx;
+    var panel = ctx ? ctx.overlayEl.querySelector("#wz-parcoords-inline, [data-role='parcoords-inline']") : document.getElementById("wz-parcoords-inline");
+    if (!panel) panel = document.getElementById("wz-parcoords-inline");
+    if (!panel) return;
+    panel.style.cssText = panel.style.cssText.replace(/display\s*:\s*none\s*;?/i, '') + "display:block;";
+    var _pcResize = ctx ? ctx.overlayEl.querySelector("#wz-resize-parcoords") : document.getElementById("wz-resize-parcoords");
+    if (!_pcResize) _pcResize = document.getElementById("wz-resize-parcoords");
+    if (_pcResize) _pcResize.style.cssText = _pcResize.style.cssText.replace(/display\s*:\s*none\s*;?/i, '') + "display:block;";
     WZ._parCoordsOpen = true;
 
     const btn = document.querySelector("[data-parcoords-btn]");
-    if (btn) { btn.style.background = "#dc2626"; btn.textContent = "⫼ Close Analysis"; }
+    if (btn) { btn.style.background = "#dc2626"; btn.textContent = "Close Analysis"; }
 
     setTimeout(() => {
       _drawParallelCoords(items);
@@ -1865,12 +1772,10 @@ WZ._parCoordsOpen = false;
     items.forEach((a, idx) => {
       const marker = _acMarkerByIdx[idx];
       if (!marker) return;
-      if (!filterSet) {
-        // No filter — show all
-        marker.setOpacity(1);
-      } else {
-        marker.setOpacity(filterSet.has(idx) ? 1 : 0.12);
-      }
+      const show = !filterSet || filterSet.has(idx);
+      marker.setOpacity(show ? 1 : 0);
+      const el = marker.getElement && marker.getElement();
+      if (el) el.style.pointerEvents = show ? "" : "none";
     });
 
     // Update table rows
@@ -1907,8 +1812,17 @@ WZ._parCoordsOpen = false;
       if (resetBtn) resetBtn.style.display = "none";
     }
 
-    // Kollisionsliste neu berechnen wenn Projektion aktiv
+    // Projektion: Ghost-Marker ein-/ausblenden + Kollisionsliste neu berechnen
     if (_projActive && _projAircraft && _projGhostMarkersRef) {
+      // Ghost-Marker Sichtbarkeit anpassen
+      _projGhostMarkersRef.forEach(m => {
+        const ac = m._projAc;
+        const idx = (WZ._liveAircraftItems || []).indexOf(ac);
+        const show = !filterSet || filterSet.has(idx);
+        m.setOpacity(show ? 1 : 0);
+        const el = m.getElement && m.getElement();
+        if (el) el.style.pointerEvents = show ? "" : "none";
+      });
       const filteredAc = _projAircraft.filter(a => {
         const idx = (WZ._liveAircraftItems || []).indexOf(a);
         return idx < 0 || !filterSet || filterSet.has(idx);
@@ -1928,9 +1842,11 @@ WZ._parCoordsOpen = false;
     }
   }
 
-  function _drawParallelCoords(items) {
-    const canvas = document.getElementById("wz-parcoords-canvas");
-    const body = document.getElementById("wz-parcoords-body");
+  window._drawParallelCoords = function _drawParallelCoords(items) {
+    var _pcCtx = WZ._currentCtx;
+    var _pcRoot = (_pcCtx && _pcCtx.overlayEl) || document;
+    const canvas = _pcRoot.querySelector("#wz-parcoords-canvas") || document.getElementById("wz-parcoords-canvas");
+    const body = _pcRoot.querySelector("#wz-parcoords-body") || document.getElementById("wz-parcoords-body");
     if (!canvas || !body) return;
 
     const W = body.clientWidth - 20;
@@ -2250,7 +2166,8 @@ WZ._parCoordsOpen = false;
         if (lp === highlighted) return;
         if (useBrush && lp.active) return; // aktive später in Rot
         const dimByHover = highlighted && lp !== highlighted;
-        const alpha = (useBrush || dimByHover) ? "0.06)" : "0.8)";
+        const _op = WZ._pcOpacity != null ? WZ._pcOpacity : 0.4;
+        const alpha = (useBrush || dimByHover) ? "0.06)" : (_op + ")");
         ctx.strokeStyle = lp.color + alpha;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -2610,7 +2527,6 @@ WZ._parCoordsOpen = false;
     _parCoordsHighlightByIdx = null;
     _wzProjStop();
     _wzDestroyCesium();
-    _acReturnToStore();
   });
 
   WZ._onLiveReset.push(function() {
@@ -2630,99 +2546,118 @@ WZ._parCoordsOpen = false;
     if (WZ._parCoordsOpen) _drawParallelCoords(WZ._liveAircraftItems);
   });
 
-  // ── Fullscreen Side-by-Side (Aircraft only) ──────────────────────────
-  WZ._onFullscreenChange.push(function(isLiveOverlayFS) {
-    var isWide = window.innerWidth >= 1200;
-    // Nur aktiv wenn Aircraft-Plugin gerade angezeigt wird
-    var isAircraft = document.getElementById("wz-parcoords-inline");
-
-    if (isLiveOverlayFS && isWide && isAircraft) {
-      WZ._fsSideBySide = true;
-      setTimeout(function() {
-        var box = document.getElementById("wz-live-box");
-        var parcoords = document.getElementById("wz-parcoords-inline");
-        var resizeH = document.getElementById("wz-resize-parcoords");
-        var sticky = document.getElementById("wz-live-sticky");
-        var body = document.getElementById("wz-live-body");
-        if (!box || !parcoords || !sticky || !body) return;
-
-        var row = document.createElement("div");
-        row.id = "wz-fs-row";
-        var right = document.createElement("div");
-        right.id = "wz-lower-right";
-        right.className = "wz-fs-right";
-
-        // Höhe: Unterkante Karte bis Unterkante Box
-        var boxRect = box.getBoundingClientRect();
-        var mapRow = document.getElementById("wz-map-row");
-        var refBottom = mapRow ? mapRow.getBoundingClientRect().bottom : boxRect.top;
-        var underMap = document.getElementById("wz-under-map-bar");
-        if (underMap && underMap.offsetHeight > 0) refBottom = underMap.getBoundingClientRect().bottom;
-        var availH = boxRect.bottom - refBottom;
-        row.style.cssText = "display:flex;flex-direction:row;height:" + availH + "px;overflow:hidden;";
-
-        parcoords.parentNode.insertBefore(row, parcoords);
-        row.appendChild(parcoords);
-        if (resizeH) resizeH.style.display = "none";
-        right.appendChild(sticky);
-        right.appendChild(body);
-        row.appendChild(right);
-
-        var pcBtn = document.querySelector("[data-parcoords-btn]");
-        if (pcBtn) pcBtn.style.display = "none";
-
-        if (!WZ._parCoordsOpen && window.wzShowParallelCoords) wzShowParallelCoords();
-
-        parcoords.style.width = "50%";
-        parcoords.style.height = "100%";
-        parcoords.style.flex = "none";
-        parcoords.style.display = "flex";
-        parcoords.style.flexDirection = "column";
-        parcoords.style.borderRight = "1px solid var(--border)";
-        parcoords.style.overflow = "hidden";
-        var pcBody = document.getElementById("wz-parcoords-body");
-        if (pcBody) { pcBody.style.flex = "1"; pcBody.style.height = "0"; pcBody.style.minHeight = "0"; }
-        var closeBtn = parcoords.querySelector("[data-parcoords-close]");
-        if (closeBtn) closeBtn.style.display = "none";
-
-        setTimeout(function() {
-          if (WZ._onResizeParcoords) WZ._onResizeParcoords.forEach(function(fn) { fn(); });
-        }, 150);
-      }, 200);
-    } else if (WZ._fsSideBySide) {
-      WZ._fsSideBySide = false;
-      var row = document.getElementById("wz-fs-row");
-      var box2 = document.getElementById("wz-live-box");
-      if (row && box2) {
-        var parcoords = document.getElementById("wz-parcoords-inline");
-        var resizeH = document.getElementById("wz-resize-parcoords");
-        var sticky = document.getElementById("wz-live-sticky");
-        var body = document.getElementById("wz-live-body");
-        row.parentNode.insertBefore(parcoords, row);
-        if (resizeH) row.parentNode.insertBefore(resizeH, row);
-        row.parentNode.insertBefore(sticky, row);
-        row.parentNode.insertBefore(body, row);
-        var right = document.getElementById("wz-lower-right");
-        if (right) right.remove();
-        row.remove();
-        parcoords.style.cssText = "display:none;height:320px;min-height:80px;flex-shrink:0;overflow:hidden;background:var(--surface);position:relative;";
-        var pcBody = document.getElementById("wz-parcoords-body");
-        if (pcBody) { pcBody.style.flex = ""; pcBody.style.height = ""; pcBody.style.minHeight = ""; }
-        var closeBtn = parcoords.querySelector("[data-parcoords-close]");
-        if (closeBtn) closeBtn.style.display = "";
-      }
-      var pcBtn2 = document.querySelector("[data-parcoords-btn]");
-      if (pcBtn2) pcBtn2.style.display = "";
-      if (WZ._parCoordsOpen && window.wzToggleParCoords) wzToggleParCoords();
-    }
+  // Layout ist bereits side-by-side (Map links, Panel rechts)
+  // Im Fullscreen: CSS :fullscreen übernimmt die Vergrößerung
+  // Fullscreen-Change-Event: Side-by-Side triggern + Map invalidieren
+  // Fullscreen-Change: Side-by-Side triggern (via globalen Listener in wz_core.js)
+  document.addEventListener('fullscreenchange', function() {
+    var isFS = !!document.fullscreenElement;
+    WZ._onFullscreenChange.forEach(function(fn) { fn(isFS); });
   });
 
   WZ.registerPlugin("aircraft", {
     renderer: _renderAircraftLive,
+    has_live_map: true,
     has_heatmap: true,
     has_projection: true,
     has_refresh_bar: true,
     default_source: "adsbexchange",
+    live_title_prefix: "Aircraft",
+    live_box_max_width: "1400px",
+    live_box_height: "92vh",
   });
+
+  // Collect Renderer
+  WZ._collectRenderers["aircraft"] = {
+    renderHTML: function(data, cardId) {
+      var h = "", fmtD = WZ._fmtDate || function(s) { return s ? String(s).slice(0,10) : ""; };
+      h += '<div style="font-size:10px;color:var(--muted);margin-bottom:6px;">Stand: ' + new Date().toLocaleString("de-DE", {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) + ' (Echtzeit)</div>';
+      if (data.items && data.items.length) {
+        var hasGeo = data.items.some(function(it) { return it.lat != null; });
+        if (hasGeo) h += '<div id="' + cardId + '-map" style="height:400px;border-radius:6px;margin-bottom:8px;"></div>';
+        h += '<table style="width:100%;font-size:10px;border-collapse:collapse;">';
+        h += '<thead><tr style="border-bottom:1px solid var(--border);color:var(--muted);">'
+          + '<th style="text-align:left;padding:3px 5px;">Callsign</th>'
+          + '<th style="text-align:left;padding:3px 5px;">Typ</th>'
+          + '<th style="text-align:right;padding:3px 5px;">H\u00f6he</th>'
+          + '<th style="text-align:right;padding:3px 5px;">Speed</th>'
+          + '<th style="text-align:left;padding:3px 5px;">Reg.</th>'
+          + '</tr></thead><tbody>';
+        data.items.slice(0, 15).forEach(function(it, idx) {
+          h += '<tr class="wz-ac-row" data-idx="' + idx + '" style="border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;">';
+          h += '<td style="padding:3px 5px;font-weight:600;">' + WZ._esc(it.callsign || it.flight || "\u2014") + '</td>';
+          h += '<td style="padding:3px 5px;color:var(--muted);">' + WZ._esc((it.type || it.aircraft_type || "").substring(0,15)) + '</td>';
+          h += '<td style="padding:3px 5px;text-align:right;">' + (it.alt_baro || it.altitude ? Math.round(it.alt_baro || it.altitude) + ' ft' : "\u2014") + '</td>';
+          h += '<td style="padding:3px 5px;text-align:right;">' + (it.gs || it.speed ? Math.round(it.gs || it.speed) + ' kn' : "\u2014") + '</td>';
+          h += '<td style="padding:3px 5px;color:var(--muted);">' + WZ._esc(it.registration || it.reg || "") + '</td>';
+          h += '</tr>';
+        });
+        h += '</tbody></table>';
+        if (data.items.length > 15) h += '<div style="font-size:10px;color:var(--muted);margin-top:4px;">+ ' + (data.items.length - 15) + ' weitere</div>';
+      } else {
+        h += '<div style="font-size:11px;color:var(--muted);">Keine Flugzeuge im Bereich.</div>';
+      }
+      return h;
+    },
+    afterRender: function(data, cardId, cardEl) {
+      if (!window.L) return;
+      var mapEl = cardEl.querySelector("[id$='-map']");
+      if (!mapEl || mapEl._leaflet_id) return;
+      var items = data.items || [];
+      var m = L.map(mapEl, { zoomControl: false }).setView([48, 10], 5);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", { maxZoom: 18 }).addTo(m);
+      var bounds = [];
+      var markers = [];
+
+      function _acIcon(hdg, color, size) {
+        return L.divIcon({
+          className: "",
+          html: '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" style="transform:rotate(' + (hdg || 0) + 'deg);filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));">'
+            + '<path d="M12 2 L16 20 L12 16 L8 20 Z" fill="' + color + '" stroke="rgba(0,0,0,.3)" stroke-width=".5"/></svg>',
+          iconSize: [size, size],
+          iconAnchor: [size / 2, size / 2],
+        });
+      }
+
+      items.slice(0, 15).forEach(function(it, idx) {
+        if (it.lat == null || it.lon == null) { markers.push(null); return; }
+        var alt = it.alt_baro || it.altitude || 0;
+        var color = alt > 30000 ? "#06b6d4" : alt > 10000 ? "#22c55e" : alt > 1000 ? "#f59e0b" : "#ef4444";
+        var mk = L.marker([it.lat, it.lon], { icon: _acIcon(it.heading || it.track, color, 18) })
+          .bindTooltip('<strong>' + WZ._esc(it.callsign || it.flight || "") + '</strong>'
+            + '<br>' + WZ._esc(it.type || it.aircraft_type || "")
+            + (alt ? '<br>' + Math.round(alt) + ' ft' : ''))
+          .addTo(m);
+        mk._acColor = color;
+        mk._acHdg = it.heading || it.track || 0;
+        markers.push(mk);
+        bounds.push([it.lat, it.lon]);
+      });
+      if (bounds.length) { try { m.fitBounds(bounds, { padding: [20, 20], maxZoom: 12 }); } catch(e) {} }
+
+      // Hover interaction
+      var highlightMk = null;
+      cardEl.querySelectorAll(".wz-ac-row").forEach(function(row) {
+        row.addEventListener("mouseenter", function() {
+          var idx = parseInt(row.getAttribute("data-idx"));
+          var mk = markers[idx];
+          if (!mk) return;
+          if (highlightMk && highlightMk !== mk) highlightMk.setIcon(_acIcon(highlightMk._acHdg, highlightMk._acColor, 18));
+          mk.setIcon(_acIcon(mk._acHdg, "#fff", 26));
+          highlightMk = mk;
+          mk.openTooltip();
+          var ll = mk.getLatLng();
+          if (!m.getBounds().contains(ll)) m.panTo(ll, { animate: true, duration: 0.5 });
+        });
+        row.addEventListener("mouseleave", function() {
+          if (highlightMk) {
+            highlightMk.setIcon(_acIcon(highlightMk._acHdg, highlightMk._acColor, 18));
+            highlightMk.closeTooltip();
+            highlightMk = null;
+          }
+        });
+      });
+    }
+  };
 
 })();

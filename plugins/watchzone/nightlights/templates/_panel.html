@@ -1,12 +1,11 @@
 <div id="panel-nightlights" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_nightlights_title">Nighttime Lights</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_nightlights_source">Source: NASA VIIRS Day/Night Band (GIBS)</span>
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_nightlights_desc">Analyses nocturnal light emissions from NASA satellite data (VIIRS). Changes can indicate economic activity, infrastructure development or conflicts. The time series appears in the analysis timeline.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_nightlights_help">Analyses nocturnal light emissions from NASA satellite imagery to detect changes in human activity on the ground.<br><br><b>How to use:</b> Draw a zone on the map and click "Live". The system fetches VIIRS nighttime images and measures light intensity over time. Results are shown on the map and as a downloadable image. The time series is automatically integrated into the analysis timeline.<br><br><b>Forensic relevance:</b> A sudden decrease in nighttime light can indicate power outages, population displacement or infrastructure destruction. Increases may signal new construction, military camps or industrial activity. Comparing light patterns before and after a conflict event provides strong visual evidence of impact.<br><br><b>Data source:</b> NASA VIIRS Day/Night Band via GIBS — no API key required.</div>
   </div>
   <div class="wz-main-body">
-    <div id="wz-map-nightlights" class="wz-map-container" style="height:500px;"></div>
+    <div id="wz-map-nightlights" class="wz-map-container" ></div>
     <div class="wz-hint" id="wz-hint-nightlights" data-i18n="wz_nightlights_hint">
       Draw observation areas on the map. VIIRS nighttime light data (NASA)
       shows light intensity and its change over time in the analysis timeline.

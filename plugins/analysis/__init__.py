@@ -25,6 +25,7 @@ class AnalysisPlugin(BasePlugin):
         "popup_handler": "",           # z.B. "openSsimForKw"
         "popup_badges": [],            # [["i18n_key", "fallback"], ...]
         "modal_template": "",          # z.B. "ssim/_modal.html"
+        "apa_method": "",              # APA-Methodenname z.B. "spike_coincidence"
     }
 
     def api_routes(self):

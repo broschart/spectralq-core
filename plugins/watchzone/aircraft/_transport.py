@@ -397,8 +397,13 @@ def fetch_aircraft_live(bbox, user_id=None):
         log.warning("airplanes.live Netzwerk-Fehler: %s", e)
         raise RuntimeError(f"airplanes.live nicht erreichbar: {e}")
 
+    ac_list = data.get("ac")
+    if ac_list is None:
+        log.warning("airplanes.live: Antwort enthält kein 'ac'-Feld – keys: %s", list(data.keys()))
+        raise RuntimeError("airplanes.live: unerwartetes Antwortformat (kein 'ac'-Feld)")
+
     results = []
-    for ac in data.get("ac", []):
+    for ac in ac_list:
         lat = ac.get("lat")
         lon = ac.get("lon")
         if lat is None or lon is None:

@@ -10,6 +10,7 @@ class CpdPlugin(AnalysisPlugin):
         "color": "#fb923c",
         "symbol": "◆",
         "description": "Erkennung von Strukturbrüchen in Zeitreihen.",
+        "apa_method": "changepoint",
         "default_show_in": ["lab", "popup"],
         "button_id": "btn-changepoint",
         "requires_multi_kw": False,

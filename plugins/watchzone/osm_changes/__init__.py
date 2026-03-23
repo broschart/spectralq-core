@@ -11,7 +11,11 @@ from plugins.watchzone._helpers import geojson_to_bbox
 log = logging.getLogger(__name__)
 
 UA = "VeriTrend.ai/1.0 (forensic trend analysis; contact@veritrend.ai)"
-OVERPASS_API = "https://overpass-api.de/api/interpreter"
+OVERPASS_APIS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+]
 
 # Forensically interesting tags
 TRACKED_TAGS = {
@@ -27,41 +31,71 @@ TRACKED_TAGS = {
     "amenity":     ("Einrichtung", "#a78bfa"),
 }
 
-def _overpass_query(query, timeout=60):
-    """Execute an Overpass QL query and return JSON."""
+def _overpass_query(query, timeout=120):
+    """Execute an Overpass QL query with fallback servers."""
     import requests as _rq
 
-    try:
-        r = _rq.post(OVERPASS_API, data={"data": query},
-                      headers={"User-Agent": UA}, timeout=timeout)
-        r.raise_for_status()
-        return r.json()
-    except Exception as exc:
-        log.warning("Overpass API error: %s", exc)
-        return {"error": str(exc)[:200]}
+    for api_url in OVERPASS_APIS:
+        try:
+            r = _rq.post(api_url, data={"data": query},
+                          headers={"User-Agent": UA}, timeout=timeout)
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            log.warning("Overpass API error (%s): %s", api_url, exc)
+            continue
+    return {"error": "Overpass API temporarily unavailable (all servers overloaded). Please try again in a few minutes."}
 
-def _fetch_recent_edits(bbox, days=30):
-    """Fetch recently edited/created elements in bbox."""
+def _fetch_recent_edits(bbox, days=30, since_date=None, until_date=None):
+    """Fetch recently edited/created elements in bbox.
+    If since_date + until_date are given, fetch changes in that historic window.
+    """
     min_lon, min_lat, max_lon, max_lat = bbox
-    since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    bb = f"{min_lat},{min_lon},{max_lat},{max_lon}"
+    _until_filter = until_date  # used for post-query filtering
 
-    # Query for recently changed nodes, ways, relations with key tags
-    tag_filters = "|".join(TRACKED_TAGS.keys())
-    query = f"""
-[out:json][timeout:90];
+    if since_date and until_date:
+        # Historic time window: fetch with newer: from start, filter by until in Python
+        since = since_date + "T00:00:00Z"
+        tag_lines = []
+        for tag in TRACKED_TAGS:
+            tag_lines.append(f'  node["{tag}"](newer:"{since}")({bb});')
+            tag_lines.append(f'  way["{tag}"](newer:"{since}")({bb});')
+        tag_union = "\n".join(tag_lines)
+        query = f"""
+[out:json][timeout:120];
 (
-  node(newer:"{since}")({min_lat},{min_lon},{max_lat},{max_lon});
-  way(newer:"{since}")({min_lat},{min_lon},{max_lat},{max_lon});
-  relation(newer:"{since}")({min_lat},{min_lon},{max_lat},{max_lon});
+{tag_union}
+);
+out center meta 500;
+"""
+    else:
+        if since_date:
+            since = since_date + "T00:00:00Z"
+        else:
+            since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        tag_lines = []
+        for tag in TRACKED_TAGS:
+            tag_lines.append(f'  node["{tag}"](newer:"{since}")({bb});')
+            tag_lines.append(f'  way["{tag}"](newer:"{since}")({bb});')
+        tag_union = "\n".join(tag_lines)
+        query = f"""
+[out:json][timeout:120];
+(
+{tag_union}
 );
 out center meta 500;
 """
 
-    data = _overpass_query(query, timeout=90)
+    data = _overpass_query(query, timeout=120)
     if isinstance(data, dict) and "error" in data:
         return data
 
     elements = data.get("elements", [])
+
+    # Filter by until_date for historic time windows
+    if _until_filter:
+        elements = [el for el in elements if (el.get("timestamp", "")[:10] or "") <= _until_filter]
 
     # Categorize and build results
     items = []
@@ -189,12 +223,27 @@ class OSMChangesPlugin(WatchZonePlugin):
         if not bbox:
             return {"error": "Zone hat keine gueltige Geometrie"}
 
-        days = config.get("days", 30)
-        result = _fetch_recent_edits(bbox, days=days)
+        time_focus = config.get("time_focus")
+        if time_focus and time_focus.get("from"):
+            # Use time focus: 15 days before event start, 15 days after event end
+            try:
+                tf_start = datetime.strptime(time_focus["from"][:10], "%Y-%m-%d")
+                tf_end_str = time_focus.get("to", time_focus["from"])
+                tf_end = datetime.strptime(tf_end_str[:10], "%Y-%m-%d")
+                since_str = (tf_start - timedelta(days=15)).strftime("%Y-%m-%d")
+                until_str = (tf_end + timedelta(days=15)).strftime("%Y-%m-%d")
+                result = _fetch_recent_edits(bbox, since_date=since_str, until_date=until_str)
+            except Exception as e:
+                log.warning("OSM time_focus fetch failed: %s", e)
+                days = config.get("days", 30)
+                result = _fetch_recent_edits(bbox, days=days)
+        else:
+            days = config.get("days", 30)
+            result = _fetch_recent_edits(bbox, days=days)
         if isinstance(result, dict) and "error" in result:
             return result
 
-        return {
+        res = {
             "zone_id": zone.id,
             "zone_name": zone.name,
             "zone_type": "osm_changes",
@@ -204,6 +253,18 @@ class OSMChangesPlugin(WatchZonePlugin):
             "top_users": result["top_users"],
             "items": result["items"],
         }
+        if time_focus:
+            # Enrich with event color
+            if not time_focus.get("color") and time_focus.get("event_id"):
+                try:
+                    from models import Event
+                    ev = Event.query.get(time_focus["event_id"])
+                    if ev and ev.color:
+                        time_focus["color"] = ev.color
+                except Exception:
+                    pass
+            res["time_focus"] = time_focus
+        return res
 
     def history_routes(self):
         return [{"suffix": "osm-history", "handler": self._history_handler}]
@@ -269,6 +330,15 @@ class OSMChangesPlugin(WatchZonePlugin):
         }
 
     def analysis_provider(self):
-        return {"data_types": ["osm_changes"], "history_endpoint_suffix": "osm-history"}
+        return {
+            "data_types": ["osm_changes"],
+            "history_endpoint_suffix": "osm-history",
+            "analysis_js": "/plugins/watchzone/osm_changes/static/osm_changes_analysis.js",
+            "ui_prefix": "osm",
+            "ui_label": "OSM \u00c4nderungen",
+            "ui_color": "#7cb342",
+            "zone_types": ["osm_changes"],
+            "accepts_global": True,
+        }
 
 PluginManager.register(OSMChangesPlugin())

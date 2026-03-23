@@ -95,6 +95,8 @@ class BlueskyMonitorPlugin(WatchZonePlugin):
         "description": "Bluesky-Postanalyse — Keyword-Monitoring via AT Protocol",
         "category": "search",
         "required_credentials": ["bluesky_handle", "bluesky_app_password"],
+        "credential_group": "bluesky",
+        "availability_key": "bluesky",
         "has_live": True,
         "has_history": True,
         "has_map": False,
@@ -209,6 +211,15 @@ class BlueskyMonitorPlugin(WatchZonePlugin):
         return {"keywords": keywords, "days": days, "results": results}
 
     def analysis_provider(self):
-        return {"data_types": ["bluesky_monitor"], "history_endpoint_suffix": "bluesky-history"}
+        return {
+            "data_types": ["bluesky_monitor"],
+            "history_endpoint_suffix": "bluesky-history",
+            "analysis_js": "/plugins/watchzone/bluesky_monitor/static/bluesky_monitor_analysis.js",
+            "ui_prefix": "bsm",
+            "ui_label": "Bluesky Monitor",
+            "ui_color": "#0085ff",
+            "zone_types": ["bluesky_monitor"],
+            "accepts_global": False,
+        }
 
 PluginManager.register(BlueskyMonitorPlugin())

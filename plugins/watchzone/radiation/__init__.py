@@ -268,6 +268,7 @@ class RadiationPlugin(WatchZonePlugin):
         if "error" in result:
             return {"error": result["error"]}
 
+        from datetime import datetime, timezone
         return {
             "zone_id": zone.id, "zone_name": zone.name,
             "zone_type": "radiation",
@@ -276,6 +277,7 @@ class RadiationPlugin(WatchZonePlugin):
             "source": result["source"],
             "stations": result["stations"],
             "elevated": result["elevated"],
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
 
     def history_routes(self):
@@ -430,6 +432,15 @@ class RadiationPlugin(WatchZonePlugin):
         return summary
 
     def analysis_provider(self):
-        return {"data_types": ["radiation"], "history_endpoint_suffix": "radiation-timeseries"}
+        return {
+            "data_types": ["radiation"],
+            "history_endpoint_suffix": "radiation-timeseries",
+            "analysis_js": "/plugins/watchzone/radiation/static/radiation_analysis.js",
+            "ui_prefix": "rad",
+            "ui_label": "Radioaktivit\u00e4t",
+            "ui_color": "#eab308",
+            "zone_types": ["radiation"],
+            "accepts_global": True,
+        }
 
 PluginManager.register(RadiationPlugin())

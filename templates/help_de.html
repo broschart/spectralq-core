@@ -847,6 +847,20 @@
         <li><strong>Radioaktivität</strong> – BfS ODL (Deutschland) + EURDEP (Europa): Gamma-Dosisleistung, ~1.600 bzw. ~37.000 Messstellen. Triangulierbar.</li>
         <li><strong>Flugzeuge</strong> – Live-Flugverkehr via OpenSky Network mit Anomalie-Score, 3D-Globus und Proximity-Analyse.</li>
         <li><strong>Schiffe</strong> – AIS-Schiffsverkehr via aisstream.io.</li>
+        <li><strong>Satellitenüberflug</strong> – Berechnet Überflüge von Erdbeobachtungs-, Militär- und Wettersatelliten über einer Watch Zone. Basiert auf öffentlichen TLE-Bahndaten (CelesTrak) und SGP4-Orbitalpropagation. Funktionen:
+          <ul style="margin-top:4px;">
+            <li><strong>Datepicker</strong> – Beliebiges Datum wählbar (Vergangenheit und Zukunft).</li>
+            <li><strong>Überflug-Tabelle</strong> – Zeigt Zeit, Satellit, Kategorie, Max. Elevation, Höhe, Dauer, Objekttyp, Status, Betreiber, Orbit, Startdatum und <strong>visuelle Auflösung</strong> (aus Datenbank bekannter Satelliten oder geschätzt aus RCS/Orbithöhe).</li>
+            <li><strong>Blind Spots</strong> – Zeitfenster ohne Satellitenabdeckung, farbkodiert nach Schweregrad (Kritisch &gt;1h, Warnung &gt;30min, Gering).</li>
+            <li><strong>24h-Animation</strong> – Fullscreen-Karte mit Satellitenbewegung in Echtzeit (24h in 60s). Aufnahmestreifen (Swath-Korridore) wachsen progressiv. Auto-Slowdown bei Überflügen (10x Echtzeit). Heatmap-Overlay zeigt Beobachtungsdichte.</li>
+            <li><strong>Hover-Info</strong> – Mouseover auf der Animationskarte zeigt alle Satelliten die den Punkt überflogen haben, mit Uhrzeit, Höhe, Auflösung und Betreiber.</li>
+            <li><strong>Klick-Timeline</strong> – Klick auf der Animationskarte öffnet ein Gantt-Diagramm aller Überflüge an dieser Stelle, sortierbar nach Zeit, Höhe oder Auflösung.</li>
+            <li><strong>Orbit-Detailansicht</strong> – Klick auf einen Satelliten in der Überflug-Liste öffnet eine Weltkarte mit Flugbahn, Aufnahmestreifen, Richtungspfeilen, Speed/Ground-Speed, Aufnahmebreite, Abdeckungsrate (km²/h) und Auflösung.</li>
+            <li><strong>Nächste Beobachtungsüberschneidungen</strong> – Top 10 Satellitenpaare mit geringstem Bodenabstand. Unterscheidet Formationsflüge (gleiche Höhe, 3D-Abstand) von sequentiellen Beobachtungen. Kollisionsrisiko-Warnung bei &lt;1km 3D-Abstand.</li>
+            <li><strong>Auflösungsdatenbank</strong> – ~100 bekannte Satelliten mit dokumentierter GSD (Ground Sample Distance). Für unbekannte Satelliten wird die Auflösung physikalisch aus RCS und Orbithöhe geschätzt. Klassifizierung: Sub-Meter, Hochauflösend, Mittel, Niedrig.</li>
+          </ul>
+          Kein API-Key nötig. Triangulierbar.
+        </li>
       </ul>
 
       <h4>Infrastruktur & Umwelt</h4>
@@ -855,6 +869,12 @@
         <li><strong>Mobilfunk (OpenCelliD)</strong> – Sendemasten-Inventar (GSM, UMTS, LTE, 5G NR) mit Reichweite, Signalstärke und LTE/5G-Abdeckungsindikator. 1.000 Requests/Tag kostenlos. Erfordert OpenCelliD API-Key.</li>
         <li><strong>Luftqualität (OpenAQ)</strong> – PM2.5, PM10, Ozon, NO₂, SO₂, CO weltweit. Farbcodiert nach EPA-Skala. Spikes deuten auf Brände, Explosionen oder Industrieunfälle. Triangulierbar. Erfordert OpenAQ API-Key (kostenlos).</li>
         <li><strong>Stromnetz (ENTSO-E)</strong> – Netzlast in 30+ europäischen Ländern. 48h-Lastkurve mit Anomalie-Erkennung (Blackout-Indikator bei &gt;30% Lastabfall). Triangulierbar. Erfordert ENTSO-E Security Token (kostenlos, per E-Mail beantragen).</li>
+        <li><strong>Internetgesundheit (IODA)</strong> – Backbone- und Konnektivitäts-Monitoring via IODA (Georgia Tech). BGP-Routen, Active Probing, Merit Darknet und Google Traffic für 30+ Länder. Erkennt Internet-Ausfälle, Kabelunterbrechungen und staatliche Abschaltungen. Triangulierbar. Kein API-Key nötig.</li>
+      </ul>
+
+      <h4>Finanzen & Rohstoffe</h4>
+      <ul>
+        <li><strong>Rohstoffpreise</strong> – Echtzeit-Monitoring von Rohstoffpreisen via Yahoo Finance: Energie (WTI, Brent, Erdgas), Metalle (Gold, Silber, Kupfer, Palladium), Agrar (Weizen, Mais, Soja, Kaffee, Kakao) und Viehwirtschaft. Kategorisierte Darstellung mit Preiskurven. Triangulierbar. Kein API-Key nötig.</li>
       </ul>
 
       <h4>Konflikte & Migration</h4>
@@ -870,7 +890,7 @@
         <li><strong>Telegram Monitor</strong> – Keyword-basiertes Monitoring öffentlicher Telegram-Kanäle. Zeigt Erwähnungsvolumen über 90 Tage mit tagesgenauer Auflösung. Triangulierbar. Erfordert Telegram API-Credentials + authentifizierte Session.</li>
         <li><strong>Bluesky Monitor</strong> – Keyword-basiertes Monitoring auf Bluesky (AT Protocol). Postvolumen über 180 Tage. Triangulierbar. Erfordert Bluesky Handle + App-Password.</li>
         <li><strong>Wayback Frequenz</strong> – Wie oft wurde eine URL vom Internet Archive gecacht? Hohe Frequenz = Medienaufmerksamkeit oder koordinierte Archivierung. Triangulierbar. Kein API-Key nötig.</li>
-        <li><strong>CertWatch</strong> – Certificate Transparency Log Monitoring für Domains.</li>
+        <li><strong>DNS / CT (CertWatch)</strong> – Certificate Transparency Log Monitoring via crt.sh. Zeigt für konfigurierte Domains: Gesamtzahl der Zertifikate, neue Subdomains mit Erstentdeckungsdatum, Aussteller-Verteilung (Let's Encrypt, DigiCert etc.), Sparkline-Zeitverlauf. Kein API-Key nötig – Spinner-Modus beim Laden, Timeout-Handling für crt.sh-Ausfälle.</li>
         <li><strong>Wikipedia</strong> – Überwacht Wikipedia-Artikel auf Änderungen.</li>
         <li><strong>Censys</strong> – Internet-Asset-Suche (erfordert Censys-Credentials).</li>
       </ul>

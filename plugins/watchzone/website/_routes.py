@@ -143,3 +143,43 @@ def api_traceroute_result_patch(zid, rid):
         res.hops_json = _j.dumps(d["hops"])
     db.session.commit()
     return jsonify({"ok": True})
+
+
+def api_snapshot_diff(zid):
+    """Liefert einen Wayback-Snapshot mit optionaler Diff-Markierung gegenüber dem Vorgänger."""
+    import json as _j
+    from flask_login import current_user
+    from models import WatchZone
+
+    z = WatchZone.query.filter_by(id=zid, user_id=current_user.id).first()
+    if not z:
+        abort(404)
+    config = _j.loads(z.config) if z.config else {}
+    url = config.get("url", "")
+    if not url:
+        return jsonify({"error": "Keine URL konfiguriert"}), 400
+    ts2 = request.args.get("ts", "").strip()
+    ts1 = request.args.get("ts1", "").strip() or None
+    if not ts2:
+        return jsonify({"error": "Parameter 'ts' erforderlich"}), 400
+    try:
+        from plugins.watchzone.website._transport import fetch_wayback_diff_html
+        result = fetch_wayback_diff_html(url, ts2, ts1)
+        return jsonify(result)
+    except Exception as e:
+        log.warning("Snapshot-Diff Fehler (Zone %d): %s", zid, e)
+        return jsonify({"error": str(e)}), 502
+
+
+def api_tracker_reverse_lookup():
+    """Reverse-Lookup: Welche Domains nutzen dieselbe Tracking-ID?"""
+    tid = request.args.get("id", "").strip()
+    if not tid:
+        return jsonify({"error": "Parameter 'id' erforderlich"}), 400
+    try:
+        from plugins.watchzone.website._transport import reverse_lookup_tracking_id
+        result = reverse_lookup_tracking_id(tid)
+        return jsonify(result)
+    except Exception as e:
+        log.warning("Tracker-Reverse-Lookup Fehler (%s): %s", tid, e)
+        return jsonify({"error": str(e)}), 502

@@ -27,8 +27,62 @@ class SeismicPlugin(WatchZonePlugin):
         "has_history": True,
         "panel_template": "seismic/_panel.html",
         "js_file": "/plugins/watchzone/seismic/static/seismic.js",
+        "apa_action": "seismic_history",
 
     }
+
+    # ------------------------------------------------------------------
+    # APA Action Handler
+    # ------------------------------------------------------------------
+
+    def apa_action_handler(self, action):
+        """Returns dict with: status_msg, report, data_msg, error"""
+        from datetime import datetime, timedelta
+
+        seis_label = action.get("label", "Region")
+        seis_days = min(action.get("days", 180), 730)
+        seis_bbox = action.get("bbox", [])
+
+        if len(seis_bbox) != 4:
+            return {"error": "Seismik: bbox muss 4 Werte haben [lon_min, lat_min, lon_max, lat_max]"}
+
+        try:
+            from plugins.watchzone.seismic._transport import fetch_usgs_earthquake_history as fetch_seismic_history
+
+            date_to = datetime.utcnow().strftime("%Y-%m-%d")
+            date_from = (datetime.utcnow() - timedelta(days=seis_days)).strftime("%Y-%m-%d")
+            seis_data = fetch_seismic_history(seis_bbox, date_from, date_to)
+
+            if seis_data and seis_data.get("data"):
+                entries = seis_data["data"]
+                total_quakes = sum(e.get("count", 1) for e in entries)
+                max_mag = max(e["value"] for e in entries) if entries else 0
+                max_date = next((e["date"] for e in entries if e["value"] == max_mag), "?")
+                report_parts = [
+                    f"SEISMIK (USGS) – {seis_label} (bbox: {seis_bbox}):",
+                    f"  Zeitraum: {date_from} bis {date_to}",
+                    f"  {total_quakes} Erdbeben in {len(entries)} Tagen mit Aktivität",
+                    f"  Max. Magnitude: {max_mag} am {max_date}",
+                ]
+                # Top 5 stärkste Beben
+                top5 = sorted(entries, key=lambda e: e["value"], reverse=True)[:5]
+                for t in top5:
+                    report_parts.append(f"  {t['date']}: Mag. {t['value']} ({t.get('count', 1)} Beben)")
+                return {
+                    "status_msg": f"Seismik (USGS): {seis_label} ({seis_days}d) …",
+                    "report": "\n".join(report_parts),
+                    "data_msg": f"Seismik {seis_label}: {total_quakes} Beben, max Mag. {max_mag} am {max_date}",
+                    "error": None,
+                }
+            else:
+                return {
+                    "status_msg": f"Seismik (USGS): {seis_label} ({seis_days}d) …",
+                    "report": f"SEISMIK (USGS) – {seis_label}: Keine Erdbeben im Zeitraum {date_from} bis {date_to}",
+                    "data_msg": f"Seismik {seis_label}: Keine Erdbeben im Zeitraum",
+                    "error": None,
+                }
+        except Exception as e:
+            return {"error": f"Seismik-Fehler: {str(e)[:80]}"}
 
     # ------------------------------------------------------------------
     # Live Handler
@@ -149,6 +203,12 @@ class SeismicPlugin(WatchZonePlugin):
         return {
             "data_types": ["seismic"],
             "history_endpoint_suffix": "seismic-history",
+            "analysis_js": "/plugins/watchzone/seismic/static/seismic_analysis.js",
+            "ui_prefix": "seis",
+            "ui_label": "Seismik (USGS)",
+            "ui_color": "#ef4444",
+            "zone_types": ["seismic"],
+            "accepts_global": True,
         }
 
     # ------------------------------------------------------------------

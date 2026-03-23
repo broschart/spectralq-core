@@ -16,7 +16,8 @@
     "wz_acled_explosions": "Explosionen/Fernwaffen",
     "wz_acled_riots": "Unruhen",
     "wz_acled_protests": "Proteste",
-    "wz_acled_strategic": "Strateg. Entwicklungen"
+    "wz_acled_strategic": "Strateg. Entwicklungen",
+    "wz_acled_help": "Überwacht bewaffnete Konflikte, politische Gewalt, Proteste und Unruhen weltweit auf Basis der ACLED-Datenbank.<br><br><b>Bedienung:</b> Zone auf der Karte einzeichnen und auf „Live“ klicken. Alle Ereignisse der letzten 30 Tage werden mit Datum, Ort, Ereignistyp, beteiligten Akteuren und Opferzahlen angezeigt. Kategorien: Gefechte, Gewalt gegen Zivilisten, Explosionen/Ferngewalt, Unruhen, Proteste und strategische Entwicklungen.<br><br><b>Forensische Relevanz:</b> Georeferenzierte Ereignisse können mit anderen Datenquellen in der Analyse-Timeline korreliert werden — z. B. Satellitenbildveränderungen, Fluchtbewegungen oder Medienberichterstattung. Nützlich für Mustererkennung bei Eskalationsdynamiken.<br><br><b>Datenquelle:</b> ACLED (Armed Conflict Location &amp; Event Data Project) — kostenloser API-Key erforderlich."
   },
   "en": {
     "wz_sidebar_acled": "ACLED Conflicts",
@@ -35,7 +36,8 @@
     "wz_acled_explosions": "Explosions/Remote violence",
     "wz_acled_riots": "Riots",
     "wz_acled_protests": "Protests",
-    "wz_acled_strategic": "Strategic developments"
+    "wz_acled_strategic": "Strategic developments",
+    "wz_acled_help": "Monitors armed conflicts, political violence, protests and riots worldwide based on the ACLED database.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All events from the last 30 days are shown with date, location, event type, actors involved and fatality count. Events are categorised into battles, violence against civilians, explosions/remote violence, riots, protests and strategic developments.<br><br><b>Forensic relevance:</b> Geo-referenced events can be correlated with other data sources in the analysis timeline — e.g. satellite imagery changes, refugee movements or media coverage spikes. Useful for pattern recognition in escalation dynamics.<br><br><b>Data source:</b> ACLED (Armed Conflict Location &amp; Event Data Project) — requires a free API key."
   },
   "fr": {
     "wz_sidebar_acled": "ACLED Conflits",
@@ -54,7 +56,8 @@
     "wz_acled_explosions": "Explosions/Violence a distance",
     "wz_acled_riots": "Emeutes",
     "wz_acled_protests": "Manifestations",
-    "wz_acled_strategic": "Developpements strategiques"
+    "wz_acled_strategic": "Developpements strategiques",
+    "wz_acled_help": "Monitors armed conflicts, political violence, protests and riots worldwide based on the ACLED database.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All events from the last 30 days are shown with date, location, event type, actors involved and fatality count. Events are categorised into battles, violence against civilians, explosions/remote violence, riots, protests and strategic developments.<br><br><b>Forensic relevance:</b> Geo-referenced events can be correlated with other data sources in the analysis timeline — e.g. satellite imagery changes, refugee movements or media coverage spikes. Useful for pattern recognition in escalation dynamics.<br><br><b>Data source:</b> ACLED (Armed Conflict Location &amp; Event Data Project) — requires a free API key."
   },
   "es": {
     "wz_sidebar_acled": "ACLED Conflictos",
@@ -73,6 +76,7 @@
     "wz_acled_explosions": "Explosiones/Violencia remota",
     "wz_acled_riots": "Disturbios",
     "wz_acled_protests": "Protestas",
-    "wz_acled_strategic": "Desarrollos estrategicos"
+    "wz_acled_strategic": "Desarrollos estrategicos",
+    "wz_acled_help": "Monitors armed conflicts, political violence, protests and riots worldwide based on the ACLED database.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All events from the last 30 days are shown with date, location, event type, actors involved and fatality count. Events are categorised into battles, violence against civilians, explosions/remote violence, riots, protests and strategic developments.<br><br><b>Forensic relevance:</b> Geo-referenced events can be correlated with other data sources in the analysis timeline — e.g. satellite imagery changes, refugee movements or media coverage spikes. Useful for pattern recognition in escalation dynamics.<br><br><b>Data source:</b> ACLED (Armed Conflict Location &amp; Event Data Project) — requires a free API key."
   }
 }

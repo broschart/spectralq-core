@@ -42,6 +42,11 @@ app.config["SQLALCHEMY_DATABASE_URI"] = (
     os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR}/spectralq.db")
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "connect_args": {"timeout": 30, "check_same_thread": False},
+    "pool_pre_ping": True,
+}
+
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-me-in-production")
 # Templates immer neu laden (kein In-Memory-Cache)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
@@ -53,11 +58,13 @@ init_auth(app)
 
 # ── Enterprise-Modul (Benutzerverwaltung) — nur im Multi-User-Modus ─────
 if MULTI_USER:
-    from enterprise import enterprise_bp
-    app.register_blueprint(enterprise_bp)
-    # Öffentliche Seiten (Landing, FAQ, About-Us, Waitlist)
-    from public_pages import public_bp
-    app.register_blueprint(public_bp)
+    try:
+        from enterprise import enterprise_bp
+        app.register_blueprint(enterprise_bp)
+        from public_pages import public_bp
+        app.register_blueprint(public_bp)
+    except ImportError:
+        pass
 
 # ── Plugin-System initialisieren ──────────────────────────────────────────
 from plugins import PluginManager
@@ -135,6 +142,16 @@ def _register_wz_api_routes():
 
 
 _register_wz_api_routes()
+
+
+def _register_wz_scheduler_jobs():
+    """Registriert Scheduler-Jobs aus WatchZone-Plugins."""
+    for pid, plugin in PluginManager.all_of_type("watchzone").items():
+        for job_def in plugin.scheduler_jobs():
+            func = job_def.pop("func")
+            job_id = job_def.pop("id")
+            trigger = job_def.pop("trigger")
+            scheduler.add_job(func, trigger, id=job_id, **job_def)
 
 
 def _register_analysis_routes():
@@ -400,6 +417,8 @@ scheduler.add_job(
     replace_existing=True,
 )
 
+# Register scheduler jobs from WatchZone plugins (TLE refresh, cache cleanup, etc.)
+_register_wz_scheduler_jobs()
 
 
 # Auth-Routen + superadmin_required → enterprise.py / auth.py
@@ -416,8 +435,7 @@ if not MULTI_USER:
 # ---------------------------------------------------------------------------
 
 # Mapping: AppSetting-Schlüssel → API-Gruppenname
-# (Plugin-spezifische Keys wie bluesky, telegram, copernicus, censys, aishub
-#  werden über das Plugin-Credential-System verwaltet, nicht hier.)
+# Core-Credentials (nicht plugin-spezifisch):
 _KEY_TO_API_GROUP = {
     "serpapi_key":          "serpapi",
     "newsapi_key":          "newsapi",
@@ -427,10 +445,35 @@ _KEY_TO_API_GROUP = {
     "mistral_api_key":      "mistral",
 }
 
-# Alle bekannten API-Gruppen (für Richtlinien-Verwaltung)
+# Core-API-Gruppen (für Richtlinien-Verwaltung)
 _ALL_API_GROUPS = [
     "serpapi", "newsapi", "anthropic", "openai", "gemini", "mistral",
 ]
+
+
+def _build_credential_maps():
+    """Ergänzt _KEY_TO_API_GROUP und _ALL_API_GROUPS dynamisch aus Plugin-Credentials."""
+    for ptype in PluginManager.all_types():
+        for p in PluginManager.all_of_type(ptype).values():
+            creds = p.meta.get("required_credentials", [])
+            if not creds:
+                continue
+            # Plugin kann explizit eine Gruppe angeben
+            group = p.meta.get("credential_group")
+            if not group:
+                # Fallback: Key ohne Suffix als Gruppe ableiten
+                group = creds[0].rsplit("_", 1)[0] if "_" in creds[0] else creds[0]
+            for ckey in creds:
+                if ckey not in _KEY_TO_API_GROUP:
+                    _KEY_TO_API_GROUP[ckey] = group
+    # Alle Gruppen sammeln (ohne Duplikate, Reihenfolge beibehalten)
+    seen = set(_ALL_API_GROUPS)
+    for g in _KEY_TO_API_GROUP.values():
+        if g not in seen:
+            _ALL_API_GROUPS.append(g)
+            seen.add(g)
+
+_build_credential_maps()
 
 _VALID_API_POLICIES = {"own_key", "admin_key", "disabled"}
 
@@ -521,7 +564,8 @@ def index():
 @app.route("/keywords")
 @login_required
 def keywords_page():
-    return render_template("keywords.html")
+    embed = request.args.get("_embed") == "1"
+    return render_template("keywords.html", embed=embed)
 
 
 @app.route("/analysis")
@@ -530,13 +574,31 @@ def analysis():
     import time as _time
     # Sammle analysis_provider-Daten aus enabled Plugins
     wz_analysis_types = set()
+    wz_analysis_providers = []
     enabled = PluginManager.enabled_for_user("watchzone", current_user.id)
+    # Get user's zone types to filter analysis providers
+    from models import WatchZone as _WZModel
+    _user_zone_types = set()
+    try:
+        _user_zones = _WZModel.query.filter_by(user_id=current_user.id).all()
+        for _uz in _user_zones:
+            _user_zone_types.add(_uz.zone_type)
+    except Exception:
+        pass
+    _has_global = "global" in _user_zone_types
+
     for pid, plugin in enabled.items():
         if not plugin.is_available(current_user.id):
             continue
         prov = plugin.analysis_provider()
         if prov:
             wz_analysis_types.update(prov.get("data_types", []))
+            if prov.get("analysis_js"):
+                # Only show if user has matching zone types or global zones
+                zone_types = prov.get("zone_types", prov.get("data_types", []))
+                has_zones = any(zt in _user_zone_types for zt in zone_types)
+                if has_zones or (prov.get("accepts_global") and _has_global):
+                    wz_analysis_providers.append(prov)
     # Modal-Templates aus enabled Analysis-Plugins sammeln
     analysis_modal_templates = []
     an_enabled = PluginManager.enabled_for_user("analysis", current_user.id)
@@ -548,6 +610,7 @@ def analysis():
         "analysis.html",
         cache_ts=int(_time.time()),
         wz_analysis_types=wz_analysis_types,
+        wz_analysis_providers=wz_analysis_providers,
         analysis_modal_templates=analysis_modal_templates,
     ))
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -571,7 +634,8 @@ def events_find_page():
 @app.route("/events/watchzones")
 @login_required
 def events_watchzones_page():
-    return render_template("events_watchzones.html")
+    import time
+    return render_template("events_watchzones.html", cache_ts=int(time.time()))
 
 
 @app.route("/audit")
@@ -654,15 +718,22 @@ def api_plugins_list():
                 all_admin = True
                 for ckey in req_creds:
                     r = AppSetting.query.filter_by(key=ckey, user_id=uid).first()
+                    # Superadmin: auch globale Keys (user_id=None) prüfen
+                    if not (r and r.value) and current_user.is_superadmin:
+                        r = AppSetting.query.filter_by(key=ckey, user_id=None).first()
                     cred_status[ckey] = bool(r and r.value)
                     grp = _KEY_TO_API_GROUP.get(ckey)
-                    pol = _get_user_api_perm(uid, grp) if grp else "own_key"
+                    # Superadmin bekommt immer "own_key", damit Felder angezeigt werden
+                    pol = "own_key" if current_user.is_superadmin else (
+                        _get_user_api_perm(uid, grp) if grp else "own_key"
+                    )
                     cred_policy[ckey] = pol
                     if pol != "admin_key":
                         all_admin = False
                 item["credential_status"] = cred_status
                 item["credential_policy"] = cred_policy
-                item["creds_admin"] = all_admin  # True = alles ueber Admin-Keys
+                # Superadmin darf immer Credentials eintragen
+                item["creds_admin"] = all_admin and not current_user.is_superadmin
             if ptype == "analysis" and hasattr(plugin, "get_show_in"):
                 show_in = plugin.get_show_in(uid)
                 item["show_in"] = show_in
@@ -753,7 +824,8 @@ def api_plugin_credentials(ptype, pid):
         return jsonify({"error": "Plugin benoetigt keine Credentials"}), 400
     data = request.get_json(force=True) or {}
     creds = data.get("credentials", {})
-    uid = current_user.id
+    # Superadmin speichert global (user_id=None), normale User per-User
+    uid = None if current_user.is_superadmin else current_user.id
     status = {}
     for ckey in allowed:
         if ckey not in creds:
@@ -802,8 +874,6 @@ def api_plugin_ai_settings():
 
     # /faq, /about-us, /api/waitlist → public_pages.py (nur MULTI_USER)
 
-
-# /about — entfernt (Core Edition)
 
 
 @app.route("/alerts")
@@ -2092,16 +2162,15 @@ def api_yahoo_finance():
 @app.route("/api/ext-source-availability")
 @login_required
 def api_ext_source_availability():
-    """Prüft welche externen Quellen konfiguriert sind."""
+    """Prüft welche externen Quellen konfiguriert sind (dynamisch via Plugin-System)."""
     uid = current_user.id
-    from transport import _get_credential
-    has_bluesky = bool(_get_credential("bluesky_handle", "BLUESKY_HANDLE", uid)) and \
-                  bool(_get_credential("bluesky_app_password", "BLUESKY_APP_PASSWORD", uid))
-    has_telegram = bool(_get_credential("telegram_api_id", "TELEGRAM_API_ID", uid)) and \
-                   bool(_get_credential("telegram_api_hash", "TELEGRAM_API_HASH", uid))
-    has_copernicus = bool(_get_credential("copernicus_email", "COPERNICUS_EMAIL", uid)) and \
-                     bool(_get_credential("copernicus_password", "COPERNICUS_PASSWORD", uid))
-    return jsonify(bluesky=has_bluesky, telegram=has_telegram, copernicus=has_copernicus)
+    result = {}
+    # Alle WZ-Plugins mit required_credentials prüfen
+    for p in PluginManager.all_of_type("watchzone").values():
+        if p.meta.get("required_credentials"):
+            key = p.meta.get("availability_key", p.plugin_id)
+            result[key] = p.is_available(uid)
+    return jsonify(**result)
 
 
 
@@ -2482,6 +2551,9 @@ def api_events_create():
         start_dt=start_dt,
         end_dt=end_dt,
         color=data.get("color", "#f75f4f"),
+        lat=data.get("lat"),
+        lon=data.get("lon"),
+        location_name=(data.get("location_name") or "").strip(),
         project_id=int(pid) if pid else None,
         user_id=current_user.id,
     )
@@ -2521,6 +2593,12 @@ def api_events_update(eid):
             evt.end_dt = None
     if "project_id" in data:
         evt.project_id = int(data["project_id"]) if data["project_id"] else None
+    if "lat" in data:
+        evt.lat = float(data["lat"]) if data["lat"] is not None else None
+    if "lon" in data:
+        evt.lon = float(data["lon"]) if data["lon"] is not None else None
+    if "location_name" in data:
+        evt.location_name = (data["location_name"] or "").strip()
 
     db.session.commit()
     return jsonify(evt.to_dict())
@@ -2644,10 +2722,25 @@ def api_watchzones_live(zid):
         return jsonify({"error": f"Unbekannter Zone-Typ: {zone_type}"}), 400
 
     config = _j.loads(z.config) if z.config else {}
+    # Merge plugin-specific config from global zone's plugins dict
+    if z.zone_type == "global" and zone_type != "global":
+        plugin_cfgs = config.get("plugins", {})
+        if zone_type in plugin_cfgs:
+            for k, v in plugin_cfgs[zone_type].items():
+                if k not in config:
+                    config[k] = v
     # Query-Parameter an Config weiterreichen (z.B. from/to für Wayback CDX)
-    for _qk in ("from", "to"):
+    for _qk in ("from", "to", "date"):
         if request.args.get(_qk):
             config[_qk] = request.args[_qk]
+    # Inherit time_focus from global zone in same project if not set
+    if not config.get("time_focus") and z.project_id:
+        from models import WatchZone as _WZ2
+        for _gz in _WZ2.query.filter_by(zone_type="global", project_id=z.project_id, user_id=current_user.id).all():
+            _gc = _j.loads(_gz.config) if _gz.config else {}
+            if _gc.get("time_focus"):
+                config["time_focus"] = _gc["time_focus"]
+                break
     bbox = _geojson_to_bbox(geo)
 
     try:
@@ -2663,32 +2756,6 @@ def api_watchzones_live(zid):
 # ── WZ-History-Routen werden dynamisch aus Plugins registriert ───────────
 # (siehe _register_wz_history_routes() weiter unten, aufgerufen nach Routendefinition)
 
-
-
-@app.route("/api/watchzones/<int:zid>/snapshot-diff")
-@login_required
-def api_snapshot_diff(zid):
-    """Liefert einen Wayback-Snapshot mit optionaler Diff-Markierung gegenüber dem Vorgänger."""
-    import json as _j
-    from models import WatchZone
-    z = WatchZone.query.filter_by(id=zid, user_id=current_user.id).first()
-    if not z:
-        abort(404)
-    config = _j.loads(z.config) if z.config else {}
-    url = config.get("url", "")
-    if not url:
-        return jsonify({"error": "Keine URL konfiguriert"}), 400
-    ts2 = request.args.get("ts", "").strip()
-    ts1 = request.args.get("ts1", "").strip() or None
-    if not ts2:
-        return jsonify({"error": "Parameter 'ts' erforderlich"}), 400
-    try:
-        from plugins.watchzone.website._transport import fetch_wayback_diff_html
-        result = fetch_wayback_diff_html(url, ts2, ts1)
-        return jsonify(result)
-    except Exception as e:
-        log.warning("Snapshot-Diff Fehler (Zone %d): %s", zid, e)
-        return jsonify({"error": str(e)}), 502
 
 
 
@@ -3097,8 +3164,64 @@ def api_events_find_news():
                 return None
         return None
 
+    def fetch_wikipedia():
+        """Wikipedia-Suche – liefert relevante Artikel zum Suchbegriff."""
+        wiki_lang = {"German": "de", "English": "en", "French": "fr", "Spanish": "es", "Arabic": "ar"}.get(lang_key, "de")
+        try:
+            r = req_lib.get(
+                f"https://{wiki_lang}.wikipedia.org/w/api.php",
+                params={
+                    "action": "query",
+                    "list": "search",
+                    "srsearch": q,
+                    "srlimit": min(limit, 50),
+                    "srinfo": "totalhits",
+                    "srprop": "snippet|timestamp|size|wordcount",
+                    "format": "json",
+                },
+                headers={"User-Agent": UA},
+                timeout=15,
+            )
+            r.raise_for_status()
+            data = r.json()
+            items = []
+            for sr in data.get("query", {}).get("search", []):
+                title = (sr.get("title") or "").strip()
+                if not title:
+                    continue
+                ts = (sr.get("timestamp") or "").strip()
+                dt_iso = ""
+                if ts:
+                    try:
+                        dt_iso = datetime.fromisoformat(ts.replace("Z", "+00:00")).strftime("%Y-%m-%dT%H:%M")
+                    except Exception:
+                        pass
+                # Strip HTML from snippet
+                snippet = (sr.get("snippet") or "")
+                import re as _re
+                snippet = _re.sub(r"<[^>]+>", "", snippet)
+                items.append({
+                    "title":          title,
+                    "title_original": snippet if snippet else None,
+                    "url":            f"https://{wiki_lang}.wikipedia.org/wiki/{title.replace(' ', '_')}",
+                    "domain":         f"{wiki_lang}.wikipedia.org",
+                    "seendate":       dt_iso,
+                    "language":       wiki_lang,
+                    "sourcecountry":  "",
+                })
+            log.info("Wikipedia (%s): %d Artikel", wiki_lang, len(items))
+            return items
+        except Exception as exc:
+            log.warning("Wikipedia-Suche fehlgeschlagen: %s", exc)
+            return None
+
     results = []
-    if source == "bing":
+    if source == "wikipedia":
+        items = fetch_wikipedia()
+        if items is None:
+            abort(502, "Wikipedia nicht erreichbar")
+        results = items
+    elif source == "bing":
         if limit > 25:
             with ThreadPoolExecutor(max_workers=2) as pool:
                 bing_future  = pool.submit(fetch_bing)
@@ -3135,11 +3258,12 @@ def api_events_find_news():
             abort(502, "NewsAPI nicht erreichbar")
         results = items
     elif source == "all":
-        google_items = fetch_google() or []
-        bing_items   = fetch_bing()   or []
-        gdelt_items  = fetch_gdelt()  or []
+        google_items = fetch_google()    or []
+        bing_items   = fetch_bing()      or []
+        gdelt_items  = fetch_gdelt()     or []
+        wiki_items   = fetch_wikipedia() or []
         seen = set()
-        for it in google_items + bing_items + gdelt_items:
+        for it in google_items + bing_items + gdelt_items + wiki_items:
             key = it["title"].lower().strip()
             if key not in seen:
                 seen.add(key)
@@ -4440,6 +4564,12 @@ def conflict(e):
 
 with app.app_context():
     db.create_all()
+    # Enable WAL mode for SQLite (concurrent reads during writes)
+    if "sqlite" in app.config["SQLALCHEMY_DATABASE_URI"]:
+        with db.engine.connect() as _wc:
+            _wc.execute(text("PRAGMA journal_mode=WAL"))
+            _wc.execute(text("PRAGMA busy_timeout=30000"))
+            _wc.commit()
     # Schema-Migrationen
     with db.engine.connect() as conn:
         # fetch_log: backend-Spalte
@@ -4448,6 +4578,13 @@ with app.app_context():
             conn.commit()
         except Exception:
             pass
+        # events: location fields
+        for _col, _def in [("lat", "FLOAT"), ("lon", "FLOAT"), ("location_name", "VARCHAR(300) DEFAULT ''")]:
+            try:
+                conn.execute(text(f"ALTER TABLE events ADD COLUMN {_col} {_def}"))
+                conn.commit()
+            except Exception:
+                pass
 
         # Keywords: neue Spalten falls nicht vorhanden
         for col, definition in [
@@ -4744,6 +4881,21 @@ with app.app_context():
         db.session.commit()
         log.info("Bestehende Daten dem Admin zugewiesen")
 
+        # Standard-Nutzer anlegen
+        normal = User(
+            username="user",
+            display_name="Benutzer",
+            role="user",
+            active=True,
+            max_serpapi_calls=0,
+            max_llm_calls=0,
+            max_projects=0,
+        )
+        normal.set_password("user")
+        db.session.add(normal)
+        db.session.commit()
+        log.info("Standard-Nutzer 'user' angelegt (Passwort: user)")
+
     log.info("Datenbank initialisiert")
 
 
@@ -4752,25 +4904,17 @@ def _run_analysis(method, body):
 
     Delegiert an die compute()-Methode des zuständigen Analysis-Plugins.
     """
-    # Methoden-Name → Plugin-ID Mapping
-    _METHOD_TO_PLUGIN = {
-        "spike_coincidence": "spike_coin",
-        "changepoint": "cpd",
-        "rolling_correlation": "rc",
-        "periodicity": "period_filter",
-        "outliers": "outlier",
-        "decompose": "decomp",
-        "self_similarity": "ssim",
-    }
+    # Dynamisch: APA-Methodenname → Plugin über meta["apa_method"]
+    plugin = None
+    for p in PluginManager.all_of_type("analysis").values():
+        if p.meta.get("apa_method") == method:
+            plugin = p
+            break
 
-    plugin_id = _METHOD_TO_PLUGIN.get(method)
-    if plugin_id:
-        plugin = PluginManager.get("analysis", plugin_id)
-        if plugin:
-            result = plugin.compute(body)
-            result.pop("_status", None)
-            return result
-        return {"error": f"Plugin nicht gefunden: {plugin_id}", "summary": f"Plugin {plugin_id} nicht verfügbar"}
+    if plugin:
+        result = plugin.compute(body)
+        result.pop("_status", None)
+        return result
 
     return {"error": f"Unbekannte Methode: {method}", "summary": f"Unbekannte Methode: {method}"}
 
@@ -4813,9 +4957,8 @@ def api_project_export_docx(pid):
     TF = {"now 1-H": "1h", "now 4-H": "4h", "now 1-d": "24h", "now 7-d": "7 Tage",
           "today 1-m": "1 Monat", "today 3-m": "3 Monate",
           "today 12-m": "12 Monate", "today 5-y": "5 Jahre"}
-    ATYPE = {"ssim": "Self-Similarity-Matrix",
-             "outlier": "Ausreißer-Erkennung",
-             "decomp": "Zeitreihen-Zerlegung"}
+    ATYPE = {p.plugin_id: p.meta.get("label", p.plugin_id)
+             for p in PluginManager.all_of_type("analysis").values()}
 
     doc = Document()
 
@@ -5090,10 +5233,23 @@ def api_project_export_docx(pid):
 # (Scientific Paper Export → plugins/ai/scientific_paper/)
 _REMOVED_SCI_PAPER = True  # Marker: alter Code entfernt, jetzt Plugin
 
-# APA (AI Project Assistance) — nur in Enterprise Edition
+# APA-Tools (ausgelagert nach apa_tools.py)
+try:
+    from apa_tools import _WZ_CORE_TOOLS, _get_wz_tools, _get_wz_tools_oai, _execute_wz_tool  # noqa: F401
+except ImportError:
+    pass
+
+# APA-Stream (ausgelagert nach apa_stream.py)
+try:
+    from apa_stream import api_ai_project_assist_stream
+    app.add_url_rule("/api/ai-project-assist/stream",
+                     endpoint="api_ai_project_assist_stream",
+                     view_func=login_required(api_ai_project_assist_stream),
+                     methods=["POST"])
+except ImportError:
+    pass
 
 
-# ---------------------------------------------------------------------------
 scheduler.start()
 log.info(
     "Scheduler gestartet – täglicher Fetch um %02d:%02d Uhr.",

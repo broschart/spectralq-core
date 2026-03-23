@@ -10,6 +10,7 @@ class RcPlugin(AnalysisPlugin):
         "color": "#38bdf8",
         "symbol": "∿",
         "description": "Gleitende Korrelation zwischen zwei Zeitreihen.",
+        "apa_method": "rolling_correlation",
         "default_show_in": ["lab", "popup"],
         "button_id": "btn-rolling-corr",
         "requires_multi_kw": True,

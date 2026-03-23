@@ -1,13 +1,12 @@
 <div id="panel-celltowers" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
-    <h2 data-i18n="wz_ct_title">Mobile Network Infrastructure</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_ct_source">Source: OpenCelliD (Open Database of Cell Towers)</span>
+    <h2 data-i18n="wz_cell_title">Mobile Network Infrastructure</h2>
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_ct_desc">Captures mobile cell towers (GSM, UMTS, LTE, 5G NR) in an area. Changes in cell tower activity can indicate population movements, network outages or targeted shutdowns.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_cell_help">Captures mobile cell towers (GSM, UMTS, LTE, 5G NR) in the defined area and displays them on the map with signal range and technology type.<br><br><b>How to use:</b> Draw a zone on the map and click "Live". All known cell towers within the zone are shown. Compare snapshots over time to detect new towers, removed infrastructure or coverage gaps.<br><br><b>Forensic relevance:</b> Changes in cell tower activity can indicate population movements, targeted network shutdowns, or the deployment of mobile surveillance equipment (IMSI catchers). Sudden disappearance of towers may signal infrastructure damage in conflict zones.<br><br><b>Data source:</b> OpenCelliD — requires a free API key.</div>
   </div>
   <div class="wz-main-body">
-    <div id="wz-map-celltowers" class="wz-map-container" style="height:500px;"></div>
-    <div class="wz-hint" id="wz-hint-celltowers" data-i18n="wz_ct_hint">
+    <div id="wz-map-celltowers" class="wz-map-container" ></div>
+    <div class="wz-hint" id="wz-hint-celltowers" data-i18n="wz_cell_hint">
       Draw observation areas on the map. Cell tower data
       will be fetched automatically from OpenCelliD.
     </div>

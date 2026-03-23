@@ -1,12 +1,11 @@
 <div id="panel-seismic" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_seismic_title">Seismic Activity</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_seismic_source">Source: USGS Earthquake Catalog</span>
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_seismic_desc">Records earthquakes (USGS) within the defined area – with magnitude, depth and time. Well suited for crisis regions or areas with known tectonic activity.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_seismic_help">Records earthquakes within the defined area with magnitude, depth, location and time.<br><br><b>How to use:</b> Draw a zone on the map and click "Live". All seismic events from the last 30 days are listed. Each event shows magnitude, depth, exact coordinates and a link to the USGS detail page. Community reports (DYFI — Did You Feel It?) and waveform data are available where reported.<br><br><b>Forensic relevance:</b> Seismic data can help distinguish natural earthquakes from underground explosions (e.g. nuclear tests or large-scale demolitions). Shallow events with unusual waveform signatures are automatically highlighted. Useful for crisis regions and areas near nuclear facilities.<br><br><b>Data source:</b> USGS Earthquake Catalog — no API key required.</div>
   </div>
   <div class="wz-main-body">
-    <div id="wz-map-seismic" class="wz-map-container" style="height:500px;"></div>
+    <div id="wz-map-seismic" class="wz-map-container" ></div>
     <div class="wz-hint" id="wz-hint-seismic" data-i18n="wz_seismic_hint">
       Draw observation areas on the map. Earthquake activity (USGS) will be
       displayed automatically in the analysis timeline (under "Other Sources").

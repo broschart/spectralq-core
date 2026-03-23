@@ -16,7 +16,8 @@
     "wz_mig_empty": "Keine Migrationsdaten fuer diese Region.",
     "wz_mig_header": "Fluechtlinge & Asyl",
     "wz_mig_as_asylum": "Als Aufnahmeland",
-    "wz_mig_as_origin": "Als Herkunftsland"
+    "wz_mig_as_origin": "Als Herkunftsland",
+    "wz_mig_help": "Überwacht Flüchtlingspopulationen, Asylanträge und Binnenvertriebene (IDPs) basierend auf offiziellen UNHCR-Statistiken.<br><br><b>Bedienung:</b> Zone über ein oder mehrere Länder einzeichnen und auf „Live“ klicken. Das System zeigt aktuelle Flüchtlings- und IDP-Zahlen pro Land sowie eine 10-Jahres-Trendanalyse, die langfristige Vertreibungsmuster aufzeigt.<br><br><b>Forensische Relevanz:</b> Migrationsdaten können mit Konfliktereignissen (ACLED), Suchvolumen-Spitzen und Medienberichterstattung korreliert werden, um ein umfassendes Bild der Krisendynamik zu erstellen. Plötzliche Anstiege der Vertreibungszahlen gehen Eskalationsphasen oft voraus oder bestätigen sie. Der Vergleich von Herkunfts- und Zielländern hilft, Vertreibungskorridore nachzuvollziehen.<br><br><b>Datenquelle:</b> UNHCR Refugee Statistics API — kein API-Key erforderlich."
   },
   "en": {
     "wz_sidebar_migration": "Migration",
@@ -35,7 +36,8 @@
     "wz_mig_empty": "No migration data for this region.",
     "wz_mig_header": "Refugees & Asylum",
     "wz_mig_as_asylum": "As host country",
-    "wz_mig_as_origin": "As country of origin"
+    "wz_mig_as_origin": "As country of origin",
+    "wz_mig_help": "Monitors refugee populations, asylum applications and internally displaced persons (IDPs) based on official UNHCR statistics.<br><br><b>How to use:</b> Draw a zone covering one or more countries and click \"Live\". The system shows current refugee and IDP counts per country, plus a 10-year trend analysis that reveals long-term displacement patterns.<br><br><b>Forensic relevance:</b> Migration data can be correlated with conflict events (ACLED), search volume spikes and media coverage to build a comprehensive picture of crisis dynamics. Sudden increases in displacement figures often precede or confirm escalation phases. Comparing origin and destination countries helps trace displacement corridors.<br><br><b>Data source:</b> UNHCR Refugee Statistics API — no API key required."
   },
   "fr": {
     "wz_sidebar_migration": "Migration",
@@ -47,7 +49,8 @@
     "wz_mig_asylum": "Demandeurs d'asile",
     "wz_mig_idps": "Deplaces internes",
     "wz_mig_empty": "Aucune donnee pour cette region.",
-    "wz_mig_header": "Refugies & asile"
+    "wz_mig_header": "Refugies & asile",
+    "wz_mig_help": "Monitors refugee populations, asylum applications and internally displaced persons (IDPs) based on official UNHCR statistics.<br><br><b>How to use:</b> Draw a zone covering one or more countries and click \"Live\". The system shows current refugee and IDP counts per country, plus a 10-year trend analysis that reveals long-term displacement patterns.<br><br><b>Forensic relevance:</b> Migration data can be correlated with conflict events (ACLED), search volume spikes and media coverage to build a comprehensive picture of crisis dynamics. Sudden increases in displacement figures often precede or confirm escalation phases. Comparing origin and destination countries helps trace displacement corridors.<br><br><b>Data source:</b> UNHCR Refugee Statistics API — no API key required."
   },
   "es": {
     "wz_sidebar_migration": "Migracion",
@@ -59,6 +62,7 @@
     "wz_mig_asylum": "Solicitantes de asilo",
     "wz_mig_idps": "Desplazados internos",
     "wz_mig_empty": "Sin datos para esta region.",
-    "wz_mig_header": "Refugiados y asilo"
+    "wz_mig_header": "Refugiados y asilo",
+    "wz_mig_help": "Monitors refugee populations, asylum applications and internally displaced persons (IDPs) based on official UNHCR statistics.<br><br><b>How to use:</b> Draw a zone covering one or more countries and click \"Live\". The system shows current refugee and IDP counts per country, plus a 10-year trend analysis that reveals long-term displacement patterns.<br><br><b>Forensic relevance:</b> Migration data can be correlated with conflict events (ACLED), search volume spikes and media coverage to build a comprehensive picture of crisis dynamics. Sudden increases in displacement figures often precede or confirm escalation phases. Comparing origin and destination countries helps trace displacement corridors.<br><br><b>Data source:</b> UNHCR Refugee Statistics API — no API key required."
   }
 }

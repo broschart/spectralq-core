@@ -10,6 +10,7 @@ class DecompPlugin(AnalysisPlugin):
         "color": "#a78bfa",
         "symbol": "≋",
         "description": "Zerlegung in Trend, Saisonalität und Residuum.",
+        "apa_method": "decompose",
         "default_show_in": ["popup"],
         "button_id": "",
         "requires_multi_kw": False,

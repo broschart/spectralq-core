@@ -21,7 +21,7 @@
 {% endblock %}
 
 {% block content %}
-<h1 data-i18n="kw_page_title">Keyword-Verwaltung</h1>
+{% if not embed %}<h1 data-i18n="kw_page_title">Keyword-Verwaltung</h1>{% endif %}
 
 {% if not current_user.is_superadmin and user_project_count == 0 %}
 <div style="max-width:640px;margin:40px auto;text-align:center;">
@@ -634,7 +634,9 @@ window._applyI18n();
     ["IT","Italien"],["ES","Spanien"],["NL","Niederlande"],
     ["BE","Belgien"],["PL","Polen"],["SE","Schweden"],
     ["NO","Norwegen"],["DK","D\u00e4nemark"],["FI","Finnland"],
+    ["EE","Estland"],["LV","Lettland"],["LT","Litauen"],
     ["PT","Portugal"],["CZ","Tschechien"],["RU","Russland"],
+    ["UA","Ukraine"],["BY","Belarus"],["MD","Moldau"],
     ["TR","T\u00fcrkei"],["JP","Japan"],["CN","China"],
     ["KR","S\u00fcdkorea"],["IN","Indien"],["BR","Brasilien"],
     ["CA","Kanada"],["AU","Australien"],["MX","Mexiko"],

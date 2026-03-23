@@ -847,6 +847,20 @@
         <li><strong>Radioactivity</strong> – BfS ODL (Germany) + EURDEP (Europe): gamma dose rate, ~1,600 and ~37,000 monitoring stations respectively. Triangulatable.</li>
         <li><strong>Aircraft</strong> – Live air traffic via OpenSky Network with anomaly score, 3D globe, and proximity analysis.</li>
         <li><strong>Vessels</strong> – AIS vessel traffic via aisstream.io.</li>
+        <li><strong>Satellite Overpass</strong> – Computes overpasses of Earth observation, military, and weather satellites over a Watch Zone. Based on public TLE orbital data (CelesTrak) and SGP4 propagation. Features:
+          <ul style="margin-top:4px;">
+            <li><strong>Date picker</strong> – Select any date (past or future).</li>
+            <li><strong>Overpass table</strong> – Shows time, satellite, category, max elevation, altitude, duration, object type, status, operator, orbit, launch date, and <strong>visual resolution</strong> (from a database of ~100 known satellites or estimated from RCS/altitude).</li>
+            <li><strong>Blind spots</strong> – Time windows with no satellite coverage, color-coded by severity (Critical &gt;1h, Warning &gt;30min, Minor).</li>
+            <li><strong>24h animation</strong> – Fullscreen map with satellite movement (24h in 60s). Imaging swath corridors grow progressively. Auto-slowdown during overpasses (10x realtime). Heatmap overlay shows observation density.</li>
+            <li><strong>Hover info</strong> – Mouseover on the animation map shows all satellites that passed over that point, with time, altitude, resolution, and operator.</li>
+            <li><strong>Click timeline</strong> – Click on the animation map opens a Gantt chart of all overpasses at that location, sortable by time, altitude, or resolution.</li>
+            <li><strong>Orbit detail view</strong> – Click on a satellite in the overpass list opens a world map with ground track, imaging swath, direction arrows, speed/ground speed, imaging width, coverage rate (km²/h), and resolution.</li>
+            <li><strong>Closest observation overlaps</strong> – Top 10 satellite pairs with smallest ground distance. Distinguishes formation flights (same altitude, 3D distance) from sequential observations. Collision risk warning at &lt;1km 3D distance.</li>
+            <li><strong>Resolution database</strong> – ~100 known satellites with documented GSD (Ground Sample Distance). For unknown satellites, resolution is estimated from RCS and orbital altitude. Classification: Sub-meter, High-res, Medium, Low-res.</li>
+          </ul>
+          No API key required. Triangulatable.
+        </li>
       </ul>
 
       <h4>Infrastructure & Environment</h4>
@@ -855,6 +869,12 @@
         <li><strong>Cell Towers (OpenCelliD)</strong> – Cell tower inventory (GSM, UMTS, LTE, 5G NR) with range, signal strength, and LTE/5G coverage indicator. 1,000 requests/day free. Requires OpenCelliD API key.</li>
         <li><strong>Air Quality (OpenAQ)</strong> – PM2.5, PM10, ozone, NO₂, SO₂, CO worldwide. Color-coded by EPA scale. Spikes indicate fires, explosions, or industrial accidents. Triangulatable. Requires OpenAQ API key (free).</li>
         <li><strong>Power Grid (ENTSO-E)</strong> – Grid load in 30+ European countries. 48h load curve with anomaly detection (blackout indicator at &gt;30% load drop). Triangulatable. Requires ENTSO-E security token (free, request via email).</li>
+        <li><strong>Internet Health (IODA)</strong> – Backbone and connectivity monitoring via IODA (Georgia Tech). BGP routes, active probing, Merit darknet and Google traffic for 30+ countries. Detects internet outages, cable disruptions and government shutdowns. Triangulatable. No API key required.</li>
+      </ul>
+
+      <h4>Finance & Commodities</h4>
+      <ul>
+        <li><strong>Commodity Prices</strong> – Real-time commodity price monitoring via Yahoo Finance: energy (WTI, Brent, natural gas), metals (gold, silver, copper, palladium), agriculture (wheat, corn, soybeans, coffee, cocoa) and livestock. Categorized display with price curves. Triangulatable. No API key required.</li>
       </ul>
 
       <h4>Conflicts & Migration</h4>
@@ -870,7 +890,7 @@
         <li><strong>Telegram Monitor</strong> – Keyword-based monitoring of public Telegram channels. Shows mention volume over 90 days with daily resolution. Triangulatable. Requires Telegram API credentials + authenticated session.</li>
         <li><strong>Bluesky Monitor</strong> – Keyword-based monitoring on Bluesky (AT Protocol). Post volume over 180 days. Triangulatable. Requires Bluesky Handle + App Password.</li>
         <li><strong>Wayback Frequency</strong> – How often was a URL cached by the Internet Archive? High frequency = media attention or coordinated archiving. Triangulatable. No API key needed.</li>
-        <li><strong>CertWatch</strong> – Certificate Transparency Log monitoring for domains.</li>
+        <li><strong>DNS / CT (CertWatch)</strong> – Certificate Transparency Log monitoring via crt.sh. Shows for configured domains: total certificate count, new subdomains with first-seen dates, issuer distribution (Let's Encrypt, DigiCert, etc.), sparkline timeline. No API key required – spinner mode during loading, timeout handling for crt.sh outages.</li>
         <li><strong>Wikipedia</strong> – Monitors Wikipedia articles for changes.</li>
         <li><strong>Censys</strong> – Internet asset search (requires Censys credentials).</li>
       </ul>

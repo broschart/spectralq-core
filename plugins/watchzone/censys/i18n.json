@@ -24,7 +24,8 @@
     "wz_censys_th_last_seen": "Zuletzt gesehen",
     "wz_censys_alert_filter": "Bitte mindestens einen Filter angeben (Land, Stadt, Port oder Dienst).",
     "wz_censys_default_name": "Censys-Suche",
-    "wz_censys_err_save": "Fehler:"
+    "wz_censys_err_save": "Fehler:",
+    "wz_censys_help": "Sucht nach exponierten Hosts und Diensten im Internet mittels der Censys-Suchmaschine, mit geografischen und portbasierten Filtern.<br><br><b>Bedienung:</b> Suchanfrage mit Filtern für Land, Stadt, Port oder Diensttyp erstellen (z. B. „location.country_code=DE and services.port=22“). Auf „Live“ klicken. Ergebnisse zeigen jeden Host mit IP-Adresse, offenen Ports, laufenden Diensten, ASN und geografischem Standort.<br><br><b>Forensische Relevanz:</b> Identifiziert exponierte Infrastruktur in einer Region — ungeschützte Server, offene Management-Interfaces oder neu bereitgestellte Dienste. Die Überwachung von Veränderungen über die Zeit kann Infrastrukturaufbau, Takedowns oder Hosting-Verlagerungen aufdecken. Nützlich zur Verfolgung von Command-and-Control-Infrastruktur oder zur Identifikation verwundbarer Regierungssysteme.<br><br><b>Datenquelle:</b> Censys Search API v2 — kostenloses Censys-Konto erforderlich (censys.io)."
   },
   "en": {
     "wz_sidebar_censys": "Censys",
@@ -51,7 +52,8 @@
     "wz_censys_th_last_seen": "Last Seen",
     "wz_censys_alert_filter": "Please specify at least one filter (country, city, port or service).",
     "wz_censys_default_name": "Censys Search",
-    "wz_censys_err_save": "Error:"
+    "wz_censys_err_save": "Error:",
+    "wz_censys_help": "Searches for exposed hosts and services on the internet using the Censys search engine, with geographic and port-based filtering.<br><br><b>How to use:</b> Create a search query with filters for country, city, port or service type (e.g. \"location.country_code=DE and services.port=22\"). Click \"Live\" to execute the query. Results show each host with IP address, open ports, running services, ASN and geographic location.<br><br><b>Forensic relevance:</b> Identifies exposed infrastructure in a region — unprotected servers, open management interfaces, or newly deployed services. Monitoring changes over time can reveal infrastructure build-up, takedowns or shifts in hosting patterns. Useful for tracking command-and-control infrastructure or identifying vulnerable government systems.<br><br><b>Data source:</b> Censys Search API v2 — requires a free Censys account (censys.io)."
   },
   "fr": {
     "wz_sidebar_censys": "Censys",
@@ -78,7 +80,8 @@
     "wz_censys_th_last_seen": "Vu pour la dernière fois",
     "wz_censys_alert_filter": "Veuillez spécifier au moins un filtre (pays, ville, port ou service).",
     "wz_censys_default_name": "Recherche Censys",
-    "wz_censys_err_save": "Erreur :"
+    "wz_censys_err_save": "Erreur :",
+    "wz_censys_help": "Searches for exposed hosts and services on the internet using the Censys search engine, with geographic and port-based filtering.<br><br><b>How to use:</b> Create a search query with filters for country, city, port or service type (e.g. \"location.country_code=DE and services.port=22\"). Click \"Live\" to execute the query. Results show each host with IP address, open ports, running services, ASN and geographic location.<br><br><b>Forensic relevance:</b> Identifies exposed infrastructure in a region — unprotected servers, open management interfaces, or newly deployed services. Monitoring changes over time can reveal infrastructure build-up, takedowns or shifts in hosting patterns. Useful for tracking command-and-control infrastructure or identifying vulnerable government systems.<br><br><b>Data source:</b> Censys Search API v2 — requires a free Censys account (censys.io)."
   },
   "es": {
     "wz_sidebar_censys": "Censys",
@@ -105,6 +108,7 @@
     "wz_censys_th_last_seen": "Última vez visto",
     "wz_censys_alert_filter": "Por favor especifique al menos un filtro (país, ciudad, puerto o servicio).",
     "wz_censys_default_name": "Búsqueda Censys",
-    "wz_censys_err_save": "Error:"
+    "wz_censys_err_save": "Error:",
+    "wz_censys_help": "Searches for exposed hosts and services on the internet using the Censys search engine, with geographic and port-based filtering.<br><br><b>How to use:</b> Create a search query with filters for country, city, port or service type (e.g. \"location.country_code=DE and services.port=22\"). Click \"Live\" to execute the query. Results show each host with IP address, open ports, running services, ASN and geographic location.<br><br><b>Forensic relevance:</b> Identifies exposed infrastructure in a region — unprotected servers, open management interfaces, or newly deployed services. Monitoring changes over time can reveal infrastructure build-up, takedowns or shifts in hosting patterns. Useful for tracking command-and-control infrastructure or identifying vulnerable government systems.<br><br><b>Data source:</b> Censys Search API v2 — requires a free Censys account (censys.io)."
   }
 }

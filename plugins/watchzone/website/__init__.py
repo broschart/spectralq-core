@@ -29,14 +29,79 @@ class WebsitePlugin(WatchZonePlugin):
         "live_map_inset_template": "website/_live_inset.html",
         "live_side_panels_template": "website/_live_panels.html",
         "live_undermap_template": "website/_live_undermap.html",
+        "apa_action": "wayback",
     }
 
+    def apa_action_handler(self, action):
+        """Returns dict with: status_msg, report, data_msg, error"""
+        from datetime import datetime, timedelta
+        from plugins.watchzone.website._transport import fetch_wayback_changes
+
+        wb_url = (action.get("url") or action.get("domain") or "").strip()
+        wb_days = min(int(action.get("days", 90)), 365)
+
+        if not wb_url:
+            return {"error": "Wayback: keine URL angegeben"}
+
+        if "://" not in wb_url:
+            wb_url = "https://" + wb_url
+
+        try:
+            date_to = datetime.utcnow().strftime("%Y-%m-%d")
+            date_from = (datetime.utcnow() - timedelta(days=wb_days)).strftime("%Y-%m-%d")
+            changes = fetch_wayback_changes(wb_url, date_from, date_to)
+
+            if changes:
+                by_month = {}
+                for c in changes:
+                    mon = c["date"][:7]
+                    by_month[mon] = by_month.get(mon, 0) + 1
+                month_str = ", ".join(f"{m}: {n}\u00d7" for m, n in sorted(by_month.items())[-6:])
+                # Titeländerungen ermitteln
+                title_changes = [c for c in changes if c.get("title_changed")]
+                titles_seen = list(dict.fromkeys(
+                    c["title"] for c in changes if c.get("title")
+                ))
+                report_parts = [
+                    f"WAYBACK MACHINE ({wb_url}, {date_from} bis {date_to}):",
+                    f"  {len(changes)} Inhaltliche Änderungen erkannt (jeweils neuer Digest)",
+                    f"  Letzte Monate: {month_str}",
+                    f"  Erster Snapshot: {changes[0]['date']}, Letzter: {changes[-1]['date']}",
+                ]
+                if titles_seen:
+                    report_parts.append(f"  Bekannte Seitentitel ({len(titles_seen)} distinct): " + " | ".join(titles_seen[:8]))
+                if title_changes:
+                    report_parts.append(f"  \u26a0 {len(title_changes)} Titeländerung(en) erkannt:")
+                    for tc in title_changes[:5]:
+                        report_parts.append(f"    {tc['date']} {tc.get('time','')} — \"{tc.get('prev_title','?')}\" → \"{tc['title']}\"")
+                tc_note = f", {len(title_changes)} Titeländerungen" if title_changes else ""
+                return {
+                    "status_msg": f"Wayback Machine: {wb_url} ({wb_days} Tage) …",
+                    "report": "\n".join(report_parts),
+                    "data_msg": f"Wayback {wb_url}: {len(changes)} Inhaltsänderungen in {wb_days} Tagen{tc_note} – {month_str}",
+                    "error": None,
+                }
+            else:
+                return {
+                    "status_msg": f"Wayback Machine: {wb_url} ({wb_days} Tage) …",
+                    "report": f"WAYBACK MACHINE ({wb_url}): Keine Snapshots im Zeitraum {date_from}–{date_to}",
+                    "data_msg": f"Wayback {wb_url}: Keine Snapshots gefunden",
+                    "error": None,
+                }
+        except Exception as e:
+            return {"error": f"Wayback-Fehler: {str(e)[:80]}"}
+
     def api_routes(self):
-        from plugins.watchzone.website._routes import api_traceroute, api_traceroute_result, api_traceroute_result_patch
+        from plugins.watchzone.website._routes import (
+            api_traceroute, api_traceroute_result, api_traceroute_result_patch,
+            api_snapshot_diff, api_tracker_reverse_lookup,
+        )
         return [
             {"rule": "/api/watchzones/<int:zid>/traceroute", "handler": api_traceroute},
             {"rule": "/api/watchzones/<int:zid>/traceroute-result", "handler": api_traceroute_result, "methods": ["GET", "POST"]},
             {"rule": "/api/watchzones/<int:zid>/traceroute-result/<int:rid>", "handler": api_traceroute_result_patch, "methods": ["PATCH"]},
+            {"rule": "/api/watchzones/<int:zid>/snapshot-diff", "handler": api_snapshot_diff},
+            {"rule": "/api/tracker-reverse-lookup", "handler": api_tracker_reverse_lookup},
         ]
 
     def live_handler(self, zone, config, geo, bbox, user_id):
@@ -44,10 +109,57 @@ class WebsitePlugin(WatchZonePlugin):
         url = config.get("url", "")
         if not url:
             return {"error": "Keine URL konfiguriert"}
-        items = fetch_wayback_live(url)
+
+        time_focus = config.get("time_focus")
+        if time_focus and time_focus.get("from"):
+            # Load snapshots ±15 days around event
+            from datetime import datetime as _dt, timedelta as _td
+            from plugins.watchzone.website._transport import fetch_wayback_snapshots
+            try:
+                focus_date = _dt.strptime(time_focus["from"][:10], "%Y-%m-%d")
+                date_from = (focus_date - _td(days=15)).strftime("%Y%m%d")
+                date_to = (focus_date + _td(days=15)).strftime("%Y%m%d")
+                items = fetch_wayback_snapshots(url, date_from, date_to)
+                return {
+                    "zone_id": zone.id, "zone_name": zone.name,
+                    "zone_type": "website", "count": len(items), "items": items,
+                    "url": url, "time_focus": time_focus,
+                    "date_from": (focus_date - _td(days=15)).strftime("%Y-%m-%d"),
+                    "date_to": (focus_date + _td(days=15)).strftime("%Y-%m-%d"),
+                }
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning("Wayback TF fetch error: %s", e)
+                # Return empty result with time_focus info so UI shows correct date
+                return {
+                    "zone_id": zone.id, "zone_name": zone.name,
+                    "zone_type": "website", "count": 0, "items": [],
+                    "url": url, "time_focus": time_focus,
+                    "date_from": (focus_date - _td(days=15)).strftime("%Y-%m-%d"),
+                    "date_to": (focus_date + _td(days=15)).strftime("%Y-%m-%d"),
+                    "error_hint": "Wayback Machine nicht erreichbar. Bitte sp\u00e4ter erneut versuchen.",
+                }
+
+        from datetime import datetime as _dt, timedelta as _td
+        from plugins.watchzone.website._transport import fetch_wayback_snapshots
+        days = config.get("days", 90)
+        dt_to = _dt.utcnow()
+        dt_from = dt_to - _td(days=days)
+        try:
+            items = fetch_wayback_snapshots(url, dt_from.strftime("%Y%m%d"), dt_to.strftime("%Y%m%d"))
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("Wayback fetch error: %s", e)
+            return {
+                "zone_id": zone.id, "zone_name": zone.name,
+                "zone_type": "website", "count": 0, "items": [], "url": url,
+                "error_hint": "Wayback Machine nicht erreichbar: " + str(e)[:100],
+            }
         return {
             "zone_id": zone.id, "zone_name": zone.name,
             "zone_type": "website", "count": len(items), "items": items, "url": url,
+            "date_from": dt_from.strftime("%Y-%m-%d"),
+            "date_to": dt_to.strftime("%Y-%m-%d"),
         }
 
     def history_routes(self):
@@ -144,6 +256,15 @@ class WebsitePlugin(WatchZonePlugin):
         return {"error": f"Unbekanntes Tool: {tool_name}"}
 
     def analysis_provider(self):
-        return {"data_types": ["website"], "history_endpoint_suffix": "website-history"}
+        return {
+            "data_types": ["website"],
+            "history_endpoint_suffix": "website-history",
+            "analysis_js": "/plugins/watchzone/website/static/website_analysis.js",
+            "ui_prefix": "web",
+            "ui_label": "Website (Wayback)",
+            "ui_color": "#06b6d4",
+            "zone_types": ["website"],
+            "accepts_global": False,
+        }
 
 PluginManager.register(WebsitePlugin())

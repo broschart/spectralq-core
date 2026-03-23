@@ -13,7 +13,8 @@
     "wz_aq_quality": "Qualitaet",
     "wz_aq_params": "Parameter",
     "wz_aq_more": "weitere",
-    "wz_aq_no_key": "OpenAQ API-Key fehlt. Kostenlos registrieren auf openaq.org."
+    "wz_aq_no_key": "OpenAQ API-Key fehlt. Kostenlos registrieren auf openaq.org.",
+    "wz_aq_help": "Überwacht die Luftqualität an bodennahen Sensorstationen weltweit: Feinstaub (PM2,5, PM10), Ozon (O₃), Stickstoffdioxid (NO₂), Schwefeldioxid (SO₂) und Kohlenmonoxid (CO).<br><br><b>Bedienung:</b> Zone auf der Karte einzeichnen und auf „Live“ klicken. Alle Messstationen im Gebiet werden mit ihren letzten Messwerten und einer Luftqualitätsbewertung aufgelistet.<br><br><b>Forensische Relevanz:</b> Plötzliche Spitzen bei PM2,5 oder SO₂ können auf Brände, Explosionen, Industrieunfälle oder militärische Aktivität hindeuten. Dauerhaft erhöhtes NO₂ kann auf verstärkten Schwerlastverkehr (z. B. Militärlogistik) hinweisen. Kreuzvergleich mit Satellitenbildern und Winddaten hilft bei der Quellenrückverfolgung.<br><br><b>Datenquelle:</b> OpenAQ (globales Sensornetzwerk) — kostenloser API-Key erforderlich."
   },
   "en": {
     "wz_sidebar_airquality": "Air Quality",
@@ -29,7 +30,8 @@
     "wz_aq_quality": "Quality",
     "wz_aq_params": "Parameters",
     "wz_aq_more": "more",
-    "wz_aq_no_key": "OpenAQ API key missing. Free registration at openaq.org."
+    "wz_aq_no_key": "OpenAQ API key missing. Free registration at openaq.org.",
+    "wz_aq_help": "Monitors air quality from ground-level sensor stations worldwide, covering particulate matter (PM2.5, PM10), ozone (O₃), nitrogen dioxide (NO₂), sulphur dioxide (SO₂) and carbon monoxide (CO).<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All monitoring stations in the area are listed with their latest readings and an air quality rating.<br><br><b>Forensic relevance:</b> Sudden spikes in PM2.5 or SO₂ can indicate fires, explosions, industrial accidents or military activity. Persistent elevated NO₂ may point to increased heavy vehicle traffic (e.g. military logistics). Cross-referencing with satellite imagery and wind data helps trace pollution sources.<br><br><b>Data source:</b> OpenAQ (global sensor network) — requires a free API key."
   },
   "fr": {
     "wz_sidebar_airquality": "Qualite de l'air",
@@ -41,7 +43,8 @@
     "wz_aq_header": "Stations dans la zone",
     "wz_aq_empty": "Aucune station dans cette region.",
     "wz_aq_more": "de plus",
-    "wz_aq_no_key": "Cle API OpenAQ manquante."
+    "wz_aq_no_key": "Cle API OpenAQ manquante.",
+    "wz_aq_help": "Monitors air quality from ground-level sensor stations worldwide, covering particulate matter (PM2.5, PM10), ozone (O₃), nitrogen dioxide (NO₂), sulphur dioxide (SO₂) and carbon monoxide (CO).<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All monitoring stations in the area are listed with their latest readings and an air quality rating.<br><br><b>Forensic relevance:</b> Sudden spikes in PM2.5 or SO₂ can indicate fires, explosions, industrial accidents or military activity. Persistent elevated NO₂ may point to increased heavy vehicle traffic (e.g. military logistics). Cross-referencing with satellite imagery and wind data helps trace pollution sources.<br><br><b>Data source:</b> OpenAQ (global sensor network) — requires a free API key."
   },
   "es": {
     "wz_sidebar_airquality": "Calidad del aire",
@@ -53,6 +56,7 @@
     "wz_aq_header": "Estaciones en la zona",
     "wz_aq_empty": "No hay estaciones en esta region.",
     "wz_aq_more": "mas",
-    "wz_aq_no_key": "Falta la clave API de OpenAQ."
+    "wz_aq_no_key": "Falta la clave API de OpenAQ.",
+    "wz_aq_help": "Monitors air quality from ground-level sensor stations worldwide, covering particulate matter (PM2.5, PM10), ozone (O₃), nitrogen dioxide (NO₂), sulphur dioxide (SO₂) and carbon monoxide (CO).<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All monitoring stations in the area are listed with their latest readings and an air quality rating.<br><br><b>Forensic relevance:</b> Sudden spikes in PM2.5 or SO₂ can indicate fires, explosions, industrial accidents or military activity. Persistent elevated NO₂ may point to increased heavy vehicle traffic (e.g. military logistics). Cross-referencing with satellite imagery and wind data helps trace pollution sources.<br><br><b>Data source:</b> OpenAQ (global sensor network) — requires a free API key."
   }
 }

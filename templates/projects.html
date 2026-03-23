@@ -578,6 +578,118 @@
   </div>
 </div>
 
+<!-- ══ LinkedIn-Post-Modal ═════════════════════════════════════════════════ -->
+<div id="linkedin-post-overlay"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);
+            align-items:center;justify-content:center;z-index:9900;padding:16px;box-sizing:border-box;"
+     onclick="if(event.target===this)closeLinkedInModal()">
+  <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid #0A66C2;
+              border-radius:14px;width:min(680px,96vw);max-height:85vh;
+              display:flex;flex-direction:column;overflow:hidden;
+              box-shadow:0 20px 60px rgba(0,0,0,.55);">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 20px;
+                border-bottom:1px solid var(--border);flex-shrink:0;">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zM7.119 20.452H3.553V9h3.566v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+      <div style="flex:1;">
+        <h2 style="margin:0 0 2px;font-size:15px;font-weight:600;" data-i18n="modal_linkedin_title">LinkedIn Post</h2>
+        <div id="linkedin-post-sub" style="font-size:11px;color:var(--muted);"></div>
+      </div>
+      <button onclick="closeLinkedInModal()"
+              style="cursor:pointer;background:none;border:none;color:var(--muted);
+                     font-size:22px;line-height:1;padding:0 6px;margin-left:8px;">&times;</button>
+    </div>
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;
+                display:flex;align-items:center;gap:12px;">
+      <label style="font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;"
+             data-i18n="label_li_language">Sprache:</label>
+      <select id="linkedin-lang-select"
+              style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);
+                     background:var(--bg);color:var(--text);font-size:13px;cursor:pointer;">
+        <option value="de">Deutsch</option>
+        <option value="en">English</option>
+        <option value="fr">Fran&ccedil;ais</option>
+        <option value="es">Espa&ntilde;ol</option>
+      </select>
+      <label style="font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;"
+             data-i18n="label_li_style">Stil:</label>
+      <select id="linkedin-style-select"
+              style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);
+                     background:var(--bg);color:var(--text);font-size:13px;cursor:pointer;">
+        <option value="breaking" data-i18n="li_style_breaking">Breaking News</option>
+        <option value="teaser" data-i18n="li_style_teaser">Teaser</option>
+        <option value="update" data-i18n="li_style_update">Update</option>
+        <option value="investigative" data-i18n="li_style_investigative">Investigativ</option>
+        <option value="economic" data-i18n="li_style_economic">Wirtschaftlich</option>
+        <option value="analysis" selected data-i18n="li_style_analysis">Analyse</option>
+      </select>
+      <label style="font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;"
+             data-i18n="label_li_length">L&auml;nge:</label>
+      <select id="linkedin-length-select"
+              style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);
+                     background:var(--bg);color:var(--text);font-size:13px;cursor:pointer;">
+        <option value="short" data-i18n="li_length_short">Kurz</option>
+        <option value="medium" selected data-i18n="li_length_medium">Mittel</option>
+        <option value="long" data-i18n="li_length_long">Lang</option>
+      </select>
+      <button id="linkedin-generate-btn"
+              style="padding:5px 14px;border-radius:6px;border:1px solid #0A66C2;
+                     background:#0A66C2;color:#fff;font-size:13px;cursor:pointer;
+                     font-weight:600;transition:opacity .15s;"
+              onmouseover="this.style.opacity='.85'"
+              onmouseout="this.style.opacity='1'"
+              onclick="generateLinkedInPost()" data-i18n="btn_li_generate">Generieren</button>
+    </div>
+    <div id="linkedin-post-body"
+         style="flex:1;min-height:0;overflow-y:auto;padding:20px 24px;">
+      <div id="linkedin-post-loading" style="display:none;text-align:center;padding:40px 0;">
+        <div style="width:36px;height:36px;border-radius:50%;border:3px solid var(--border);
+                    border-top-color:#0A66C2;animation:proj-ai-spin .8s linear infinite;
+                    margin:0 auto 12px;"></div>
+        <span style="font-size:13px;color:var(--muted);" data-i18n="msg_li_generating">KI generiert LinkedIn Post…</span>
+      </div>
+      <div id="linkedin-post-empty"
+           style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px;"
+           data-i18n="msg_li_hint">Sprache wählen und „Generieren" klicken.</div>
+      <textarea id="linkedin-post-text"
+                style="display:none;width:100%;min-height:220px;padding:16px;border-radius:8px;
+                       border:1px solid var(--border);background:var(--bg);color:var(--text);
+                       font-size:14px;line-height:1.6;resize:vertical;font-family:system-ui,sans-serif;
+                       box-sizing:border-box;"></textarea>
+      <div id="linkedin-image-wrap"
+           style="display:none;margin-top:12px;text-align:center;">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;
+                    letter-spacing:.05em;margin-bottom:6px;" data-i18n="label_li_image">Begleitbild</div>
+        <img id="linkedin-image-preview"
+             style="max-width:100%;border-radius:8px;border:1px solid var(--border);cursor:pointer;"
+             onclick="downloadLinkedInImage()"
+             title="Klicken zum Herunterladen">
+      </div>
+    </div>
+    <div id="linkedin-post-actions"
+         style="display:none;padding:12px 20px;border-top:1px solid var(--border);
+                flex-shrink:0;align-items:center;gap:8px;">
+      <span id="linkedin-char-count" style="font-size:11px;color:var(--muted);"></span>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="downloadLinkedInImage()"
+                style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);
+                       background:none;color:var(--text);font-size:12px;cursor:pointer;"
+                data-i18n="btn_li_download_img">Bild herunterladen</button>
+        <button onclick="copyLinkedInPost()"
+                style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);
+                       background:none;color:var(--text);font-size:12px;cursor:pointer;"
+                data-i18n="btn_li_copy">Kopieren</button>
+        <button onclick="openLinkedInShare()"
+                style="padding:5px 14px;border-radius:6px;border:1px solid #0A66C2;
+                       background:#0A66C2;color:#fff;font-size:12px;cursor:pointer;
+                       font-weight:600;transition:opacity .15s;"
+                onmouseover="this.style.opacity='.85'"
+                onmouseout="this.style.opacity='1'"
+                data-i18n="btn_li_open">Auf LinkedIn öffnen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ Briefing-Modal ═══════════════════════════════════════════════════════ -->
 <div id="briefing-modal-overlay"
      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);
@@ -871,6 +983,19 @@
                   onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">
             ⬇ <span data-i18n="btn_export_word">Word</span>
           </button>
+          {% if 'linkedin_post' in ai_plugins_enabled %}
+          <button id="btn-proj-linkedin"
+                  style="display:none;padding:4px 12px;border-radius:6px;
+                         border:1px solid rgba(10,102,194,.5);background:none;
+                         color:#0A66C2;font-size:13px;cursor:pointer;white-space:nowrap;
+                         transition:border-color .15s,color .15s,background .15s;"
+                  onclick="openLinkedInPostModal()"
+                  onmouseover="this.style.background='rgba(10,102,194,.1)';this.style.borderColor='#0A66C2'"
+                  onmouseout="this.style.background='none';this.style.borderColor='rgba(10,102,194,.5)'">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="vertical-align:middle;margin-right:4px;"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zM7.119 20.452H3.553V9h3.566v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            <span data-i18n="btn_linkedin_post">LinkedIn Post</span>
+          </button>
+          {% endif %}
           {% if 'scientific_paper' in ai_plugins_enabled %}
           <button id="btn-proj-export-sci"
                   style="display:none;padding:4px 12px;border-radius:6px;
@@ -1011,7 +1136,29 @@ window._mergeI18n({
     slide_type_chronologie: "Chronologie",
     btn_export_word: "Word",
     btn_export_scientific: "Scientific Paper",
-    btn_present: "Präsentation starten",
+    btn_linkedin_post: "LinkedIn Post",
+    modal_linkedin_title: "LinkedIn Post",
+    label_li_language: "Sprache:",
+    btn_li_generate: "Generieren",
+    msg_li_generating: "KI generiert LinkedIn Post…",
+    msg_li_hint: "Sprache w\u00e4hlen und \u201eGenerieren\u201c klicken.",
+    btn_li_copy: "Kopieren",
+    btn_li_download_img: "Bild herunterladen",
+    label_li_image: "Begleitbild",
+    label_li_style: "Stil:",
+    li_style_breaking: "Breaking News",
+    li_style_teaser: "Teaser",
+    li_style_update: "Update",
+    li_style_investigative: "Investigativ",
+    li_style_economic: "Wirtschaftlich",
+    li_style_analysis: "Analyse",
+    label_li_length: "L\u00e4nge:",
+    li_length_short: "Kurz",
+    li_length_medium: "Mittel",
+    li_length_long: "Lang",
+    btn_li_open: "Auf LinkedIn \u00f6ffnen",
+    msg_li_paste_hint: "Text wurde kopiert \u2013 auf LinkedIn einf\u00fcgen.",
+    btn_present: "Pr\u00e4sentation starten",
     dlg_new_proj_title: "Neues Projekt anlegen",
     placeholder_proj_name: "Projektname…",
     btn_create: "Anlegen",
@@ -1120,6 +1267,28 @@ window._mergeI18n({
     slide_type_chronologie: "Timeline",
     btn_export_word: "Word",
     btn_export_scientific: "Scientific Paper",
+    btn_linkedin_post: "LinkedIn Post",
+    modal_linkedin_title: "LinkedIn Post",
+    label_li_language: "Language:",
+    btn_li_generate: "Generate",
+    msg_li_generating: "AI is generating LinkedIn post…",
+    msg_li_hint: "Select a language and click \"Generate\".",
+    btn_li_copy: "Copy",
+    btn_li_download_img: "Download image",
+    label_li_image: "Accompanying image",
+    label_li_style: "Style:",
+    li_style_breaking: "Breaking News",
+    li_style_teaser: "Teaser",
+    li_style_update: "Update",
+    li_style_investigative: "Investigative",
+    li_style_economic: "Economic",
+    li_style_analysis: "Analysis",
+    label_li_length: "Length:",
+    li_length_short: "Short",
+    li_length_medium: "Medium",
+    li_length_long: "Long",
+    btn_li_open: "Open on LinkedIn",
+    msg_li_paste_hint: "Text copied – paste it on LinkedIn.",
     btn_present: "Start presentation",
     dlg_new_proj_title: "Create new project",
     placeholder_proj_name: "Project name…",
@@ -1229,6 +1398,28 @@ window._mergeI18n({
     slide_type_chronologie: "Chronologie",
     btn_export_word: "Word",
     btn_export_scientific: "Scientific Paper",
+    btn_linkedin_post: "LinkedIn Post",
+    modal_linkedin_title: "LinkedIn Post",
+    label_li_language: "Langue :",
+    btn_li_generate: "Générer",
+    msg_li_generating: "L'IA génère le post LinkedIn…",
+    msg_li_hint: "Choisir une langue et cliquer sur « Générer ».",
+    btn_li_copy: "Copier",
+    btn_li_download_img: "T\u00e9l\u00e9charger l'image",
+    label_li_image: "Image d'accompagnement",
+    label_li_style: "Style :",
+    li_style_breaking: "Breaking News",
+    li_style_teaser: "Teaser",
+    li_style_update: "Mise \u00e0 jour",
+    li_style_investigative: "Investigatif",
+    li_style_economic: "\u00c9conomique",
+    li_style_analysis: "Analyse",
+    label_li_length: "Longueur :",
+    li_length_short: "Court",
+    li_length_medium: "Moyen",
+    li_length_long: "Long",
+    btn_li_open: "Ouvrir sur LinkedIn",
+    msg_li_paste_hint: "Texte copié – collez-le sur LinkedIn.",
     btn_present: "Démarrer la présentation",
     dlg_new_proj_title: "Créer un nouveau projet",
     placeholder_proj_name: "Nom du projet…",
@@ -1338,6 +1529,28 @@ window._mergeI18n({
     slide_type_chronologie: "Cronología",
     btn_export_word: "Word",
     btn_export_scientific: "Scientific Paper",
+    btn_linkedin_post: "LinkedIn Post",
+    modal_linkedin_title: "LinkedIn Post",
+    label_li_language: "Idioma:",
+    btn_li_generate: "Generar",
+    msg_li_generating: "La IA está generando el post de LinkedIn…",
+    msg_li_hint: "Selecciona un idioma y haz clic en \"Generar\".",
+    btn_li_copy: "Copiar",
+    btn_li_download_img: "Descargar imagen",
+    label_li_image: "Imagen adjunta",
+    label_li_style: "Estilo:",
+    li_style_breaking: "Breaking News",
+    li_style_teaser: "Teaser",
+    li_style_update: "Actualizaci\u00f3n",
+    li_style_investigative: "Investigativo",
+    li_style_economic: "Econ\u00f3mico",
+    li_style_analysis: "An\u00e1lisis",
+    label_li_length: "Longitud:",
+    li_length_short: "Corto",
+    li_length_medium: "Medio",
+    li_length_long: "Largo",
+    btn_li_open: "Abrir en LinkedIn",
+    msg_li_paste_hint: "Texto copiado – pégalo en LinkedIn.",
     btn_present: "Iniciar presentación",
     dlg_new_proj_title: "Crear nuevo proyecto",
     placeholder_proj_name: "Nombre del proyecto…",
@@ -1803,6 +2016,8 @@ function renderSnapshots() {
   document.getElementById("btn-proj-export-word").style.display = selPid ? "inline-flex" : "none";
   var _btnSci = document.getElementById("btn-proj-export-sci");
   if (_btnSci) _btnSci.style.display = selPid ? "inline-flex" : "none";
+  var _btnLi = document.getElementById("btn-proj-linkedin");
+  if (_btnLi) _btnLi.style.display = selPid ? "inline-flex" : "none";
 
   // Briefing-Bar
   const briefingBar  = document.getElementById("proj-briefing-bar");
@@ -5219,6 +5434,111 @@ async function exportScientificPaper() {
     btn.textContent = orig;
     btn.disabled = false;
   }
+}
+
+// ── LinkedIn-Post-Modal ──────────────────────────────────────────────────────
+
+function openLinkedInPostModal() {
+  if (!selPid) return;
+  const overlay = document.getElementById('linkedin-post-overlay');
+  overlay.style.display = 'flex';
+  document.getElementById('linkedin-post-sub').textContent =
+    allProjects.find(p => p.id === selPid)?.name || '';
+  // Reset state
+  document.getElementById('linkedin-post-text').style.display = 'none';
+  document.getElementById('linkedin-post-text').value = '';
+  document.getElementById('linkedin-post-empty').style.display = 'block';
+  document.getElementById('linkedin-post-loading').style.display = 'none';
+  document.getElementById('linkedin-post-actions').style.display = 'none';
+  document.getElementById('linkedin-char-count').textContent = '';
+  document.getElementById('linkedin-image-wrap').style.display = 'none';
+  document.getElementById('linkedin-image-preview').src = '';
+}
+
+function closeLinkedInModal() {
+  document.getElementById('linkedin-post-overlay').style.display = 'none';
+}
+
+async function generateLinkedInPost() {
+  if (!selPid) return;
+  const lang = document.getElementById('linkedin-lang-select').value;
+  const style = document.getElementById('linkedin-style-select').value;
+  const length = document.getElementById('linkedin-length-select').value;
+  const genBtn = document.getElementById('linkedin-generate-btn');
+  const loading = document.getElementById('linkedin-post-loading');
+  const empty = document.getElementById('linkedin-post-empty');
+  const textarea = document.getElementById('linkedin-post-text');
+  const actions = document.getElementById('linkedin-post-actions');
+
+  genBtn.disabled = true;
+  genBtn.textContent = window.t("msg_ai_writing", 'KI schreibt …');
+  empty.style.display = 'none';
+  textarea.style.display = 'none';
+  actions.style.display = 'none';
+  loading.style.display = 'block';
+
+  try {
+    const res = await fetch(`/api/projects/${selPid}/linkedin-post`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({lang, style, length})
+    });
+    if (!res.ok) {
+      let errMsg = window.t("msg_export_failed", 'Generierung fehlgeschlagen');
+      try { const j = await res.json(); errMsg = j.error || errMsg; } catch(_) {}
+      toast(errMsg, 'error');
+      return;
+    }
+    const data = await res.json();
+    textarea.value = data.text;
+    textarea.style.display = 'block';
+    actions.style.display = 'flex';
+    _updateLinkedInCharCount();
+    textarea.oninput = _updateLinkedInCharCount;
+    // Load combined chart image
+    const imgWrap = document.getElementById('linkedin-image-wrap');
+    const imgEl = document.getElementById('linkedin-image-preview');
+    imgEl.src = `/api/projects/${selPid}/linkedin-image?t=${Date.now()}`;
+    imgEl.onload = function() { imgWrap.style.display = 'block'; };
+    imgEl.onerror = function() { imgWrap.style.display = 'none'; };
+  } catch(e) {
+    toast(window.t("msg_network_error", 'Netzwerkfehler: ') + e.message, 'error');
+  } finally {
+    loading.style.display = 'none';
+    genBtn.disabled = false;
+    genBtn.textContent = window.t("btn_li_generate", 'Generieren');
+  }
+}
+
+function _updateLinkedInCharCount() {
+  const text = document.getElementById('linkedin-post-text').value;
+  const cnt = document.getElementById('linkedin-char-count');
+  const len = text.length;
+  cnt.textContent = `${len} / 3000`;
+  cnt.style.color = len > 3000 ? '#ef4444' : 'var(--muted)';
+}
+
+function copyLinkedInPost() {
+  const text = document.getElementById('linkedin-post-text').value;
+  navigator.clipboard.writeText(text).then(() => {
+    toast(window.t("msg_copied", 'Kopiert!'), 'ok');
+  });
+}
+
+function downloadLinkedInImage() {
+  if (!selPid) return;
+  const a = document.createElement('a');
+  a.href = `/api/projects/${selPid}/linkedin-image`;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function openLinkedInShare() {
+  window.open('https://www.linkedin.com/feed/?shareActive=true', '_blank');
+  toast(window.t("msg_li_paste_hint", 'Text wurde kopiert – auf LinkedIn einfügen.'), 'ok');
+  copyLinkedInPost();
 }
 
 // ── Briefing-Modal ───────────────────────────────────────────────────────────

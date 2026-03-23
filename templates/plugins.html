@@ -237,6 +237,13 @@
   <h1 data-i18n="plugins_title">Plugins</h1>
   <p class="page-desc" data-i18n="plugins_desc">Manage which plugins are active for your account. Disabled plugins will not appear in the sidebar, AI assistant, or analysis.</p>
 
+  <div style="margin-bottom:16px;">
+    <input id="plugin-search" type="text" placeholder="Plugin suchen…"
+           style="width:100%;max-width:360px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;
+                  background:var(--bg);color:var(--text);font-size:13px;box-sizing:border-box;"
+           data-i18n-placeholder="plugins_search_placeholder">
+  </div>
+
   <div id="plugins-container">
     <div style="color:var(--muted);font-size:13px;padding:20px 0;">Loading…</div>
   </div>
@@ -690,6 +697,20 @@
   }
 
   loadPlugins();
+
+  // ── Plugin-Suche ──
+  document.getElementById('plugin-search').addEventListener('input', function() {
+    var q = this.value.toLowerCase().trim();
+    document.querySelectorAll('.plugin-card').forEach(function(card) {
+      var text = card.textContent.toLowerCase();
+      card.style.display = (!q || text.includes(q)) ? '' : 'none';
+    });
+    // Sections ohne sichtbare Cards ausblenden
+    document.querySelectorAll('.plugin-type-section').forEach(function(sec) {
+      var visible = sec.querySelectorAll('.plugin-card:not([style*="display: none"])');
+      sec.style.display = visible.length ? '' : 'none';
+    });
+  });
 })();
 </script>
 {% endblock %}

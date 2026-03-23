@@ -422,35 +422,14 @@ var WZ = window.WZ;
 
   // ── Satellitenbild rendern ──────────────────────────────────────────────
   function _renderSatelliteLive(data) {
-    document.getElementById("wz-live-count").textContent =
+    var ctx = WZ._currentCtx;
+    if (ctx && ctx.mapEl) ctx.mapEl.style.height = "clamp(450px,75vh,850px)";
+    var _countEl = ctx ? ctx.countEl : document.getElementById("wz-live-count");
+    var _mapRowEl = ctx ? ctx.mapRowEl : document.getElementById("wz-map-row");
+    _countEl.textContent =
       `Sentinel-2 \u00b7 ${data.date_from} ${t('wz_sat_to','to')} ${data.date_to}` + (data.cropped ? " " + t('wz_sat_cropped','(cropped)') : "");
 
     if (WZ._liveMarkers) WZ._liveMarkers.clearLayers();
-
-    // ── Layout: Karte volle Höhe links, Info-Panel rechts ──
-    var liveBox = document.getElementById("wz-live-box");
-    if (liveBox) {
-      liveBox.classList.add("wz-map-fill");
-      liveBox.style.display = "flex";
-      liveBox.style.flexDirection = "column";
-      liveBox.style.height = "95vh";
-      liveBox.style.maxHeight = "95vh";
-      liveBox.style.maxWidth = "1400px";
-    }
-    var mapRow = document.getElementById("wz-map-row");
-    if (mapRow) {
-      mapRow.style.display = "flex";
-      mapRow.style.flex = "1 1 0";
-      mapRow.style.minHeight = "0";
-      mapRow.style.height = "100%";
-      mapRow.style.flexShrink = "1";
-    }
-    var mapEl = document.getElementById("wz-live-map");
-    if (mapEl) { mapEl.style.height = "100%"; mapEl.style.minHeight = "0"; mapEl.style.flex = "1"; }
-    // Alles unterhalb Karte ausblenden
-    ["wz-live-body","wz-under-map-bar","wz-resize-map","wz-live-sticky"].forEach(function(id) {
-      var el = document.getElementById(id); if (el) el.style.display = "none";
-    });
 
     // Bild als Overlay auf der Karte
     var imgSrc = "";
@@ -465,39 +444,74 @@ var WZ = window.WZ;
       }
     }
 
-    // ── Seitenpanel erstellen ──
+    // ── Seitenpanel ──
     var panel = document.getElementById("sat-side-panel");
     if (!panel) {
-      panel = document.createElement("div");
-      panel.id = "sat-side-panel";
-      panel.style.cssText = "width:360px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow-y:auto;";
-      mapRow.appendChild(panel);
+      var mapRow = _mapRowEl;
+      if (mapRow) {
+        panel = document.createElement("div");
+        panel.id = "sat-side-panel";
+        panel.style.cssText = "width:360px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow-y:auto;";
+        mapRow.appendChild(panel);
+      }
     }
-    panel.style.display = "flex";
+    if (panel) panel.style.display = "flex";
 
     var html = '<div style="padding:16px;">';
+
+    // Date formatter
+    var _satFmtDate = function(d) {
+      if (!d) return "";
+      var iso = d.length <= 10 ? d + "T00:00" : d;
+      return window.fmtDate ? window.fmtDate(iso) : (window.fmtDateOnly ? window.fmtDateOnly(iso) : d);
+    };
 
     // Vorschaubild
     if (imgSrc) {
       html += `<div style="margin-bottom:14px;cursor:pointer;" onclick="wzSatFullscreen(document.getElementById('wz-sat-img'))">
         <img id="wz-sat-img" src="${imgSrc}" style="width:100%;border-radius:8px;border:1px solid var(--border);" title="${t('wz_sat_click_fullscreen','Click for fullscreen')}" />
+        <div id="sat-preview-date" style="font-size:13px;font-weight:600;color:var(--text);margin-top:6px;">${_satFmtDate(data.date_from)} \u2013 ${_satFmtDate(data.date_to)}</div>
       </div>`;
     }
 
     // Metadaten
-    html += `<h4 style="margin:0 0 10px;font-size:14px;font-weight:600;">${t('wz_sat_true_color','Sentinel-2 True-Color')}</h4>`;
-    html += '<div style="font-size:12px;line-height:2;color:var(--text);">';
-    html += `<div>${t('wz_sat_period','Period:')} <strong>${WZ._esc(data.date_from)} \u2013 ${WZ._esc(data.date_to)}</strong></div>`;
+    html += '<div style="font-size:12px;color:var(--text);margin-bottom:8px;">';
     html += `<div>${t('wz_sat_zone_label','Zone:')} <strong>${WZ._esc(data.zone_name)}</strong></div>`;
-    if (data.bbox) html += `<div style="color:var(--muted);font-size:11px;">BBox: ${data.bbox.map(function(v){return v.toFixed(4);}).join(", ")}</div>`;
     if (data.cropped) html += `<div style="color:#f59e0b;font-size:11px;">${t('wz_sat_crop_warning','Region clipped to max. 2\u00d7\u00b02\u00b0')}</div>`;
     html += '</div>';
+
+    // Time Focus comparison (3 images)
+    if (data.time_focus_images && data.time_focus_images.length) {
+      window._satTfImages = data.time_focus_images;
+      window._satTfBbox = data.bbox;
+      window._satFmtDate = _satFmtDate;
+      var tf = data.time_focus || {};
+      var _tfLabels = {before: t('wz_sat_tf_before','Vorher'), focus: t('wz_sat_tf_focus','Ereignis'), after: t('wz_sat_tf_after','Nachher')};
+      html += '<div style="padding:10px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:10px;">';
+      html += '<h4 style="margin:0 0 8px;font-size:13px;font-weight:600;">Time Focus: ' + WZ._esc(tf.title || "") + '</h4>';
+      html += '<div style="display:flex;gap:6px;">';
+      data.time_focus_images.forEach(function(img, idx) {
+        var borderClr = img.label === 'focus' ? '#f59e0b' : 'var(--border)';
+        html += '<div class="sat-tf-thumb" data-idx="' + idx + '" style="flex:1;text-align:center;cursor:pointer;border-radius:8px;padding:4px;transition:background .15s;" ' +
+          'onclick="_satShowTfImage(' + idx + ')" ' +
+          'onmouseover="this.style.background=\'rgba(14,165,233,.1)\'" onmouseout="this.style.background=\'none\'">';
+        html += '<div style="font-size:9px;font-weight:700;color:' + (img.label === 'focus' ? '#f59e0b' : 'var(--muted)') + ';margin-bottom:3px;text-transform:uppercase;">' + (_tfLabels[img.label] || img.label) + '</div>';
+        if (img.image_b64) {
+          html += '<img src="data:image/png;base64,' + img.image_b64 + '" style="width:100%;border-radius:6px;border:2px solid ' + borderClr + ';display:block;" />';
+        } else {
+          html += '<div style="height:60px;background:#111;border-radius:6px;border:2px solid ' + borderClr + ';display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--muted);">N/A</div>';
+        }
+        html += '<div style="font-size:11px;font-weight:600;color:' + (img.label === 'focus' ? '#f59e0b' : 'var(--text)') + ';margin-top:4px;">' + _satFmtDate(img.date) + '</div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    }
 
     // Aktions-Buttons
     html += '<div style="margin-top:16px;display:flex;flex-direction:column;gap:8px;">';
     if (imgSrc) {
       html += `<button onclick="wzSatFullscreen(document.getElementById('wz-sat-img'))"
-        style="font-size:12px;font-weight:600;color:#fff;background:var(--accent1);
+        style="font-size:12px;font-weight:600;color:#fff;background:var(--accent3);
         border:none;border-radius:6px;padding:8px 14px;cursor:pointer;width:100%;">${t('wz_sat_fullscreen_btn','Fullscreen / Zoom')}</button>`;
       html += `<a href="${imgSrc}" download="sentinel_${WZ._esc(data.zone_name || 'zone')}.png"
         style="display:block;text-align:center;font-size:12px;font-weight:600;color:#0ea5e9;
@@ -517,11 +531,41 @@ var WZ = window.WZ;
     setTimeout(function() { if (WZ._liveMap) WZ._liveMap.invalidateSize(); }, 200);
   }
 
+  // Switch satellite map overlay + preview to a time-focus image
+  window._satShowTfImage = function(idx) {
+    var images = window._satTfImages;
+    var bbox = window._satTfBbox;
+    if (!images || !images[idx] || !images[idx].image_b64) return;
+    var img = images[idx];
+    var imgSrc = "data:image/png;base64," + img.image_b64;
 
-  WZ._onLiveClose.push(function() {
-    var panel = document.getElementById("sat-side-panel");
-    if (panel) { panel.style.display = "none"; panel.innerHTML = ""; }
-  });
+    // Update map overlay
+    if (WZ._liveMap && WZ._liveMarkers && (img.bbox || bbox)) {
+      WZ._liveMarkers.clearLayers();
+      var bb = img.bbox || bbox;
+      var bounds = [[bb[1], bb[0]], [bb[3], bb[2]]];
+      L.imageOverlay(imgSrc, bounds, { opacity: 0.9, interactive: false }).addTo(WZ._liveMarkers);
+    }
+
+    // Update preview image and date
+    var previewImg = document.getElementById("wz-sat-img");
+    if (previewImg) previewImg.src = imgSrc;
+    var previewDate = document.getElementById("sat-preview-date");
+    if (previewDate) previewDate.textContent = window._satFmtDate ? window._satFmtDate(img.date) : (img.date || "");
+
+    // Highlight selected thumbnail
+    document.querySelectorAll(".sat-tf-thumb").forEach(function(el) {
+      el.style.background = "none";
+      var i = el.querySelector("img");
+      if (i) i.style.borderColor = "var(--border)";
+    });
+    var sel = document.querySelector('.sat-tf-thumb[data-idx="' + idx + '"]');
+    if (sel) {
+      sel.style.background = "rgba(14,165,233,.15)";
+      var si = sel.querySelector("img");
+      if (si) si.style.borderColor = "#f59e0b";
+    }
+  };
 
   WZ.registerPlugin('satellite', {
     renderer: _renderSatelliteLive,
@@ -530,10 +574,37 @@ var WZ = window.WZ;
     default_source: "sentinel",
     open_button_label: "Image",
     open_button_i18n: "wz_btn_image",
+    has_live_map: true,
     live_title_prefix: "Satellite Image:",
     live_title_i18n: "wz_live_prefix_satellite",
     live_box_max_width: "1400px",
-    openStrategy: "preload",
+    live_box_height: "68vh",
   });
+
+  // Collect Renderer
+  WZ._collectRenderers["satellite"] = {
+    renderHTML: function(data, cardId) {
+      var h = "";
+      var fmtD = WZ._fmtDate || function(s) { return s ? String(s).slice(0,10) : ""; };
+      var hasTfImages = data.time_focus_images && data.time_focus_images.some(function(tfi) { return tfi.image_b64; });
+      if (hasTfImages) {
+        // Focus time: show 3 comparison images, skip current
+        h += '<div style="display:flex;gap:8px;overflow-x:auto;margin-bottom:8px;">';
+        data.time_focus_images.forEach(function(tfi) {
+          var imgSrc = tfi.image_b64 ? ("data:image/png;base64," + tfi.image_b64) : "";
+          if (!imgSrc) return;
+          var tfLabel = tfi.label === "before" ? "Vorher" : tfi.label === "focus" ? "Ereignis" : "Nachher";
+          h += '<div style="flex:1;min-width:0;text-align:center;"><img src="' + imgSrc + '" style="width:100%;border-radius:6px;border:1px solid var(--border);cursor:pointer;" onclick="window.open(this.src,\'_blank\')">';
+          h += '<div style="font-size:10px;color:var(--muted);margin-top:3px;">' + tfLabel + (tfi.date ? " \u2014 " + fmtD(tfi.date) : "") + '</div></div>';
+        });
+        h += '</div>';
+      } else if (data.image_b64) {
+        // No focus time: show current image
+        h += '<img src="data:image/png;base64,' + data.image_b64 + '" style="width:100%;border-radius:6px;margin-bottom:8px;cursor:pointer;border:1px solid var(--border);" onclick="window.open(this.src,\'_blank\')" title="Satellitenaufnahme">';
+        if (data.date_from && data.date_to) h += '<div style="font-size:10px;color:var(--muted);margin-bottom:6px;">Zeitfenster: ' + fmtD(data.date_from) + ' \u2013 ' + fmtD(data.date_to) + '</div>';
+      }
+      return h;
+    }
+  };
 
 })();

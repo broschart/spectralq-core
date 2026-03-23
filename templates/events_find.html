@@ -9,6 +9,10 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
+  .btn-primary {
+    background: var(--accent3) !important;
+    border-color: var(--accent3) !important;
+  }
   .color-dot {
     width: 20px;
     height: 20px;
@@ -109,49 +113,53 @@
   Durchsucht Nachrichtenquellen zu einem Thema und erstellt ein chronologisches Lagebild.
   Fremdsprachige Schlagzeilen werden automatisch übersetzt.
 </p>
-    <div style="display:flex;gap:8px;margin-bottom:8px;">
+    <!-- Search box + translation -->
+    <div style="display:flex;gap:8px;margin-bottom:6px;">
       <input id="find-q" type="text" style="flex:1;" placeholder="Suchbegriff eingeben …" />
       <button class="btn btn-primary" id="btn-find-search" data-i18n="ef_search">Suchen</button>
+      <button id="btn-find-show-filters" style="display:none;padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--muted);cursor:pointer;font-size:11px;white-space:nowrap;"
+              onclick="document.getElementById('find-filters-wrap').style.display='';this.style.display='none';">Filter ▼</button>
     </div>
+    <!-- Translation suggestions -->
+    <div id="find-translate" style="display:none;margin-bottom:10px;"></div>
 
-    <!-- Filter -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:6px;">
-        <label style="margin:0;font-size:12px;white-space:nowrap;" data-i18n="ef_from">Von</label>
-        <input id="find-from" type="text" style="width:140px;font-size:12px;" data-i18n-placeholder="ef_date_placeholder" />
+    <!-- Collapsible filter section -->
+    <div id="find-filters-wrap">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;">
+        <!-- Inline calendars -->
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;" data-i18n="ef_from">Von</label>
+          <input type="hidden" id="find-from" />
+          <div id="find-cal-from" style="border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:6px;width:220px;"></div>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;" data-i18n="ef_to">Bis</label>
+          <input type="hidden" id="find-to" />
+          <div id="find-cal-to" style="border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:6px;width:220px;"></div>
+        </div>
+
       </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <label style="margin:0;font-size:12px;white-space:nowrap;" data-i18n="ef_to">Bis</label>
-        <input id="find-to" type="text" style="width:140px;font-size:12px;" data-i18n-placeholder="ef_date_placeholder" />
+
+      <!-- Sources as chips -->
+      <div style="margin-bottom:18px;">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;" data-i18n="ef_source">Quelle</label>
+        <input type="hidden" id="find-source" value="google" />
+        <div id="find-source-chips" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <label style="margin:0;font-size:12px;" data-i18n="ef_lang">Sprache</label>
-        <select id="find-lang" style="font-size:12px;">
-          <option value="" data-i18n="ef_lang_all">Alle</option>
-          <option value="German" data-i18n="ef_lang_de">Deutsch</option>
-          <option value="English" data-i18n="ef_lang_en">Englisch</option>
-          <option value="Arabic" data-i18n="ef_lang_ar">Arabisch</option>
-          <option value="French" data-i18n="ef_lang_fr">Französisch</option>
-          <option value="Spanish" data-i18n="ef_lang_es">Spanisch</option>
-        </select>
+
+      <!-- Count as chips -->
+      <div style="margin-bottom:18px;">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;" data-i18n="ef_count">Anzahl</label>
+        <input type="hidden" id="find-limit" value="25" />
+        <div id="find-limit-chips" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <label style="margin:0;font-size:12px;" data-i18n="ef_source">Quelle</label>
-        <select id="find-source" style="font-size:12px;">
-          <option value="google">Google News</option>
-          <option value="bing">Bing News</option>
-          <option value="gdelt">GDELT</option>
-          <option value="all" data-i18n="ef_source_all">Alle (kombiniert)</option>
-          <option value="newsapi">NewsAPI.org</option>
-        </select>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <label style="margin:0;font-size:12px;white-space:nowrap;" data-i18n="ef_count">Anzahl</label>
-        <select id="find-limit" style="font-size:12px;width:70px;">
-          <option value="25">25</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
-        </select>
+
+      <!-- Languages: all visible, no dropdown -->
+      <div style="margin-bottom:18px;">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;" data-i18n="ef_lang">Sprache</label>
+        <input type="hidden" id="find-lang" value="" />
+        <div id="find-lang-chips" style="display:flex;flex-wrap:wrap;gap:4px;">
+        </div>
       </div>
     </div>
 
@@ -187,7 +195,7 @@
     {% if 'report_analysis' in ai_plugins_enabled %}
     <div id="find-ai-bar" style="display:none;margin-bottom:10px;gap:8px;align-items:center;">
       <button class="btn btn-sm" id="btn-find-ai"
-              style="background:var(--accent1);color:#fff;border:none;">
+              style="background:var(--accent3);color:#fff;border:none;">
         <svg viewBox="0 0 20 16" width="16" height="13" fill="currentColor"
              style="vertical-align:middle;margin-right:4px;">
           <text x="1" y="13" font-family="system-ui,sans-serif" font-size="11"
@@ -554,7 +562,8 @@
       ef_searching_sources:'Durchsuche Nachrichtenquellen und übersetze Schlagzeilen …',
       ef_error:'Fehler:', ef_no_results:'Keine Artikel gefunden – anderen Zeitraum oder Suchbegriff versuchen.',
       ef_of:'von', ef_hits_in_range:'Treffern im ausgewählten Zeitraum',
-      ef_hits_sorted:'Treffer · chronologisch sortiert (älteste zuerst)',
+      ef_hits_sorted:'Treffer · chronologisch sortiert',
+      ef_sort_oldest:'Älteste zuerst', ef_sort_newest:'Neueste zuerst',
       ef_original:'Original:', ef_as_event:'Als Ereignis',
       ef_search_query_label:'· Suchnachfrage:', ef_no_keyword:'· kein passendes Keyword in Datenbank',
       ef_no_trend:'Keine Trenddaten für diesen Zeitpunkt',
@@ -617,7 +626,8 @@
       ef_searching_sources:'Searching news sources and translating headlines …',
       ef_error:'Error:', ef_no_results:'No articles found – try a different date range or search term.',
       ef_of:'of', ef_hits_in_range:'hits in selected period',
-      ef_hits_sorted:'hits · sorted chronologically (oldest first)',
+      ef_hits_sorted:'hits · sorted chronologically',
+      ef_sort_oldest:'Oldest first', ef_sort_newest:'Newest first',
       ef_original:'Original:', ef_as_event:'As Event',
       ef_search_query_label:'· Search query:', ef_no_keyword:'· no matching keyword in database',
       ef_no_trend:'No trend data for this point in time',
@@ -680,7 +690,8 @@
       ef_searching_sources:'Recherche dans les sources d\'actualités et traduction des titres …',
       ef_error:'Erreur :', ef_no_results:'Aucun article trouvé – essayez une autre période ou un autre terme.',
       ef_of:'sur', ef_hits_in_range:'résultats dans la période sélectionnée',
-      ef_hits_sorted:'résultats · triés chronologiquement (plus anciens en premier)',
+      ef_hits_sorted:'résultats · triés chronologiquement',
+      ef_sort_oldest:'Plus anciens d\'abord', ef_sort_newest:'Plus récents d\'abord',
       ef_original:'Original :', ef_as_event:'Comme événement',
       ef_search_query_label:'· Requête :', ef_no_keyword:'· aucun mot-clé correspondant dans la base',
       ef_no_trend:'Aucune donnée de tendance pour ce moment',
@@ -743,7 +754,8 @@
       ef_searching_sources:'Buscando fuentes de noticias y traduciendo titulares …',
       ef_error:'Error:', ef_no_results:'No se encontraron artículos – intente otro período o término.',
       ef_of:'de', ef_hits_in_range:'resultados en el período seleccionado',
-      ef_hits_sorted:'resultados · ordenados cronológicamente (más antiguos primero)',
+      ef_hits_sorted:'resultados · ordenados cronológicamente',
+      ef_sort_oldest:'Más antiguos primero', ef_sort_newest:'Más recientes primero',
       ef_original:'Original:', ef_as_event:'Como evento',
       ef_search_query_label:'· Consulta:', ef_no_keyword:'· ninguna palabra clave coincidente en la base de datos',
       ef_no_trend:'Sin datos de tendencia para este momento',
@@ -828,7 +840,14 @@
 
   function fmtDt(s) {
     if (!s) return "–";
-    if (s.includes("T")) return window.fmtDate ? window.fmtDate(s) : new Date(s).toLocaleString("de-DE", {dateStyle:"medium", timeStyle:"short"});
+    if (s.includes("T")) {
+      // If time is 00:00, show only date (source didn't provide a real time)
+      var timePart = s.split("T")[1] || "";
+      if (timePart === "00:00" || timePart === "00:00:00" || timePart.startsWith("00:00:00")) {
+        return window.fmtDateOnly ? window.fmtDateOnly(s) : new Date(s).toLocaleDateString("de-DE", {dateStyle:"medium"});
+      }
+      return window.fmtDate ? window.fmtDate(s) : new Date(s).toLocaleString("de-DE", {dateStyle:"medium", timeStyle:"short"});
+    }
     return window.fmtDateOnly ? window.fmtDateOnly(s + "T00:00") : new Date(s + "T00:00").toLocaleDateString("de-DE", {dateStyle:"medium"});
   }
 
@@ -877,6 +896,7 @@
 
   // ── Meldungen finden (GDELT News-Suche) ──────────────────────────
   let _findResults       = [];
+  let _findSortAsc       = true;   // true = älteste zuerst, false = neueste zuerst
   let _lastSearch        = null;   // { q, from, to }
   let _trendChart        = null;   // Chart.js Instanz
   let _markerTooltip     = null;   // Floating-Tooltip-Div für News-Marker
@@ -908,19 +928,289 @@
     el.addEventListener("mouseleave", () => _setHighlight(null));
   })();
 
+  // ── Inline mini-calendar ──
+  function _renderMiniCal(containerId, hiddenId, initialDate) {
+    var container = document.getElementById(containerId);
+    var hidden = document.getElementById(hiddenId);
+    if (!container) return;
+
+    var _month = initialDate ? new Date(initialDate + "T12:00:00") : new Date();
+    var _selected = initialDate || "";
+    var _WDAYS = ["Mo","Di","Mi","Do","Fr","Sa","So"];
+    var _MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+
+    function _render() {
+      var year = _month.getFullYear(), month = _month.getMonth();
+      var first = new Date(year, month, 1);
+      var startDay = (first.getDay() + 6) % 7; // Monday = 0
+      var daysInMonth = new Date(year, month + 1, 0).getDate();
+      var today = new Date().toISOString().slice(0, 10);
+
+      var h = '<div style="display:flex;align-items:center;margin-bottom:4px;">';
+      h += '<button type="button" onclick="_calNav(\'' + containerId + '\',-1)" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;">◀</button>';
+      h += '<span style="flex:1;text-align:center;font-size:11px;font-weight:700;color:var(--text);">' + _MONTHS[month] + ' ' + year + '</span>';
+      h += '<button type="button" onclick="_calNav(\'' + containerId + '\',1)" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;">▶</button>';
+      h += '</div>';
+      h += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center;">';
+      _WDAYS.forEach(function(wd) { h += '<div style="font-size:9px;color:var(--muted);padding:2px 0;">' + wd + '</div>'; });
+
+      for (var i = 0; i < startDay; i++) h += '<div></div>';
+      for (var d = 1; d <= daysInMonth; d++) {
+        var iso = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        var isSel = iso === _selected;
+        var isToday = iso === today;
+        h += '<div data-date="' + iso + '" style="padding:3px 0;font-size:11px;cursor:pointer;border-radius:4px;'
+          + 'background:' + (isSel ? '#0088cc' : 'transparent') + ';'
+          + 'color:' + (isSel ? '#fff' : (isToday ? '#0088cc' : 'var(--text)')) + ';'
+          + 'font-weight:' + (isSel || isToday ? '700' : '400') + ';"'
+          + ' onmouseover="this.style.background=\'' + (isSel ? '#0088cc' : 'rgba(0,136,204,.1)') + '\'"'
+          + ' onmouseout="this.style.background=\'' + (isSel ? '#0088cc' : 'transparent') + '\'"'
+          + '>' + d + '</div>';
+      }
+      h += '</div>';
+      if (_selected) {
+        h += '<div style="text-align:center;margin-top:4px;font-size:10px;color:var(--muted);">' + (window.fmtDateOnly ? window.fmtDateOnly(_selected) : _selected)
+          + ' <button type="button" onclick="_calClear(\'' + containerId + '\')" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:10px;">✕</button></div>';
+      }
+      container.innerHTML = h;
+      container.querySelectorAll("[data-date]").forEach(function(el) {
+        el.addEventListener("click", function() {
+          _selected = el.dataset.date;
+          hidden.value = _selected;
+          _render();
+        });
+      });
+    }
+
+    // Store render function for navigation
+    container._calRender = _render;
+    container._calMonth = _month;
+    container._calSetSelected = function(v) { _selected = v; hidden.value = v; };
+    container._calNav = function(dir) { _month.setMonth(_month.getMonth() + dir); _render(); };
+    container._calClear = function() { _selected = ""; hidden.value = ""; _render(); };
+    _render();
+  }
+
+  window._calNav = function(id, dir) { var c = document.getElementById(id); if (c && c._calNav) c._calNav(dir); };
+  window._calClear = function(id) { var c = document.getElementById(id); if (c && c._calClear) c._calClear(); };
+
+  _renderMiniCal("find-cal-from", "find-from", "");
+  _renderMiniCal("find-cal-to", "find-to", "");
+
+  // ── Language chips (all visible, no dropdown) ──
+  var _FIND_LANGS = [
+    {val: "", label: "Alle"}, {val: "German", label: "Deutsch"}, {val: "English", label: "Englisch"},
+    {val: "Russian", label: "Russisch"}, {val: "Ukrainian", label: "Ukrainisch"},
+    {val: "Arabic", label: "Arabisch"}, {val: "French", label: "Französisch"},
+    {val: "Spanish", label: "Spanisch"}, {val: "Chinese", label: "Chinesisch"},
+    {val: "Turkish", label: "Türkisch"}, {val: "Persian", label: "Persisch"},
+    {val: "Hebrew", label: "Hebräisch"}, {val: "Portuguese", label: "Portugiesisch"},
+    {val: "Italian", label: "Italienisch"}, {val: "Polish", label: "Polnisch"},
+    {val: "Japanese", label: "Japanisch"}, {val: "Korean", label: "Koreanisch"},
+    {val: "Dutch", label: "Niederländisch"}, {val: "Swedish", label: "Schwedisch"},
+    {val: "Norwegian", label: "Norwegisch"}, {val: "Finnish", label: "Finnisch"},
+    {val: "Estonian", label: "Estnisch"}, {val: "Latvian", label: "Lettisch"},
+    {val: "Lithuanian", label: "Litauisch"}, {val: "Romanian", label: "Rumänisch"},
+    {val: "Hungarian", label: "Ungarisch"}, {val: "Czech", label: "Tschechisch"},
+    {val: "Greek", label: "Griechisch"}, {val: "Hindi", label: "Hindi"},
+  ];
+
+  function _renderLangChips() {
+    var sel = document.getElementById("find-lang").value;
+    var html = '';
+    _FIND_LANGS.forEach(function(l) {
+      var active = l.val === sel;
+      html += '<button data-lang="' + l.val + '" style="padding:3px 10px;border:1px solid '
+        + (active ? '#0088cc' : 'var(--border)') + ';border-radius:12px;background:'
+        + (active ? 'rgba(0,136,204,.15)' : 'var(--surface)') + ';color:'
+        + (active ? '#0088cc' : 'var(--text)') + ';cursor:pointer;font-size:11px;'
+        + 'font-weight:' + (active ? '700' : '400') + ';">' + l.label + '</button>';
+    });
+    document.getElementById("find-lang-chips").innerHTML = html;
+    document.getElementById("find-lang-chips").querySelectorAll("button").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        document.getElementById("find-lang").value = btn.dataset.lang;
+        _renderLangChips();
+        _doFindTranslate(); // Re-translate when language changes
+      });
+    });
+  }
+  _renderLangChips();
+
+  // ── Source chips ──
+  var _FIND_SOURCES = [
+    {val: "google", label: "Google News"},
+    {val: "bing",   label: "Bing News"},
+    {val: "gdelt",  label: "GDELT"},
+    {val: "wikipedia", label: "Wikipedia"},
+    {val: "all",    label: t('ef_source_all','Alle')},
+    {val: "newsapi", label: "NewsAPI.org"},
+  ];
+  function _renderSourceChips() {
+    var sel = document.getElementById("find-source").value;
+    var html = '';
+    _FIND_SOURCES.forEach(function(s) {
+      var active = s.val === sel;
+      html += '<button data-src="' + s.val + '" style="padding:3px 10px;border:1px solid '
+        + (active ? '#0088cc' : 'var(--border)') + ';border-radius:12px;background:'
+        + (active ? 'rgba(0,136,204,.15)' : 'var(--surface)') + ';color:'
+        + (active ? '#0088cc' : 'var(--text)') + ';cursor:pointer;font-size:11px;'
+        + 'font-weight:' + (active ? '700' : '400') + ';">' + s.label + '</button>';
+    });
+    document.getElementById("find-source-chips").innerHTML = html;
+    document.getElementById("find-source-chips").querySelectorAll("button").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        document.getElementById("find-source").value = btn.dataset.src;
+        _renderSourceChips();
+        // Show/hide NewsAPI hint
+        var hint = document.getElementById("find-newsapi-hint");
+        if (hint) hint.style.display = btn.dataset.src === "newsapi" ? "" : "none";
+      });
+    });
+  }
+  _renderSourceChips();
+
+  // ── Limit chips ──
+  var _FIND_LIMITS = [
+    {val: "25", label: "25"},
+    {val: "50", label: "50"},
+    {val: "100", label: "100"},
+  ];
+  function _renderLimitChips() {
+    var sel = document.getElementById("find-limit").value;
+    var html = '';
+    _FIND_LIMITS.forEach(function(l) {
+      var active = l.val === sel;
+      html += '<button data-lim="' + l.val + '" style="padding:3px 10px;border:1px solid '
+        + (active ? '#0088cc' : 'var(--border)') + ';border-radius:12px;background:'
+        + (active ? 'rgba(0,136,204,.15)' : 'var(--surface)') + ';color:'
+        + (active ? '#0088cc' : 'var(--text)') + ';cursor:pointer;font-size:11px;'
+        + 'font-weight:' + (active ? '700' : '400') + ';">' + l.label + '</button>';
+    });
+    document.getElementById("find-limit-chips").innerHTML = html;
+    document.getElementById("find-limit-chips").querySelectorAll("button").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        document.getElementById("find-limit").value = btn.dataset.lim;
+        _renderLimitChips();
+      });
+    });
+  }
+  _renderLimitChips();
+
+  // ── Language code mapping for translation highlight ──
+  var _LANG_TO_CODE = {
+    "German":"de","English":"en","Russian":"ru","Ukrainian":"uk","Arabic":"ar",
+    "French":"fr","Spanish":"es","Chinese":"zh-CN","Turkish":"tr","Persian":"fa",
+    "Hebrew":"he","Portuguese":"pt","Italian":"it","Polish":"pl","Japanese":"ja",
+    "Korean":"ko","Dutch":"nl","Swedish":"sv","Norwegian":"no","Finnish":"fi",
+    "Estonian":"et","Latvian":"lv","Lithuanian":"lt","Romanian":"ro",
+    "Hungarian":"hu","Czech":"cs","Greek":"el","Hindi":"hi",
+  };
+
+  // ── Translation suggestions ──
+  var _findTransCache = null; // cache last translation result
+  var _findTransTimer = null;
+
+  function _doFindTranslate() {
+    var q = document.getElementById("find-q").value.trim();
+    var box = document.getElementById("find-translate");
+    if (!q || q.length < 2) { box.style.display = "none"; return; }
+
+    // Use cache if same query
+    if (_findTransCache && _findTransCache.q === q) {
+      _renderTranslations(_findTransCache.translations);
+      return;
+    }
+
+    box.style.display = "";
+    box.innerHTML = '<span style="font-size:10px;color:var(--muted);">Übersetze…</span>';
+
+    fetch("/api/telegram-translate-kw?text=" + encodeURIComponent(q))
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.ok || !d.translations || !d.translations.length) { box.style.display = "none"; return; }
+        _findTransCache = { q: q, translations: d.translations };
+        _renderTranslations(d.translations);
+      })
+      .catch(function() { box.style.display = "none"; });
+  }
+
+  function _renderTranslations(translations) {
+    var box = document.getElementById("find-translate");
+    var selectedLang = document.getElementById("find-lang").value;
+    var selectedCode = _LANG_TO_CODE[selectedLang] || "";
+    // If selected language is not in translations, fetch it in background
+    if (selectedCode && !translations.some(function(t) { return t.lang === selectedCode; })) {
+      var q = document.getElementById("find-q").value.trim();
+      if (q) {
+        fetch("/api/telegram-translate-kw?text=" + encodeURIComponent(q) + "&target=" + encodeURIComponent(selectedCode))
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            if (d.ok && d.translations) {
+              d.translations.forEach(function(t) {
+                if (!translations.some(function(x) { return x.lang === t.lang; })) {
+                  translations.push(t);
+                }
+              });
+              if (_findTransCache) _findTransCache.translations = translations;
+              _renderTranslations(translations); // Re-render with new language added
+            }
+          }).catch(function() {});
+      }
+    }
+
+    // Sort: selected language first, then rest
+    var sorted = translations.slice().sort(function(a, b) {
+      var aMatch = (selectedCode && a.lang === selectedCode) ? 0 : 1;
+      var bMatch = (selectedCode && b.lang === selectedCode) ? 0 : 1;
+      return aMatch - bMatch;
+    });
+
+    var html = '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">';
+    html += '<span style="font-size:10px;color:var(--muted);margin-right:4px;">Übersetzungen:</span>';
+    sorted.forEach(function(tr) {
+      var isSelected = selectedCode && tr.lang === selectedCode;
+      var safeText = tr.text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      html += '<button onclick="document.getElementById(\'find-q\').value=\'' + safeText + '\'" '
+        + 'style="padding:2px 8px;border:1px solid ' + (isSelected ? '#f59e0b' : 'var(--border)') + ';border-radius:10px;'
+        + 'background:' + (isSelected ? 'rgba(245,158,11,.12)' : 'var(--surface)') + ';'
+        + 'color:var(--text);cursor:pointer;font-size:11px;' + (isSelected ? 'font-weight:700;' : '') + '" title="' + tr.name + '">'
+        + '<span style="font-size:9px;color:' + (isSelected ? '#f59e0b' : 'var(--muted)') + ';margin-right:3px;">'
+        + tr.lang.toUpperCase().replace("ZH-CN","ZH") + '</span>'
+        + tr.text + '</button>';
+    });
+    html += '</div>';
+    box.style.display = "";
+    box.innerHTML = html;
+  }
+
+  document.getElementById("find-q").addEventListener("input", function() {
+    clearTimeout(_findTransTimer);
+    _findTransCache = null;
+    var q = this.value.trim();
+    var box = document.getElementById("find-translate");
+    if (!q || q.length < 2) { box.style.display = "none"; return; }
+    _findTransTimer = setTimeout(_doFindTranslate, 600);
+  });
+
   document.getElementById("find-q").addEventListener("keydown", e => {
     if (e.key === "Enter") document.getElementById("btn-find-search").click();
   });
 
-  // DD.MM.JJJJ → YYYY-MM-DD (leer wenn ungültig)
+  // ── Search handler ──
   document.getElementById("btn-find-search").addEventListener("click", async () => {
     const q      = document.getElementById("find-q").value.trim();
     if (!q) return;
-    const from   = deToIso(document.getElementById("find-from").value);
-    const to     = deToIso(document.getElementById("find-to").value);
+    const from   = document.getElementById("find-from").value || "";
+    const to     = document.getElementById("find-to").value || "";
     const lang   = document.getElementById("find-lang").value;
     const source = document.getElementById("find-source").value;
     const btn    = document.getElementById("btn-find-search");
+
+    // Collapse filters + show toggle button
+    document.getElementById("find-filters-wrap").style.display = "none";
+    document.getElementById("find-translate").style.display = "none";
+    document.getElementById("btn-find-show-filters").style.display = "";
 
     btn.disabled = true; btn.textContent = t('ef_searching','Suche läuft…');
     document.getElementById("find-results").innerHTML =
@@ -946,6 +1236,8 @@
 
     try {
       _findResults = await api(url);
+      _hmSelectedDate = null;
+      _wcActiveFilters.clear();
       renderFindResults();
     } catch(e) {
       document.getElementById("find-results").innerHTML =
@@ -957,10 +1249,18 @@
 
   // displayResults: optionale gefilterte Teilmenge für Zoom-Ansicht;
   // wenn weggelassen, werden alle _findResults gerendert + Graph/Indikatoren geladen
+  window._toggleFindSort = function() {
+    _findSortAsc = !_findSortAsc;
+    renderFindResults();
+  };
   function renderFindResults(displayResults) {
     const el      = document.getElementById("find-results");
     const isFiltered = displayResults !== undefined;
-    const results = isFiltered ? displayResults : _findResults;
+    let results = isFiltered ? displayResults.slice() : _findResults.slice();
+    results.sort((a, b) => {
+      const da = a.seendate || "", db = b.seendate || "";
+      return _findSortAsc ? da.localeCompare(db) : db.localeCompare(da);
+    });
 
     if (!results.length) {
       el.innerHTML = `<p class="text-muted text-sm">
@@ -975,6 +1275,9 @@
     el.innerHTML = `
       <div style="font-size:11px;color:var(--muted);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
         <span>${totalNote}</span>
+        <button id="find-sort-toggle" onclick="_toggleFindSort()" class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px;margin-left:8px;">
+          ${_findSortAsc ? '↑ ' + t('ef_sort_oldest','Älteste zuerst') : '↓ ' + t('ef_sort_newest','Neueste zuerst')}
+        </button>
         <span id="find-trend-meta" style="font-size:11px;"></span>
       </div>` +
       results.map(r => {
@@ -1114,20 +1417,35 @@
     });
   }
 
+  let _hmSelectedDate = null;  // currently selected heatmap date filter
+
   function _applyWordCloudFilter() {
-    if (!_wcActiveFilters.size) {
-      // Kein Filter → alle anzeigen
-      renderFindResults();
-      return;
+    _applyAllFilters();
+  }
+
+  function _applyAllFilters() {
+    var filtered = _findResults;
+    // Heatmap date filter
+    if (_hmSelectedDate) {
+      filtered = filtered.filter(function(r) {
+        return r.seendate && r.seendate.slice(0, 10) === _hmSelectedDate;
+      });
     }
-    const filtered = _findResults.filter(r => {
-      const title = (r.title || "").toLowerCase();
-      for (const w of _wcActiveFilters) {
-        if (title.includes(w)) return true;
-      }
-      return false;
-    });
-    renderFindResults(filtered);
+    // Word cloud filter
+    if (_wcActiveFilters.size) {
+      filtered = filtered.filter(function(r) {
+        var title = (r.title || "").toLowerCase();
+        for (var w of _wcActiveFilters) {
+          if (title.includes(w)) return true;
+        }
+        return false;
+      });
+    }
+    if (!_hmSelectedDate && !_wcActiveFilters.size) {
+      renderFindResults();
+    } else {
+      renderFindResults(filtered);
+    }
   }
 
   function adoptNewsResult(idx) {
@@ -1399,7 +1717,62 @@
           _trendChart.update("none");
         }
       });
+      // Click to filter results by date
+      rect.addEventListener("click", () => {
+        const iso = rect.getAttribute("data-date");
+        const count = parseInt(rect.getAttribute("data-count") || "0");
+        if (!count) return;  // Don't filter on empty days
+        if (_hmSelectedDate === iso) {
+          // Deselect
+          _hmSelectedDate = null;
+          _hmUpdateSelection();
+          _applyAllFilters();
+        } else {
+          _hmSelectedDate = iso;
+          _hmUpdateSelection();
+          _applyAllFilters();
+        }
+      });
     });
+  }
+
+  function _hmUpdateSelection() {
+    // Clear all selections
+    document.querySelectorAll("#find-heatmap .hm-cell").forEach(function(r) {
+      r.removeAttribute("stroke");
+      r.removeAttribute("stroke-width");
+    });
+    // Mark selected
+    if (_hmSelectedDate) {
+      var sel = document.querySelector('#find-heatmap .hm-cell[data-date="' + _hmSelectedDate + '"]');
+      if (sel) {
+        sel.setAttribute("stroke", "#f59e0b");
+        sel.setAttribute("stroke-width", "2");
+      }
+    }
+    // Show/hide filter badge
+    var badge = document.getElementById("find-hm-filter-badge");
+    if (!badge) {
+      badge = document.createElement("div");
+      badge.id = "find-hm-filter-badge";
+      badge.style.cssText = "display:none;font-size:11px;padding:4px 10px;background:rgba(245,158,11,.1);" +
+        "border:1px solid rgba(245,158,11,.3);border-radius:6px;color:#f59e0b;font-weight:600;" +
+        "cursor:pointer;display:inline-flex;align-items:center;gap:6px;margin-left:8px;";
+      var label = document.querySelector('#find-heatmap-wrap .find-chart-inner > div:first-child');
+      if (label) label.appendChild(badge);
+    }
+    if (_hmSelectedDate) {
+      var fmtDate = window.fmtDateOnly ? window.fmtDateOnly(_hmSelectedDate + "T00:00") : _hmSelectedDate;
+      badge.style.display = "inline-flex";
+      badge.innerHTML = fmtDate + ' <span style="font-size:14px;line-height:1;">\u00d7</span>';
+      badge.onclick = function() {
+        _hmSelectedDate = null;
+        _hmUpdateSelection();
+        _applyAllFilters();
+      };
+    } else {
+      badge.style.display = "none";
+    }
   }
 
   let _hmHighlightedRect = null;

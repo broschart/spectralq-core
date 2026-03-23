@@ -10,6 +10,7 @@ class GrangerPlugin(AnalysisPlugin):
         "color": "#e879f9",
         "symbol": "⇄",
         "description": "Granger-Kausalitätstest zwischen Zeitreihen.",
+        "apa_method": "granger",
         "modal_template": "granger/_modal.html",
         "default_show_in": ["lab"],
         "button_id": "btn-granger",

@@ -1,11 +1,10 @@
 <div id="panel-certwatch" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_ct_title">Certificate Transparency</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_ct_source">Source: crt.sh (Certificate Transparency Logs)</span>
     <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="wzAddCertWatch()" data-i18n="wz_ct_add_btn">
       + Add Domain
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_ct_desc">Monitors certificate transparency logs for domains. New certificates and subdomains are detected as early indicators of campaign preparation or new infrastructure.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_ct_help">Monitors Certificate Transparency (CT) logs for specified domains, tracking all issued TLS/SSL certificates and newly discovered subdomains.<br><br><b>How to use:</b> Add a domain and click "Live". The system queries crt.sh and lists all certificates with issuer, validity dates and associated subdomains. New subdomains discovered within the last 30 days are highlighted.<br><br><b>Forensic relevance:</b> New certificates and subdomains are early indicators of campaign preparation — phishing sites, new infrastructure or service deployments. Monitoring a target domain's certificate history reveals hosting changes, CDN migrations and shadow IT. Wildcard certificates may indicate rapid infrastructure scaling.<br><br><b>Data source:</b> crt.sh (Certificate Transparency Logs) — no API key required.</div>
   </div>
   <div class="wz-main-body">
     <div class="wz-hint" id="wz-hint-certwatch" data-i18n="wz_ct_hint">

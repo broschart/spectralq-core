@@ -10,6 +10,7 @@ class PeriodFilterPlugin(AnalysisPlugin):
         "color": "#14b8a6",
         "symbol": "∼",
         "description": "Spektralanalyse zur Erkennung periodischer Muster.",
+        "apa_method": "periodicity",
         "modal_template": "period_filter/_modal.html",
         "default_show_in": ["lab"],
         "button_id": "btn-period-filter",

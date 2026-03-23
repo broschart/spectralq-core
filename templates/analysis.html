@@ -404,8 +404,29 @@
 {% endblock %}
 
 {% block content %}
+{# ── Analyse-Tabs: Desk / Keywords ── #}
+<div id="analysis-tabs" style="display:flex;align-items:center;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border);">
+  <button class="an-tab active" data-tab="desk"
+          style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;
+                 color:var(--text);cursor:pointer;border-bottom:2px solid var(--accent1);
+                 margin-bottom:-2px;transition:color .15s,border-color .15s;"
+          data-i18n="an_tab_desk">Desk</button>
+  <button class="an-tab" data-tab="keywords"
+          style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;
+                 color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;
+                 margin-bottom:-2px;transition:color .15s,border-color .15s;">
+    <span data-i18n="nav_keywords">Keywords</span>
+    <sup id="an-kw-quota" style="display:none;color:var(--muted);font-size:10px;margin-left:2px;"></sup>
+  </button>
+</div>
+<div id="tab-panel-keywords" style="display:none;">
+  <h1 data-i18n="nav_keywords">Keywords</h1>
+  <iframe id="kw-iframe" src="/keywords?_embed=1" style="width:100%;border:none;min-height:calc(100vh - 140px);"
+          onload="try{this.style.height=this.contentWindow.document.body.scrollHeight+'px';}catch(e){}"></iframe>
+</div>
+<div id="tab-panel-desk">
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
-  <h1 style="margin:0;" data-i18n="an_title">Analyse</h1>
+  <h1 style="margin:0;" data-i18n="an_title">Analyse Desk</h1>
   <div id="hdr-project-wrap" style="margin-left:auto;display:flex;align-items:center;gap:8px;">
     <span style="font-size:11px;color:var(--muted);white-space:nowrap;" data-i18n="an_project_label">Projekt:</span>
     <select id="hdr-project-select"
@@ -754,7 +775,25 @@
     <!-- ── Gruppe: Geospatiale Quellen ── -->
     <div style="font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;" data-i18n="an_tri_group_geo">Geospatiale Quellen</div>
     <div style="display:flex;flex-direction:column;gap:4px;padding-left:4px;">
-      {% if 'ndvi' in wz_analysis_types %}
+      <!-- Dynamic analysis provider UI rows -->
+      {% for prov in wz_analysis_providers %}
+      <div id="{{ prov.ui_prefix }}-wz-row" style="display:flex;align-items:center;gap:6px;padding:4px 0;">
+        <label for="{{ prov.ui_prefix }}-wz-cb" style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0;">
+          <input type="checkbox" id="{{ prov.ui_prefix }}-wz-cb" disabled
+                 onchange="_apWzToggle('{{ prov.ui_prefix }}', this.checked)" />
+          <span style="font-size:12px;color:var(--muted);white-space:nowrap;min-width:130px;">{{ prov.ui_label }}</span>
+        </label>
+        <select id="{{ prov.ui_prefix }}-wz-select"
+                style="display:none;flex:1;font-size:11px;padding:3px 8px;border:1px solid var(--border);
+                       border-radius:4px;background:var(--bg);color:var(--text);min-width:0;"
+                onchange="_apWzSelectChange('{{ prov.ui_prefix }}')"></select>
+        <span id="{{ prov.ui_prefix }}-wz-empty" style="flex:1;font-size:11px;color:var(--muted);font-style:italic;">Zuerst Watch Zone anlegen</span>
+        <span id="{{ prov.ui_prefix }}-extra"></span>
+      </div>
+      {% endfor %}
+
+      <!-- Legacy UI rows (plugins not yet migrated) -->
+      {% if 'ndvi' in wz_analysis_types and 'ndvi' not in wz_analysis_providers|map(attribute='data_types')|map('first')|list %}
       <div id="ndvi-row" style="display:flex;align-items:center;gap:6px;padding:4px 0;">
         <label for="ndvi-wz-cb" style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0;">
           <input type="checkbox" id="ndvi-wz-cb" disabled onchange="onNdviWzMasterToggle(this.checked)" />
@@ -816,6 +855,20 @@
                        border-radius:4px;background:var(--bg);color:var(--text);min-width:0;"
                 onchange="onSeisWzSelectChange()"></select>
         <span id="seis-wz-empty" style="flex:1;font-size:11px;color:var(--muted);font-style:italic;" data-i18n="an_wz_empty_hint">Zuerst Watch Zone anlegen</span>
+      </div>
+      {% endif %}
+      {% if 'satoverpass' in wz_analysis_types %}
+      <!-- Satellite Overpass -->
+      <div id="satov-wz-row" style="display:flex;align-items:center;gap:6px;padding:4px 0;">
+        <label for="satov-wz-cb" style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0;">
+          <input type="checkbox" id="satov-wz-cb" disabled onchange="onSatovWzMasterToggle(this.checked)" />
+          <span style="font-size:12px;color:var(--muted);white-space:nowrap;min-width:130px;">Sat-Überflüge</span>
+        </label>
+        <select id="satov-wz-select"
+                style="display:none;flex:1;font-size:11px;padding:3px 8px;border:1px solid var(--border);
+                       border-radius:4px;background:var(--bg);color:var(--text);min-width:0;"
+                onchange="onSatovWzSelectChange()"></select>
+        <span id="satov-wz-empty" style="flex:1;font-size:11px;color:var(--muted);font-style:italic;" data-i18n="an_wz_empty_hint">Zuerst Watch Zone anlegen</span>
       </div>
       {% endif %}
       {% if 'nightlights' in wz_analysis_types %}
@@ -1428,13 +1481,58 @@
     </div>
   </div>
 </div>
+</div>{# /tab-panel-desk #}
 {% endblock %}
 
 {% block scripts %}
+<!-- Analysis Provider Framework -->
+<script src="/static/js/analysis_providers.js?v={{ cache_ts }}"></script>
+<!-- Provider metadata from backend -->
+<script>try{window._analysisProvidersMeta = {{ wz_analysis_providers | tojson }};}catch(e){window._analysisProvidersMeta=[];console.warn("AP meta parse error:",e);}</script>
+<!-- Plugin analysis scripts -->
+{% for prov in wz_analysis_providers %}
+{% if prov.analysis_js %}
+<script src="{{ prov.analysis_js }}?v={{ cache_ts }}"></script>
+{% endif %}
+{% endfor %}
+
+<script>
+// ── Tab-Switching: Desk / Keywords ──
+(function() {
+  var tabs = document.querySelectorAll('#analysis-tabs .an-tab');
+  var kwIframeLoaded = false;
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      var target = tab.dataset.tab;
+      tabs.forEach(function(t) {
+        var isActive = t.dataset.tab === target;
+        t.style.color = isActive ? 'var(--text)' : 'var(--muted)';
+        t.style.borderBottomColor = isActive ? 'var(--accent1)' : 'transparent';
+        t.classList.toggle('active', isActive);
+      });
+      document.getElementById('tab-panel-desk').style.display = target === 'desk' ? '' : 'none';
+      document.getElementById('tab-panel-keywords').style.display = target === 'keywords' ? '' : 'none';
+      // Lazy-load iframe
+      if (target === 'keywords' && !kwIframeLoaded) {
+        kwIframeLoaded = true;
+        var iframe = document.getElementById('kw-iframe');
+        iframe.onload = function() {
+          try { iframe.style.height = iframe.contentWindow.document.body.scrollHeight + 'px'; } catch(e) {}
+        };
+      }
+    });
+  });
+  // URL-Hash: #keywords → direkt Tab öffnen
+  if (location.hash === '#keywords') {
+    var kwTab = document.querySelector('.an-tab[data-tab="keywords"]');
+    if (kwTab) kwTab.click();
+  }
+})();
+</script>
 <script>
 window._mergeI18n({
   de: {
-    an_title:'Analyse', an_project_label:'Projekt:', an_live_check:'⚡ Live-Check',
+    an_tab_desk:'Desk', an_title:'Analyse Desk', an_project_label:'Projekt:', an_live_check:'⚡ Live-Check',
     an_no_project:'Bitte zuerst ein Projekt anlegen.',
     an_no_project_desc:'Um mit der Analyse zu starten, wird ein Projekt benötigt. Dort werden alle Keywords und Ergebnisse organisiert.',
     an_create_project:'Projekt anlegen',
@@ -1584,7 +1682,7 @@ window._mergeI18n({
     kp_max_kw:'Maximal ${n} Keywords gleichzeitig',
   },
   en: {
-    an_title:'Analysis', an_project_label:'Project:', an_live_check:'⚡ Live-Check',
+    an_tab_desk:'Desk', an_title:'Analysis Desk', an_project_label:'Project:', an_live_check:'⚡ Live-Check',
     an_no_project:'Please create a project first.',
     an_no_project_desc:'A project is required to start the analysis. All keywords and results are organised there.',
     an_create_project:'Create project',
@@ -1734,7 +1832,7 @@ window._mergeI18n({
     kp_max_kw:'Maximum ${n} keywords at a time',
   },
   fr: {
-    an_title:'Analyse', an_project_label:'Projet :', an_live_check:'⚡ Live-Check',
+    an_tab_desk:'Desk', an_title:'Analyse Desk', an_project_label:'Projet :', an_live_check:'⚡ Live-Check',
     an_no_project:'Veuillez d\'abord créer un projet.',
     an_no_project_desc:'Un projet est nécessaire pour démarrer l\'analyse. Tous les mots-clés et résultats y sont organisés.',
     an_create_project:'Créer un projet',
@@ -1884,7 +1982,7 @@ window._mergeI18n({
     kp_max_kw:'Maximum ${n} mots-clés en même temps',
   },
   es: {
-    an_title:'Análisis', an_project_label:'Proyecto:', an_live_check:'⚡ Live-Check',
+    an_tab_desk:'Desk', an_title:'Análisis Desk', an_project_label:'Proyecto:', an_live_check:'⚡ Live-Check',
     an_no_project:'Por favor, crea un proyecto primero.',
     an_no_project_desc:'Se necesita un proyecto para iniciar el análisis. Allí se organizan todas las palabras clave y los resultados.',
     an_create_project:'Crear proyecto',
@@ -2164,6 +2262,7 @@ _applyI18n();
   function _esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
   // _ndviCache is declared in the NDVI watchzone block below
   let _ndviAnomalyAnnotations = {};  // Chart-Annotations für NDVI-Anomalien
+  var _apResult = { datasets: [], annotations: {}, yAxes: {} };  // Analysis Provider results
   let _satDateAnnotations = {};      // Chart-Annotations für Sentinel-Aufnahmedaten
   let _satDateCache = {};            // Cache: key → {dates, zones, zoneData:[{id,bbox}]}
   let _satDateLabels = [];           // [{label, date, zoneId, bbox}] für Klick-Handling
@@ -2951,6 +3050,7 @@ _applyI18n();
     // Direkt über /api/sentinel/image laden (unterstützt konkretes Datum)
     if (bboxStr) {
       try {
+        // Use exact date (dates come from satellite-dates API = confirmed availability)
         const r = await fetch("/api/sentinel/image?bbox=" + encodeURIComponent(bboxStr) + "&from=" + date + "&to=" + date + "&width=1024&height=1024");
         if (r.ok) {
           const blob = await r.blob();
@@ -3319,7 +3419,7 @@ _applyI18n();
 
     try {
       _satPopImgUrl = await _satPopFetchImage(date, zoneId, bboxStr);
-      if (!_satPopImgUrl) throw new Error("Kein Bild verfügbar");
+      if (!_satPopImgUrl) throw new Error("Kein Satellitenbild f\u00fcr " + date + " verf\u00fcgbar (\u00b13 Tage). Copernicus-Zugangsdaten pr\u00fcfen.");
       _satPopRenderMain(date);
     } catch(e) {
       popup.innerHTML = `
@@ -4233,50 +4333,6 @@ _applyI18n();
     closeDropdown();
   }
 
-  // ── Auto Correlate (Plugin-Handler) ──────────────────────────────────
-  window.openAutoCorrForKw = async function(kwId) {
-    toast(t('an_ac_searching','Suche korrelierte Keywords\u2026'), "ok");
-    try {
-      const res = await api(`/api/auto-correlate/${kwId}`);
-      if (res.error) { toast(res.error, "error"); return; }
-      if (!res.top || !res.top.length) { toast(t('an_ac_none','Keine korrelierten Keywords gefunden.'), "error"); return; }
-      const loaded = [];
-      const lagInfo = [];
-      for (const match of res.top) {
-        if (selectedIds.has(match.id)) {
-          loaded.push(`${match.keyword} (r=${match.correlation}, bereits aktiv)`);
-          if (match.best_lag) lagInfo.push({ id: match.id, lag: match.best_lag });
-          continue;
-        }
-        if (selectedIds.size >= MAX_KW) break;
-        await addToSelection(match.id);
-        const lagStr = match.best_lag ? `, lag=${match.best_lag}` : '';
-        loaded.push(`${match.keyword} (r=${match.best_lag_r || match.correlation}${lagStr})`);
-        if (match.best_lag) lagInfo.push({ id: match.id, lag: match.best_lag });
-      }
-      await refreshChart();
-      if (lagInfo.length) {
-        const entries = Object.values(rawData).filter(e => e.data.length > 0);
-        const refIdx = entries.findIndex(e => e.kwId === kwId);
-        if (refIdx >= 0) {
-          for (const li of lagInfo) {
-            const matchIdx = entries.findIndex(e => e.kwId === li.id);
-            if (matchIdx < 0) continue;
-            const [i, j] = refIdx < matchIdx ? [refIdx, matchIdx] : [matchIdx, refIdx];
-            const pairKey = `${i}_${j}`;
-            const lag = refIdx < matchIdx ? li.lag : -li.lag;
-            corrShiftMap[pairKey] = lag;
-          }
-          buildCorrelation();
-          updateChartShifts();
-        }
-      }
-      toast(`Auto Correlate: ${loaded.join(", ")}`, "ok");
-    } catch (e) {
-      toast("Fehler: " + e.message, "error");
-    }
-  };
-
   function updateSearchDropdown() {
     const dd    = document.getElementById("kw-dd");
     const rawQ  = document.getElementById("kw-search").value.trim();
@@ -4477,55 +4533,9 @@ _applyI18n();
       dcCb.checked = false;
     }
 
-    /* ── Zerlegung: Datasets anhängen ── */
-    if (decompActive && datasets.length === 1) {
-      const vals = datasets[0].data;
-      const res  = window._decompose(vals, 30, 3, decompModel);
-      // Original dezenter
-      datasets[0].borderWidth = 1.5;
-      datasets[0].borderColor = datasets[0].borderColor.replace(/[\da-f]{2}$/i, "") + "88";
-      // Trend
-      datasets.push({
-        label: "Trend",
-        data: res.trend,
-        borderColor: "#f7d44f",
-        backgroundColor: "#f7d44f22",
-        borderWidth: 2.5,
-        tension: 0.35,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        fill: false,
-        spanGaps: true,
-        yAxisID: "y",
-      });
-      // Seasonal
-      datasets.push({
-        label: "Seasonal",
-        data: res.seasonal,
-        borderColor: "#4ff79e",
-        backgroundColor: "#4ff79e22",
-        borderWidth: 1.5,
-        tension: 0.35,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        fill: false,
-        spanGaps: true,
-        yAxisID: "y2",
-      });
-      // Residual
-      datasets.push({
-        label: "Residual",
-        data: res.residual,
-        borderColor: "#c44ff7",
-        backgroundColor: "#c44ff722",
-        borderWidth: 1,
-        tension: 0.35,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        fill: false,
-        spanGaps: true,
-        yAxisID: "y2",
-      });
+    /* ── Zerlegung: Datasets anhängen (via decomp-Plugin-Hook) ── */
+    if (decompActive && datasets.length === 1 && typeof window._decompChartHook === 'function') {
+      window._decompChartHook(datasets, decompModel);
     }
 
     // ── Lade-Hinweis Helfer ──
@@ -4584,7 +4594,7 @@ _applyI18n();
                 }
               }
             }
-          } catch (e) { console.warn("Wiki-Views Fehler:", e); }
+          } catch (e) { console.warn("Wiki-Views Fehler:", e); toast("Wiki-Views: " + e.message, "error"); }
           _hideExtHint("wiki");
           if (myGen !== _refreshGen) return;
         }
@@ -4595,7 +4605,7 @@ _applyI18n();
           if (!cached || !cached.series.length) continue;
           const dateMap = {};
           cached.series.forEach(p => { dateMap[p.date] = p.views; });
-          const values = labels.map(d => dateMap[d] ?? null);
+          const values = labels.map(d => dateMap[d] ?? dateMap[d.slice(0,10)] ?? null);
           // Prüfen ob überhaupt Werte im sichtbaren Bereich vorhanden sind
           if (values.every(v => v === null)) continue;
           const wikiTitle = cached.title || name;
@@ -4636,7 +4646,7 @@ _applyI18n();
                 }
               }
             }
-          } catch (e) { console.warn("Wiki-Edits Fehler:", e); }
+          } catch (e) { console.warn("Wiki-Edits Fehler:", e); toast("Wiki-Edits: " + e.message, "error"); }
           if (myGen !== _refreshGen) return;
         }
         const EDIT_COLORS = ["#4ade80", "#c084fc", "#67e8f9", "#fbbf24", "#fb7185"];
@@ -4646,7 +4656,7 @@ _applyI18n();
           if (!cached || !cached.series.length) continue;
           const dateMap = {};
           cached.series.forEach(p => { dateMap[p.date] = p.edits; });
-          const values = labels.map(d => dateMap[d] ?? null);
+          const values = labels.map(d => dateMap[d] ?? dateMap[d.slice(0,10)] ?? null);
           if (values.every(v => v === null)) continue;
           const editTitle = cached.title || name;
           datasets.push({
@@ -4706,7 +4716,7 @@ _applyI18n();
           if (!series || !series.length) continue;
           const dateMap = {};
           series.forEach(p => { dateMap[p.date] = p.count; });
-          const values = labels.map(d => dateMap[d] ?? null);
+          const values = labels.map(d => dateMap[d] ?? dateMap[d.slice(0,10)] ?? null);
           if (values.every(v => v === null)) continue;
           datasets.push({
             _isGdelt: true,
@@ -4767,7 +4777,7 @@ _applyI18n();
           if (!series || !series.length) continue;
           const dateMap = {};
           series.forEach(p => { dateMap[p.date] = (dateMap[p.date] || 0) + p.count; });
-          const values = labels.map(d => dateMap[d] ?? null);
+          const values = labels.map(d => dateMap[d] ?? dateMap[d.slice(0,10)] ?? null);
           if (values.every(v => v === null)) continue;
           datasets.push({
             _isBluesky: true,
@@ -4821,7 +4831,7 @@ _applyI18n();
           if (!series) continue;
           const dateMap = {};
           series.forEach(p => { dateMap[p.date] = p.count; });
-          const values = labels.map(d => dateMap[d] ?? null);
+          const values = labels.map(d => dateMap[d] ?? dateMap[d.slice(0,10)] ?? null);
           datasets.push({
             _isTelegram: true,
             label: `${name} (Telegram)`,
@@ -4877,7 +4887,7 @@ _applyI18n();
           if (mode === "price" || mode === "both") {
             const dateMap = {};
             data.price.forEach(p => { dateMap[p.date] = p.close; });
-            const values = labels.map(d => dateMap[d] ?? null);
+            const values = labels.map(d => dateMap[d] ?? dateMap[d.slice(0,10)] ?? null);
             datasets.push({
               _isYahooPrice: true,
               label: `${lbl}${cur}`,
@@ -4897,7 +4907,7 @@ _applyI18n();
           if (mode === "volume" || mode === "both") {
             const dateMap = {};
             data.volume.forEach(v => { dateMap[v.date] = v.volume; });
-            const values = labels.map(d => dateMap[d] ?? null);
+            const values = labels.map(d => dateMap[d] ?? dateMap[d.slice(0,10)] ?? null);
             datasets.push({
               _isYahooVol: true,
               label: `${lbl} Vol.`,
@@ -4915,9 +4925,28 @@ _applyI18n();
       }
     }
 
-    /* ── Sentinel-2 NDVI: Dataset anhängen (watchzone-basiert) ── */
+    /* ── Analysis Provider Integration (Plugin System) ── */
+    var _apResult = { datasets: [], annotations: {}, yAxes: {} };
+    if (typeof AnalysisProviders !== "undefined" && labels.length >= 2) {
+      try {
+        _apResult = await AnalysisProviders.collectAll({
+          labels: labels,
+          showExtHint: _showExtHint,
+          hideExtHint: _hideExtHint,
+          myGen: myGen,
+          refreshGen: _refreshGen,
+          toast: toast,
+          t: window.t,
+        });
+        if (myGen !== _refreshGen) return;
+        datasets.push.apply(datasets, _apResult.datasets);
+      } catch(e) { console.warn("[AP] collectAll error:", e); }
+    }
+
+    /* ── Sentinel-2 NDVI: Dataset anhängen (watchzone-basiert) [LEGACY] ── */
     _ndviAnomalyAnnotations = {};
-    if (typeof _ndviWzSelected !== "undefined" && _ndviWzSelected && labels.length >= 2) {
+    var _ndviCbChecked = document.getElementById("ndvi-wz-cb");
+    if (_ndviCbChecked && _ndviCbChecked.checked && _ndviWzSelected && labels.length >= 2) {
       try {
         const fromDate = labels[0].slice(0, 10);
         const toDate = labels[labels.length - 1].slice(0, 10);
@@ -4929,12 +4958,18 @@ _applyI18n();
           if (r.ok) {
             _ndviCache[cacheKey] = await r.json();
           } else {
-            console.warn("[NDVI] API error:", r.status, await r.text());
+            var _ndviErr = "";
+            try { _ndviErr = (await r.json()).error || ""; } catch(_) { _ndviErr = "HTTP " + r.status; }
+            console.warn("[NDVI] API error:", r.status, _ndviErr);
+            toast(window.t("an_ndvi_error", "NDVI-Fehler: ") + _ndviErr, "error");
           }
           _hideExtHint("ndvi");
         }
         const cached = _ndviCache[cacheKey];
         const ndviData = cached && cached.data ? cached.data : [];
+        if (!ndviData.length && cached) {
+          toast(window.t("an_ndvi_no_data", "Keine NDVI-Daten im Zeitraum gefunden (Copernicus)"), "info");
+        }
         if (ndviData.length) {
           const dateMap = {};
           ndviData.forEach(p => { if (p.mean_ndvi != null) dateMap[p.date] = p.mean_ndvi; });
@@ -5128,7 +5163,8 @@ _applyI18n();
     }
 
     // ── USGS Seismik-Daten für ausgewählte Seismik-Watchzone ──
-    if (typeof _seisWzSelected !== "undefined" && _seisWzSelected && labels.length >= 2) {
+    var _seisCbChecked = document.getElementById("seis-wz-cb");
+    if (_seisCbChecked && _seisCbChecked.checked && _seisWzSelected && labels.length >= 2) {
       try {
         const fromDate = labels[0].slice(0, 10);
         const toDate = labels[labels.length - 1].slice(0, 10);
@@ -5146,6 +5182,9 @@ _applyI18n();
           _hideExtHint("seis");
         }
         const cached = _seisDataCache[cacheKey];
+        if (cached && (!cached.data || !cached.data.length)) {
+          toast(window.t("an_seis_no_data", "Keine Erdbeben im Zeitraum gefunden (USGS)"), "info");
+        }
         if (cached && cached.data && cached.data.length) {
           // Labels können wöchentlich sein → Erdbeben dem nächsten Label zuordnen
           const labelDates = labels.map(l => new Date(l.slice(0, 10)).getTime());
@@ -5182,6 +5221,74 @@ _applyI18n();
           });
         }
       } catch(e) { _hideExtHint("seis"); console.warn("Seismic-History Fehler:", e); }
+    }
+
+    // ── Sat-Overpass Markierungen am unteren Graphenrand ──
+    _satovAnnotations = {};
+    var _satovCbChecked = document.getElementById("satov-wz-cb");
+    if (_satovCbChecked && _satovCbChecked.checked && _satovWzSelected && labels.length >= 2) {
+      try {
+        const fromDate = labels[0].slice(0, 10);
+        const toDate = labels[labels.length - 1].slice(0, 10);
+        const cacheKey = `satov_${_satovWzSelected}_${fromDate}_${toDate}`;
+        if (!_satovCache[cacheKey]) {
+          _showExtHint("satov", "Sat-Überflüge", "#6366f1");
+          // Fetch overpass data day by day is too slow — use sat-history endpoint
+          const r = await fetch(`/api/watchzones/${_satovWzSelected}/sat-history?days=${Math.ceil((new Date(toDate) - new Date(fromDate)) / 86400000) + 1}`
+            + (typeof WZ !== "undefined" && WZ._liveAsType ? "&as_type=" + WZ._liveAsType : ""));
+          if (r.ok) {
+            _satovCache[cacheKey] = await r.json();
+          } else {
+            console.warn("[SatOv] API error:", r.status);
+          }
+          _hideExtHint("satov");
+        }
+        const cached = _satovCache[cacheKey];
+        if (cached && cached.items && cached.items.length) {
+          // Group overpasses by date
+          const dayMap = {};
+          cached.items.forEach(op => {
+            const d = (op.time || op.start || "").slice(0, 10);
+            if (!dayMap[d]) dayMap[d] = [];
+            dayMap[d].push(op);
+          });
+          // Create annotations + dataset for overpass count per day
+          const ovValues = labels.map(d => {
+            const dk = d.slice(0, 10);
+            return dayMap[dk] ? dayMap[dk].length : null;
+          });
+          if (!ovValues.every(v => v === null)) {
+            datasets.push({
+              _isSatOv: true,
+              label: "Sat-Überflüge (" + (cached.zone_name || "Zone") + ")",
+              data: ovValues,
+              borderColor: "#6366f1",
+              backgroundColor: "#6366f140",
+              borderWidth: 1.5,
+              type: "bar",
+              barPercentage: 0.3,
+              order: 12,
+              yAxisID: "ySatOv",
+            });
+          }
+          // Annotations as vertical lines for each overpass
+          let annIdx = 0;
+          cached.items.forEach(op => {
+            const d = (op.time || op.start || "").slice(0, 10);
+            const lbl = labels.find(l => l.slice(0, 10) === d);
+            if (lbl) {
+              _satovAnnotations["satov_" + annIdx] = {
+                type: "line", xMin: lbl, xMax: lbl,
+                borderColor: "rgba(99,102,241,.12)", borderWidth: 1,
+                drawTime: "beforeDatasetsDraw",
+              };
+              annIdx++;
+            }
+          });
+        } else if (cached) {
+          toast(window.t("an_satov_no_data", "Keine Satellitenüberflüge im Zeitraum"), "info");
+        }
+      } catch(e) { _hideExtHint("satov"); console.warn("SatOv Fehler:", e); }
     }
 
     // ── Radioaktivität (BfS ODL / EURDEP) für ausgewählte Radiation-Watchzone ──
@@ -5724,7 +5831,7 @@ _applyI18n();
             },
           },
           tooltip:    { enabled: false },   // eigener Tooltip (Fadenkreuz-Tip)
-          annotation: { annotations: { ...buildAnnotations(labels), ..._ndviAnomalyAnnotations, ..._satDateAnnotations } },
+          annotation: { annotations: { ...buildAnnotations(labels), ..._ndviAnomalyAnnotations, ..._satDateAnnotations, ..._satovAnnotations, ...(_apResult.annotations || {}) } },
           zoom: {
             pan: {
               enabled: false,
@@ -5917,6 +6024,20 @@ _applyI18n();
               },
             },
           } : {}),
+          ...(datasets.some(ds => ds._isSatOv) ? {
+            ySatOv: {
+              position: "right",
+              min: 0,
+              ticks: { color: "#6366f1", stepSize: 1 },
+              grid: { drawOnChartArea: false },
+              title: {
+                display: true,
+                text: "Sat-Überflüge / Tag",
+                color: "#6366f1",
+                font: { size: 11 },
+              },
+            },
+          } : {}),
           ...(datasets.some(ds => ds._isRad) ? {
             yRad: {
               position: "right",
@@ -6019,6 +6140,7 @@ _applyI18n();
               title: { display: true, text: "Refugees + Asylum", color: "#8b5cf6", font: { size: 11 } },
             },
           } : {}),
+          ...(_apResult.yAxes || {}),
         },
       },
     });
@@ -7146,22 +7268,20 @@ _applyI18n();
       if (!startLbl) return;
 
       if (evt.event_type === "point") {
-        // Gestrichelte Linie – vor Datenkurven (hinter)
         annotations[`evt_${i}`] = {
           type: "line",
           xMin: startLbl, xMax: startLbl,
           borderColor: evt.color, borderWidth: 2, borderDash: [6, 4],
-          drawTime: "beforeDatasetsDraw",
+          drawTime: "afterDatasetsDraw",
         };
       } else {
         const endLbl = nearestLabel(labels, evt.end_dt || evt.start_dt);
-        // Farbige Box – vor Datenkurven (hinter)
         annotations[`evt_${i}`] = {
           type: "box",
           xMin: startLbl, xMax: endLbl || startLbl,
           backgroundColor: evt.color + "20",
           borderColor: evt.color + "70", borderWidth: 1,
-          drawTime: "beforeDatasetsDraw",
+          drawTime: "afterDatasetsDraw",
         };
       }
     });
@@ -8961,6 +9081,7 @@ _applyI18n();
       ).join("");
       if (!_ndviWzSelected) {
         sel.selectedIndex = 0;
+        _ndviWzSelected = parseInt(sel.value) || null;
       } else {
         const opt = [...sel.options].find(o => parseInt(o.value) === _ndviWzSelected);
         if (opt) opt.selected = true; else sel.selectedIndex = 0;
@@ -9259,6 +9380,50 @@ _applyI18n();
   };
 
   loadSeisWatchzones();
+
+  // ── Sat-Overpass-Watchzones im Weitere-Quellen-Popup ──
+  let _satovWzones = [];
+  let _satovWzSelected = null;
+  let _satovCache = {};
+  let _satovAnnotations = {};
+
+  async function loadSatovWatchzones() {
+    const sel = document.getElementById("satov-wz-select");
+    const cb = document.getElementById("satov-wz-cb");
+    const empty = document.getElementById("satov-wz-empty");
+    if (!sel || !cb) return;
+    try {
+      const r = await fetch("/api/watchzones");
+      if (!r.ok) return;
+      const all = await r.json();
+      _satovWzones = all.filter(z => z.zone_type === "satoverpass" || (z.zone_type === "global" && z.active));
+      if (!_satovWzones.length) { cb.disabled = true; sel.style.display = "none"; empty.style.display = ""; return; }
+      cb.disabled = false; sel.style.display = ""; empty.style.display = "none";
+      sel.innerHTML = _satovWzones.map(z => `<option value="${z.id}">${z.name || 'Zone ' + z.id}</option>`).join("");
+      if (!_satovWzSelected) { sel.selectedIndex = 0; _satovWzSelected = parseInt(sel.value) || null; }
+    } catch(e) {}
+  }
+  window.onSatovWzSelectChange = function() {
+    const sel = document.getElementById("satov-wz-select");
+    const cb = document.getElementById("satov-wz-cb");
+    _satovWzSelected = parseInt(sel.value) || null;
+    if (_satovWzSelected) cb.checked = true;
+    _satovCache = {};
+    refreshChart();
+  };
+  window.onSatovWzMasterToggle = function(checked) {
+    const sel = document.getElementById("satov-wz-select");
+    if (!checked) { _satovWzSelected = null; _satovCache = {}; refreshChart(); return; }
+    if (!_satovWzSelected && sel.options.length) { sel.selectedIndex = 0; _satovWzSelected = parseInt(sel.value); }
+    _satovCache = {};
+    refreshChart();
+  };
+  loadSatovWatchzones();
+
+  // ── Analysis Provider System Init ──
+  if (typeof AnalysisProviders !== "undefined" && window._analysisProvidersMeta) {
+    AnalysisProviders.initAll(window._analysisProvidersMeta);
+  }
 
   // ── Radiation-Watchzones (BfS ODL / EURDEP) im Weitere-Quellen-Popup ──
   let _radWzones = [];
@@ -11107,6 +11272,7 @@ _applyI18n();
                            padding:0 2px;display:none;"
                     data-tip="Löschen">✕</button>
           </div>
+          <div id="lc-translate-chips" style="display:none;flex-wrap:wrap;gap:4px;margin-top:6px;"></div>
         </div>
         <!-- Land -->
         <div style="margin-bottom:14px;">
@@ -11385,12 +11551,60 @@ _applyI18n();
   // ✕-Button: Anzeige steuern + Löschen
   const lcKwInput = document.getElementById("lc-keyword");
   const lcKwClear = document.getElementById("btn-lc-kw-clear");
+  var _lcTransTimer = null;
   lcKwInput.addEventListener("input", () => {
     lcKwClear.style.display = lcKwInput.value ? "" : "none";
+    // Translate keyword into multiple languages
+    clearTimeout(_lcTransTimer);
+    var chips = document.getElementById("lc-translate-chips");
+    var q = lcKwInput.value.trim();
+    if (q.length >= 2) {
+      _lcTransTimer = setTimeout(function() {
+        fetch('/api/telegram-translate-kw?text=' + encodeURIComponent(q))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data.ok || !data.translations || !data.translations.length) {
+              chips.style.display = 'none';
+              return;
+            }
+            var html = '<button type="button" onclick="document.getElementById(\'lc-keyword\').value=\'' + q.replace(/'/g, "\\'") + '\'" '
+              + 'style="padding:3px 10px;border:1px solid var(--accent3);border-radius:12px;background:rgba(0,136,204,.15);color:var(--accent3);cursor:pointer;font-size:11px;font-weight:700;">'
+              + q + ' <span style="font-size:9px;color:var(--muted);">' + (data.src_lang || '').toUpperCase() + '</span></button>';
+            data.translations.forEach(function(tr) {
+              html += '<button type="button" onclick="_lcUseTranslation(\'' + tr.text.replace(/'/g, "\\'") + '\',this)" '
+                + 'style="padding:3px 10px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);cursor:pointer;font-size:11px;">'
+                + tr.text + ' <span style="font-size:9px;color:var(--muted);">' + tr.lang.toUpperCase() + '</span></button>';
+            });
+            chips.innerHTML = html;
+            chips.style.display = 'flex';
+          }).catch(function() { chips.style.display = 'none'; });
+      }, 500);
+    } else {
+      chips.style.display = 'none';
+    }
   });
+  window._lcUseTranslation = function(text, btn) {
+    lcKwInput.value = text;
+    lcKwClear.style.display = text ? '' : 'none';
+    // Highlight active chip
+    var chips = document.getElementById('lc-translate-chips');
+    chips.querySelectorAll('button').forEach(function(b) {
+      b.style.borderColor = 'var(--border)';
+      b.style.background = 'var(--surface)';
+      b.style.fontWeight = '400';
+      b.style.color = 'var(--text)';
+    });
+    if (btn) {
+      btn.style.borderColor = 'var(--accent3)';
+      btn.style.background = 'rgba(0,136,204,.15)';
+      btn.style.fontWeight = '700';
+      btn.style.color = 'var(--accent3)';
+    }
+  };
   lcKwClear.addEventListener("click", () => {
     lcKwInput.value = "";
     lcKwClear.style.display = "none";
+    document.getElementById("lc-translate-chips").style.display = "none";
     lcKwInput.focus();
   });
 
@@ -13184,17 +13398,10 @@ window._registerAnalysisPlugin = function(id, opts) {
     }
     let context = '';
     let methodExtras = null;
-    if (decompActive && series.length === 1) {
-      const vals = series[0].data.map(p => p.value);
-      const res  = window._decompose(vals, 30, 3, decompModel);
-      const modelLabel = decompModel === 'additive' ? 'Additiv (T+S+R)' : 'Multiplikativ (T×S×R)';
-      context = `Decomposition aktiv – Modell: ${modelLabel}`;
-      methodExtras = { dc: {
-        model: decompModel,
-        trend:    series[0].data.map((p, i) => ({ date: p.date, value: res.trend[i] != null ? +res.trend[i].toFixed(2) : null })),
-        seasonal: series[0].data.map((p, i) => ({ date: p.date, value: res.seasonal[i] != null ? +res.seasonal[i].toFixed(4) : null })),
-        residual: series[0].data.map((p, i) => ({ date: p.date, value: res.residual[i] != null ? +res.residual[i].toFixed(4) : null })),
-      }};
+    if (decompActive && series.length === 1 && typeof window._decompAiHook === 'function') {
+      const dcResult = window._decompAiHook(series, decompModel);
+      context = dcResult.context;
+      methodExtras = dcResult.extras;
     }
     openAiWithContext(series, context, '', '', methodExtras);
   }

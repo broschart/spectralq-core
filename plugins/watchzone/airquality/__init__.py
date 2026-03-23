@@ -297,6 +297,12 @@ class AirQualityPlugin(WatchZonePlugin):
         return {
             "data_types": ["airquality"],
             "history_endpoint_suffix": "airquality-history",
+            "analysis_js": "/plugins/watchzone/airquality/static/airquality_analysis.js",
+            "ui_prefix": "aq",
+            "ui_label": "Luftqualit\u00e4t",
+            "ui_color": "#22c55e",
+            "zone_types": ["airquality"],
+            "accepts_global": True,
         }
 
 PluginManager.register(AirQualityPlugin())

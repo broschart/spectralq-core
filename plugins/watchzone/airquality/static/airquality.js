@@ -164,4 +164,35 @@ WZ.registerPlugin("airquality", {
   default_source: "openaq",
 });
 
+// Collect Renderer
+WZ._collectRenderers["airquality"] = {
+  renderHTML: function(data, cardId) {
+    var h = "";
+    h += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;">';
+    if (data.avg_pm25 != null) h += '<div style="text-align:center;"><div style="font-size:22px;font-weight:800;color:' + (data.avg_color || "#f59e0b") + ';">' + data.avg_pm25.toFixed(1) + '</div><div style="font-size:9px;color:var(--muted);">\u00d8 PM2.5 \u00b5g/m\u00b3</div></div>';
+    if (data.avg_label) h += '<div style="text-align:center;"><div style="font-size:16px;font-weight:700;color:' + (data.avg_color || "var(--text)") + ';">' + WZ._esc(data.avg_label) + '</div><div style="font-size:9px;color:var(--muted);">Bewertung</div></div>';
+    if (data.worst_pm25 != null) h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:700;color:#ef4444;">' + data.worst_pm25.toFixed(1) + '</div><div style="font-size:9px;color:var(--muted);">Worst PM2.5</div></div>';
+    h += '</div>';
+    if (data.items && data.items.length) {
+      h += '<div id="' + cardId + '-map" style="height:400px;border-radius:6px;margin-bottom:8px;"></div>';
+      h += '<table style="width:100%;font-size:11px;border-collapse:collapse;">';
+      h += '<thead><tr style="border-bottom:1px solid var(--border);color:var(--muted);"><th style="text-align:left;padding:3px 6px;">Station</th><th style="text-align:right;padding:3px 6px;">PM2.5</th><th style="text-align:left;padding:3px 6px;">Qualit\u00e4t</th></tr></thead><tbody>';
+      data.items.slice(0, 10).forEach(function(it) {
+        var pm = it.pm25 || it.value || 0;
+        var c = pm > 55 ? "#ef4444" : pm > 35 ? "#f59e0b" : pm > 12 ? "#eab308" : "#22c55e";
+        h += '<tr style="border-bottom:1px solid rgba(255,255,255,.05);">';
+        h += '<td style="padding:3px 6px;">' + WZ._esc((it.name || it.location || "").substring(0, 30)) + '</td>';
+        h += '<td style="padding:3px 6px;text-align:right;color:' + c + ';font-weight:600;">' + (typeof pm === "number" ? pm.toFixed(1) : pm) + '</td>';
+        h += '<td style="padding:3px 6px;">' + WZ._esc(it.label || it.quality || "") + '</td>';
+        h += '</tr>';
+      });
+      h += '</tbody></table>';
+    }
+    return h;
+  },
+  afterRender: function(data, cardId, cardEl) {
+    WZ._collectGenericAfterRender({ plugin: "airquality", data: data }, cardId, cardEl);
+  }
+};
+
 })();

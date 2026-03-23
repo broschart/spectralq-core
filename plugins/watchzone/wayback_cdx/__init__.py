@@ -59,6 +59,97 @@ def _fetch_cdx(url, date_from, date_to, collapse="timestamp:8"):
 
     return records
 
+def _fetch_site_tree(domain, limit=500):
+    """Fetch unique URLs for a domain and build a site tree structure."""
+    import requests as _rq
+    from urllib.parse import urlparse
+    from collections import Counter
+
+    params = {
+        "url": domain + "/*",
+        "output": "json",
+        "fl": "original,mimetype,statuscode",
+        "filter": "statuscode:200",
+        "collapse": "urlkey",
+        "limit": limit,
+    }
+    try:
+        r = _rq.get(CDX_API, params=params, headers={"User-Agent": UA}, timeout=20)
+        r.raise_for_status()
+        data = r.json()
+    except Exception as exc:
+        log.debug("Site tree fetch failed: %s", exc)
+        return None
+
+    if not data or len(data) < 2:
+        return None
+
+    header = data[0]
+    entries = []  # list of {path, mime_type}
+    mime_counts = Counter()
+    for row in data[1:]:
+        rec = dict(zip(header, row))
+        orig_url = rec.get("original", "")
+        mime = rec.get("mimetype", "")
+        if not orig_url:
+            continue
+        # Reconstruct absolute path from full URL
+        parsed = urlparse(orig_url if "://" in orig_url else "https://" + orig_url)
+        path = parsed.path or "/"
+        # Include query string for unique pages
+        if parsed.query:
+            path += "?" + parsed.query
+        path = path.rstrip("/") or "/"
+        # Classify MIME type
+        if "html" in mime:
+            mt = "HTML"
+        elif "css" in mime:
+            mt = "CSS"
+        elif "javascript" in mime or "js" in mime:
+            mt = "JS"
+        elif "image" in mime:
+            mt = "Bilder"
+        elif "pdf" in mime:
+            mt = "PDF"
+        elif "json" in mime or "xml" in mime:
+            mt = "Daten"
+        else:
+            mt = "Sonstige"
+        mime_counts[mt] += 1
+        entries.append({"path": path, "mime": mt, "url": orig_url})
+
+    # Build tree with mime info + original URL on leaf nodes
+    tree = {}
+    for entry in entries:
+        parts = [p for p in entry["path"].split("/") if p]
+        if not parts:
+            parts = ["/"]
+        node = tree
+        for i, part in enumerate(parts):
+            if part not in node:
+                node[part] = {"_children": {}, "_mime": None, "_url": None}
+            if i == len(parts) - 1:
+                node[part]["_mime"] = entry["mime"]
+                node[part]["_url"] = entry.get("url", "")
+            node = node[part]["_children"]
+
+    # Flatten tree for JSON
+    def _flatten(node):
+        result = {}
+        for key, val in node.items():
+            children = _flatten(val.get("_children", {}))
+            entry = {"mime": val.get("_mime"), "children": children}
+            if val.get("_url"):
+                entry["url"] = val["_url"]
+            result[key] = entry
+        return result
+
+    return {
+        "total_urls": len(entries),
+        "tree": _flatten(tree),
+        "mime_counts": dict(mime_counts),
+    }
+
 def _aggregate_daily(records):
     """Count snapshots per day."""
     by_date = {}
@@ -139,7 +230,33 @@ class WaybackCDXPlugin(WatchZonePlugin):
         first_date = records[0]["date"] if records else ""
         last_date = records[-1]["date"] if records else ""
 
-        return {
+        # Count total archived pages for the whole domain (including subpages)
+        domain_total = None
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url if "://" in url else "https://" + url)
+            domain = parsed.netloc or parsed.path.split("/")[0]
+            if domain:
+                import requests as _rq
+                _ct_params = {
+                    "url": domain + "/*",
+                    "output": "json",
+                    "fl": "timestamp",
+                    "limit": 1,
+                    "showNumPages": "true",
+                }
+                _ct_r = _rq.get(CDX_API, params=_ct_params,
+                                headers={"User-Agent": UA}, timeout=15)
+                if _ct_r.ok:
+                    _ct_data = _ct_r.json()
+                    if isinstance(_ct_data, int):
+                        domain_total = _ct_data
+                    elif isinstance(_ct_data, list) and _ct_data:
+                        domain_total = int(_ct_data[0]) if isinstance(_ct_data[0], (int, str)) else None
+        except Exception as exc:
+            log.debug("Domain page count failed: %s", exc)
+
+        result = {
             "zone_id": zone.id,
             "zone_name": zone.name,
             "zone_type": "wayback_cdx",
@@ -155,6 +272,22 @@ class WaybackCDXPlugin(WatchZonePlugin):
             "date_to": date_to,
             "daily": daily,
         }
+        if domain_total is not None:
+            result["domain_total_pages"] = domain_total
+
+        # Fetch site tree structure
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url if "://" in url else "https://" + url)
+            domain = parsed.netloc or parsed.path.split("/")[0]
+            if domain:
+                site_tree = _fetch_site_tree(domain, limit=300)
+                if site_tree:
+                    result["site_tree"] = site_tree
+        except Exception as exc:
+            log.debug("Site tree failed: %s", exc)
+
+        return result
 
     def history_routes(self):
         return [{"suffix": "wayback-frequency", "handler": self._history_handler}]

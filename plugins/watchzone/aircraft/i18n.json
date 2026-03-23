@@ -6,7 +6,7 @@
     "wz_aircraft_desc": "Verfolgt Flugzeuge via ADS-B in einem definierten Luftraum. „Live“ öffnet die Echtzeit-Karte mit Höhe, Kurs und Geschwindigkeit – kritische Nähe zwischen Maschinen wird farblich hervorgehoben. Klick auf ein Paar zoomt die Karte direkt dorthin.",
     "wz_aircraft_hint": "Luftraum-Zonen auf der Karte einzeichnen. ADS-B-Daten (airplanes.live) zeigen Flugbewegungen in Echtzeit und ermöglichen Anomalie-Erkennung.",
     "wz_aircraft_empty": "Keine Flugzeuge in dieser Zone gefunden.",
-    "wz_aircraft_analyse": "⧼ Flugverkehr analysieren",
+    "wz_aircraft_analyse": "Flugverkehr analysieren",
     "wz_aircraft_count_zone": "Flugzeuge in Zone",
     "wz_aircraft_th_usage": "Nutzung",
     "wz_aircraft_th_callsign": "Rufzeichen",
@@ -29,8 +29,9 @@
     "wz_proj_running": "Läuft…",
     "wz_proj_restart": "Neustart",
     "wz_no_collisions": "Keine Kollisionen projiziert",
-    "wz_parcoords_title": "⧼ Mehrdimensionale Analyse und Filter",
-    "wz_btn_reset_filter": "Filter zurücksetzen"
+    "wz_parcoords_title": "Mehrdimensionale Analyse und Filter",
+    "wz_btn_reset_filter": "Filter zurücksetzen",
+    "wz_aircraft_help": "Verfolgt Flugzeuge in Echtzeit über ADS-B-Transponderdaten in einem definierten Luftraum.<br><br><b>Bedienung:</b> Zone auf der Karte einzeichnen und auf „Live“ klicken. Alle Flugzeuge im Bereich werden mit Rufzeichen, Höhe, Kurs und Geschwindigkeit aufgelistet. Die Karte zeigt Positionen mit farbcodierten Annäherungswarnungen bei kritischer Nähe.<br><br><b>Erweiterte Funktionen:</b> Stundenprojektion berechnet zukünftige Positionen. Die Heatmap visualisiert die Verkehrsdichte. Parallele Koordinaten ermöglichen multidimensionale Filterung nach Höhe, Geschwindigkeit, Kurs und Entfernung. Formationsflugmuster und Kollisionsrisiken werden automatisch erkannt.<br><br><b>Forensische Relevanz:</b> Nützlich zur Überwachung militärischer Luftraumaktivität, Erkennung von Überwachungsflugzeugmustern, Überprüfung der Einhaltung von Flugverbotszonen oder Rekonstruktion von Luftzwischenfällen.<br><br><b>Datenquelle:</b> ADS-B Exchange / airplanes.live — kein API-Key erforderlich."
   },
   "en": {
     "wz_sidebar_aircraft": "Aircraft",
@@ -39,7 +40,7 @@
     "wz_aircraft_desc": "Tracks aircraft via ADS-B within a defined airspace. “Live” opens the real-time map with altitude, heading and speed – critical proximity between aircraft is colour-coded. Click on a pair to zoom the map directly to them.",
     "wz_aircraft_hint": "Draw airspace zones on the map. ADS-B data (airplanes.live) shows flight movements in real time and enables anomaly detection.",
     "wz_aircraft_empty": "No aircraft found in this zone.",
-    "wz_aircraft_analyse": "⧼ Analyse Air Traffic",
+    "wz_aircraft_analyse": "Analyse Air Traffic",
     "wz_aircraft_count_zone": "aircraft in zone",
     "wz_aircraft_th_usage": "Usage",
     "wz_aircraft_th_callsign": "Callsign",
@@ -62,8 +63,9 @@
     "wz_proj_running": "Running…",
     "wz_proj_restart": "Restart",
     "wz_no_collisions": "No collisions projected",
-    "wz_parcoords_title": "⧼ Multidimensional Analysis and Filtering",
-    "wz_btn_reset_filter": "Reset Filter"
+    "wz_parcoords_title": "Multidimensional Analysis and Filtering",
+    "wz_btn_reset_filter": "Reset Filter",
+    "wz_aircraft_help": "Tracks aircraft in real time via ADS-B transponder data within a defined airspace.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All aircraft in the area are listed with callsign, altitude, heading and speed. The map shows positions with colour-coded proximity warnings when aircraft are critically close.<br><br><b>Advanced features:</b> Hourly projection calculates future positions. The heatmap visualises traffic density. Parallel coordinates allow multidimensional filtering by altitude, speed, heading and distance. Formation flight patterns and collision risks are automatically detected.<br><br><b>Forensic relevance:</b> Useful for monitoring military airspace activity, detecting surveillance aircraft patterns, verifying no-fly zone compliance or reconstructing aerial incidents.<br><br><b>Data source:</b> ADS-B Exchange / airplanes.live — no API key required."
   },
   "fr": {
     "wz_sidebar_aircraft": "Aéronefs",
@@ -72,7 +74,7 @@
     "wz_aircraft_desc": "Suit les aéronefs via ADS-B dans un espace aérien défini. « Direct » ouvre la carte en temps réel avec l’altitude, le cap et la vitesse – la proximité critique entre appareils est indiquée par des couleurs. Cliquez sur une paire pour zoomer sur la carte.",
     "wz_aircraft_hint": "Dessinez des zones d’espace aérien sur la carte. Les données ADS-B (airplanes.live) affichent les mouvements en temps réel et permettent la détection d’anomalies.",
     "wz_aircraft_empty": "Aucun aéronef trouvé dans cette zone.",
-    "wz_aircraft_analyse": "⧼ Analyser le trafic aérien",
+    "wz_aircraft_analyse": "Analyser le trafic aérien",
     "wz_aircraft_count_zone": "aéronefs dans la zone",
     "wz_aircraft_th_usage": "Usage",
     "wz_aircraft_th_callsign": "Indicatif",
@@ -95,8 +97,9 @@
     "wz_proj_running": "En cours…",
     "wz_proj_restart": "Redémarrer",
     "wz_no_collisions": "Aucune collision projetée",
-    "wz_parcoords_title": "⧼ Analyse et filtrage multidimensionnels",
-    "wz_btn_reset_filter": "Réinitialiser les filtres"
+    "wz_parcoords_title": "Analyse et filtrage multidimensionnels",
+    "wz_btn_reset_filter": "Réinitialiser les filtres",
+    "wz_aircraft_help": "Tracks aircraft in real time via ADS-B transponder data within a defined airspace.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All aircraft in the area are listed with callsign, altitude, heading and speed. The map shows positions with colour-coded proximity warnings when aircraft are critically close.<br><br><b>Advanced features:</b> Hourly projection calculates future positions. The heatmap visualises traffic density. Parallel coordinates allow multidimensional filtering by altitude, speed, heading and distance. Formation flight patterns and collision risks are automatically detected.<br><br><b>Forensic relevance:</b> Useful for monitoring military airspace activity, detecting surveillance aircraft patterns, verifying no-fly zone compliance or reconstructing aerial incidents.<br><br><b>Data source:</b> ADS-B Exchange / airplanes.live — no API key required."
   },
   "es": {
     "wz_sidebar_aircraft": "Aeronaves",
@@ -105,7 +108,7 @@
     "wz_aircraft_desc": "Rastrea aeronaves via ADS-B en un espacio aéreo definido. “Vivo” abre el mapa en tiempo real con altitud, rumbo y velocidad – la proximidad crítica entre aeronaves se indica con colores. Haga clic en un par para hacer zoom en el mapa.",
     "wz_aircraft_hint": "Dibuje zonas de espacio aéreo en el mapa. Los datos ADS-B (airplanes.live) muestran movimientos de vuelo en tiempo real y permiten la detección de anomalías.",
     "wz_aircraft_empty": "No se encontraron aeronaves en esta zona.",
-    "wz_aircraft_analyse": "⧼ Analizar tráfico aéreo",
+    "wz_aircraft_analyse": "Analizar tráfico aéreo",
     "wz_aircraft_count_zone": "aeronaves en la zona",
     "wz_aircraft_th_usage": "Uso",
     "wz_aircraft_th_callsign": "Indicativo",
@@ -128,7 +131,8 @@
     "wz_proj_running": "En curso…",
     "wz_proj_restart": "Reiniciar",
     "wz_no_collisions": "No hay colisiones proyectadas",
-    "wz_parcoords_title": "⧼ Análisis y filtrado multidimensional",
-    "wz_btn_reset_filter": "Restablecer filtros"
+    "wz_parcoords_title": "Análisis y filtrado multidimensional",
+    "wz_btn_reset_filter": "Restablecer filtros",
+    "wz_aircraft_help": "Tracks aircraft in real time via ADS-B transponder data within a defined airspace.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All aircraft in the area are listed with callsign, altitude, heading and speed. The map shows positions with colour-coded proximity warnings when aircraft are critically close.<br><br><b>Advanced features:</b> Hourly projection calculates future positions. The heatmap visualises traffic density. Parallel coordinates allow multidimensional filtering by altitude, speed, heading and distance. Formation flight patterns and collision risks are automatically detected.<br><br><b>Forensic relevance:</b> Useful for monitoring military airspace activity, detecting surveillance aircraft patterns, verifying no-fly zone compliance or reconstructing aerial incidents.<br><br><b>Data source:</b> ADS-B Exchange / airplanes.live — no API key required."
   }
 }

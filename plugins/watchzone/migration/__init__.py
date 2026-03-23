@@ -201,13 +201,17 @@ class MigrationPlugin(WatchZonePlugin):
                 ],
             })
 
-        return {
+        result = {
             "zone_id": zone.id,
             "zone_name": zone.name,
             "zone_type": "migration",
             "count": len(results),
             "countries": results,
         }
+        time_focus = config.get("time_focus")
+        if time_focus:
+            result["time_focus"] = time_focus
+        return result
 
     def history_routes(self):
         return [{"suffix": "migration-history", "handler": self._history_handler}]
@@ -288,6 +292,15 @@ class MigrationPlugin(WatchZonePlugin):
         }
 
     def analysis_provider(self):
-        return {"data_types": ["migration"], "history_endpoint_suffix": "migration-history"}
+        return {
+            "data_types": ["migration"],
+            "history_endpoint_suffix": "migration-history",
+            "analysis_js": "/plugins/watchzone/migration/static/migration_analysis.js",
+            "ui_prefix": "mig",
+            "ui_label": "Migration (UNHCR)",
+            "ui_color": "#8b5cf6",
+            "zone_types": ["migration"],
+            "accepts_global": False,
+        }
 
 PluginManager.register(MigrationPlugin())

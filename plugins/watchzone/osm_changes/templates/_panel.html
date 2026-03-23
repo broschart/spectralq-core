@@ -1,12 +1,11 @@
 <div id="panel-osm_changes" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_osm_title">OpenStreetMap Changes</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_osm_source">Source: OpenStreetMap / Overpass API</span>
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_osm_desc">Monitors map edits in a region: newly drawn roads, buildings, military infrastructure, airports. Crowdsourced, but forensically relevant when mappers are on the ground. No API key required.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_osm_help">Monitors OpenStreetMap edits in the defined region over the last 30 days, tracking newly drawn or modified roads, buildings, military infrastructure, airports and other map features.<br><br><b>How to use:</b> Draw a zone on the map and click "Live". All changes are listed with the mapper's username, edit date, object type (new vs. modified) and version history. Click on an entry to see the exact location on the map.<br><br><b>Forensic relevance:</b> While crowdsourced, OSM edits are forensically relevant when local mappers document changes on the ground — new military checkpoints, destroyed bridges, refugee camps or road closures. Coordinated editing activity by new accounts can also indicate information operations.<br><br><b>Data source:</b> OpenStreetMap / Overpass API — no API key required.</div>
   </div>
   <div class="wz-main-body">
-    <div id="wz-map-osm_changes" class="wz-map-container" style="height:500px;"></div>
+    <div id="wz-map-osm_changes" class="wz-map-container" ></div>
     <div class="wz-hint" id="wz-hint-osm_changes" data-i18n="wz_osm_hint">
       Draw observation areas on the map. OSM changes
       from the last 30 days will be fetched automatically.

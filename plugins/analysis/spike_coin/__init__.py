@@ -10,6 +10,7 @@ class SpikeCoinPlugin(AnalysisPlugin):
         "color": "#f87171",
         "symbol": "⚡",
         "description": "Erkennung gleichzeitiger Spitzen über mehrere Keywords hinweg.",
+        "apa_method": "spike_coincidence",
         "modal_template": "spike_coin/_modal.html",
         "default_show_in": ["lab"],
         "button_id": "btn-spike-coin",

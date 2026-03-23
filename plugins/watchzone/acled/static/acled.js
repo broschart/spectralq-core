@@ -176,4 +176,38 @@ WZ.registerPlugin("acled", {
   default_source: "acled",
 });
 
+// Collect Renderer
+WZ._collectRenderers["acled"] = {
+  renderHTML: function(data, cardId) {
+    var h = "", fmtD = WZ._fmtDate || function(s) { return s ? String(s).slice(0,10) : ""; };
+    h += '<div id="' + cardId + '-map" style="height:400px;border-radius:6px;margin-bottom:8px;"></div>';
+    h += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;">';
+    h += '<div style="text-align:center;"><div style="font-size:20px;font-weight:800;color:var(--text);">' + (data.count || 0) + '</div><div style="font-size:9px;color:var(--muted);">Ereignisse</div></div>';
+    if (data.fatalities) h += '<div style="text-align:center;"><div style="font-size:20px;font-weight:800;color:#ef4444;">' + data.fatalities + '</div><div style="font-size:9px;color:var(--muted);">Opfer</div></div>';
+    var tc = data.type_counts || {};
+    Object.keys(tc).slice(0, 4).forEach(function(t) {
+      h += '<div style="text-align:center;"><div style="font-size:16px;font-weight:700;color:var(--text);">' + tc[t] + '</div><div style="font-size:9px;color:var(--muted);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + WZ._esc(t) + '</div></div>';
+    });
+    h += '</div>';
+    if (data.items && data.items.length) {
+      h += '<table style="width:100%;font-size:11px;border-collapse:collapse;">';
+      h += '<thead><tr style="border-bottom:1px solid var(--border);color:var(--muted);"><th style="text-align:left;padding:3px 6px;">Datum</th><th style="text-align:left;padding:3px 6px;">Typ</th><th style="text-align:left;padding:3px 6px;">Ort</th><th style="text-align:right;padding:3px 6px;">Opfer</th></tr></thead><tbody>';
+      data.items.slice(0, 10).forEach(function(it) {
+        h += '<tr style="border-bottom:1px solid rgba(255,255,255,.05);">';
+        h += '<td style="padding:3px 6px;">' + fmtD(it.date || it.event_date) + '</td>';
+        h += '<td style="padding:3px 6px;">' + WZ._esc((it.event_type || it.type || "").substring(0, 25)) + '</td>';
+        h += '<td style="padding:3px 6px;">' + WZ._esc((it.location || it.admin1 || "").substring(0, 25)) + '</td>';
+        h += '<td style="padding:3px 6px;text-align:right;color:' + (it.fatalities > 0 ? "#ef4444" : "var(--muted)") + ';">' + (it.fatalities || 0) + '</td>';
+        h += '</tr>';
+      });
+      h += '</tbody></table>';
+      if (data.items.length > 10) h += '<div style="font-size:10px;color:var(--muted);margin-top:4px;">+ ' + (data.items.length - 10) + ' weitere</div>';
+    }
+    return h;
+  },
+  afterRender: function(data, cardId, cardEl) {
+    WZ._collectGenericAfterRender({ plugin: "acled", data: data }, cardId, cardEl);
+  }
+};
+
 })();

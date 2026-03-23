@@ -4,7 +4,7 @@
 (function() {
 "use strict";
 var WZ = window.WZ;
-var t = window._t || function(k, fb) { return fb; };
+var t = window.t || function(k, fb) { return fb; };
 
 var NORMAL_MAX = 0.3;
 var _radMarkers = [];
@@ -25,6 +25,10 @@ function _valColor(v) {
 
 // ── Live-Ansicht rendern ────────────────────────────────────────────────
 function _renderRadiationLive(data) {
+  var ctx = WZ._currentCtx;
+  if (ctx && ctx.mapEl) ctx.mapEl.style.height = "clamp(450px,75vh,850px)";
+  var _countEl = ctx ? ctx.countEl : document.getElementById("wz-live-count");
+  var _mapRowEl = ctx ? ctx.mapRowEl : document.getElementById("wz-map-row");
   var count = data.count || 0;
   var elevated = data.elevated_count || 0;
   var source = data.source || "odl";
@@ -34,36 +38,12 @@ function _renderRadiationLive(data) {
   _radMarkers = [];
   _radStop();
 
-  document.getElementById("wz-live-count").textContent =
+  _countEl.textContent =
     count + " " + t("wz_rad_stations", "Stations") +
     (elevated > 0 ? " \u00b7 " + elevated + " " + t("wz_rad_elevated", "Elevated") : "");
 
   var stations = _radStations;
   var elevatedList = data.elevated || [];
-
-  // ── Layout ──
-  var liveBox = document.getElementById("wz-live-box");
-  if (liveBox) {
-    liveBox.classList.add("wz-map-fill");
-    liveBox.style.display = "flex";
-    liveBox.style.flexDirection = "column";
-    liveBox.style.height = "95vh";
-    liveBox.style.maxHeight = "95vh";
-    liveBox.style.maxWidth = "1400px";
-  }
-  var mapRow = document.getElementById("wz-map-row");
-  if (mapRow) {
-    mapRow.style.display = "flex";
-    mapRow.style.flex = "1 1 0";
-    mapRow.style.minHeight = "0";
-    mapRow.style.height = "100%";
-    mapRow.style.flexShrink = "1";
-  }
-  var mapEl = document.getElementById("wz-live-map");
-  if (mapEl) { mapEl.style.height = "100%"; mapEl.style.minHeight = "0"; mapEl.style.flex = "1"; }
-  ["wz-live-body","wz-under-map-bar","wz-resize-map","wz-live-sticky"].forEach(function(id) {
-    var el = document.getElementById(id); if (el) el.style.display = "none";
-  });
 
   // ── Marker ──
   if (WZ._liveMarkers) WZ._liveMarkers.clearLayers();
@@ -100,12 +80,15 @@ function _renderRadiationLive(data) {
   // ── Seitenpanel ──
   var panel = document.getElementById("rad-side-panel");
   if (!panel) {
-    panel = document.createElement("div");
-    panel.id = "rad-side-panel";
-    panel.style.cssText = "width:420px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;";
-    mapRow.appendChild(panel);
+    var mapRow = _mapRowEl;
+    if (mapRow) {
+      panel = document.createElement("div");
+      panel.id = "rad-side-panel";
+      panel.style.cssText = "width:420px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;";
+      mapRow.appendChild(panel);
+    }
   }
-  panel.style.display = "flex";
+  if (panel) panel.style.display = "flex";
 
   if (!stations.length) {
     panel.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);">' +
@@ -123,12 +106,12 @@ function _renderRadiationLive(data) {
 
   // ── Play-Bar ──
   html += '<div id="rad-play-bar" style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;">';
-  html += '<button id="rad-play-btn" onclick="_radTogglePlay()" style="background:var(--accent1);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">';
+  html += '<button id="rad-play-btn" onclick="_radTogglePlay()" style="background:var(--accent3);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">';
   html += '<span id="rad-play-icon">&#9654;</span> <span id="rad-play-label">' + t("wz_rad_play", "Play") + '</span></button>';
   // Modus-Toggle
   if (source === "odl") {
     html += '<div style="display:flex;border:1px solid var(--border);border-radius:5px;overflow:hidden;font-size:10px;font-weight:600;">';
-    html += '<button id="rad-mode-1h" onclick="_radSetMode(\'1h\')" style="padding:3px 8px;border:none;cursor:pointer;background:var(--accent1);color:#fff;">7 ' + t("wz_rad_days", "days") + '</button>';
+    html += '<button id="rad-mode-1h" onclick="_radSetMode(\'1h\')" style="padding:3px 8px;border:none;cursor:pointer;background:var(--accent3);color:#fff;">7 ' + t("wz_rad_days", "days") + '</button>';
     html += '<button id="rad-mode-24h" onclick="_radSetMode(\'24h\')" style="padding:3px 8px;border:none;cursor:pointer;background:var(--surface2);color:var(--muted);">180 ' + t("wz_rad_days", "days") + '</button>';
     html += '</div>';
   } else {
@@ -250,8 +233,8 @@ window._radSetMode = function(mode) {
   _radStop();
   var btn1 = document.getElementById("rad-mode-1h");
   var btn2 = document.getElementById("rad-mode-24h");
-  if (btn1) { btn1.style.background = mode === "1h" ? "var(--accent1)" : "var(--surface2)"; btn1.style.color = mode === "1h" ? "#fff" : "var(--muted)"; }
-  if (btn2) { btn2.style.background = mode === "24h" ? "var(--accent1)" : "var(--surface2)"; btn2.style.color = mode === "24h" ? "#fff" : "var(--muted)"; }
+  if (btn1) { btn1.style.background = mode === "1h" ? "var(--accent3)" : "var(--surface2)"; btn1.style.color = mode === "1h" ? "#fff" : "var(--muted)"; }
+  if (btn2) { btn2.style.background = mode === "24h" ? "var(--accent3)" : "var(--surface2)"; btn2.style.color = mode === "24h" ? "#fff" : "var(--muted)"; }
 };
 
 window._radTogglePlay = async function() {
@@ -455,14 +438,97 @@ function _esc(s) {
 WZ._onLiveClose.push(function() {
   _radStop();
   _radTsData = null;
-  var panel = document.getElementById("rad-side-panel");
-  if (panel) { panel.style.display = "none"; panel.innerHTML = ""; }
   _radMarkers = [];
 });
 
 WZ.registerPlugin("radiation", {
   renderer: _renderRadiationLive,
   has_heatmap: false,
+  has_live_map: true,
+  live_title_prefix: t("wz_rad_title", "Radioaktivität"),
+  live_box_max_width: "1400px",
+  live_box_height: "75vh",
 });
+
+// Collect Renderer
+WZ._collectRenderers["radiation"] = {
+  renderHTML: function(data, cardId) {
+    var h = "", fmtD = WZ._fmtDate || function(s) { return s ? String(s).slice(0,10) : ""; };
+    if (data.timestamp || data.fetched_at) h += '<div style="font-size:10px;color:var(--muted);margin-bottom:6px;">Stand: ' + fmtD(data.timestamp || data.fetched_at) + '</div>';
+    if (data.stations && data.stations.length) {
+      h += '<div id="' + cardId + '-map" style="height:400px;border-radius:6px;margin-bottom:8px;"></div>';
+      h += '<div style="display:flex;gap:14px;margin-bottom:8px;">';
+      h += '<div style="text-align:center;"><div style="font-size:20px;font-weight:800;color:var(--text);">' + (data.count || data.stations.length) + '</div><div style="font-size:9px;color:var(--muted);">Stationen</div></div>';
+      if (data.elevated_count) h += '<div style="text-align:center;"><div style="font-size:20px;font-weight:800;color:#ef4444;">' + data.elevated_count + '</div><div style="font-size:9px;color:var(--muted);">Erh\u00f6ht</div></div>';
+      h += '</div>';
+      h += '<table style="width:100%;font-size:11px;border-collapse:collapse;">';
+      h += '<thead><tr style="border-bottom:1px solid var(--border);color:var(--muted);"><th style="text-align:left;padding:3px 6px;">Station</th><th style="text-align:right;padding:3px 6px;">\u00b5Sv/h</th><th style="text-align:right;padding:3px 6px;">Status</th></tr></thead><tbody>';
+      var _radItems = (data.elevated && data.elevated.length ? data.elevated : data.stations).slice(0, 12);
+      _radItems.forEach(function(s, idx) {
+        var val = s.value || s.dose_rate || 0;
+        var vc = val > 0.5 ? "#ef4444" : val > 0.2 ? "#f59e0b" : "#22c55e";
+        h += '<tr class="wz-rad-row" data-idx="' + idx + '" style="border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;">';
+        h += '<td style="padding:3px 6px;">' + WZ._esc(s.name || s.station || "") + '</td>';
+        h += '<td style="padding:3px 6px;text-align:right;color:' + vc + ';font-weight:600;">' + (typeof val === "number" ? val.toFixed(3) : val) + '</td>';
+        h += '<td style="padding:3px 6px;text-align:right;">' + (s.elevated ? '<span style="color:#ef4444;">erh\u00f6ht</span>' : '<span style="color:#22c55e;">normal</span>') + '</td>';
+        h += '</tr>';
+      });
+      h += '</tbody></table>';
+    }
+    return h;
+  },
+  afterRender: function(data, cardId, cardEl) {
+    if (!window.L) return;
+    var mapEl = cardEl.querySelector("[id$='-map']");
+    if (!mapEl || mapEl._leaflet_id) return;
+    var _radItems = (data.elevated && data.elevated.length ? data.elevated : data.stations || []).slice(0, 12);
+    var m = L.map(mapEl, { zoomControl: false }).setView([51, 10], 6);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", { maxZoom: 18 }).addTo(m);
+    var bounds = [];
+    var markers = [];
+    // All stations as small dots
+    (data.stations || []).forEach(function(s) {
+      if (s.lat == null) return;
+      var val = s.value || s.dose_rate || 0;
+      var c = val > 0.5 ? "#ef4444" : val > 0.2 ? "#f59e0b" : "#22c55e";
+      L.circleMarker([s.lat, s.lon], { radius: 3, color: c, fillColor: c, fillOpacity: 0.3, weight: 0.5 }).addTo(m);
+      bounds.push([s.lat, s.lon]);
+    });
+    // Listed stations as larger markers (for hover)
+    _radItems.forEach(function(s, idx) {
+      if (s.lat == null) { markers.push(null); return; }
+      var val = s.value || s.dose_rate || 0;
+      var c = val > 0.5 ? "#ef4444" : val > 0.2 ? "#f59e0b" : "#22c55e";
+      var mk = L.circleMarker([s.lat, s.lon], { radius: 6, color: c, fillColor: c, fillOpacity: 0.6, weight: 1.5 })
+        .bindTooltip('<strong>' + WZ._esc(s.name || "") + '</strong><br>' + val + ' \u00b5Sv/h').addTo(m);
+      mk._radColor = c;
+      markers.push(mk);
+    });
+    if (bounds.length) { try { m.fitBounds(bounds, { padding: [20, 20] }); } catch(e) {} }
+
+    // Hover interaction
+    var highlightMk = null;
+    cardEl.querySelectorAll(".wz-rad-row").forEach(function(row) {
+      row.addEventListener("mouseenter", function() {
+        var idx = parseInt(row.getAttribute("data-idx"));
+        var mk = markers[idx];
+        if (!mk) return;
+        if (highlightMk && highlightMk !== mk) highlightMk.setStyle({ radius: 6, weight: 1.5, color: highlightMk._radColor });
+        mk.setStyle({ radius: 12, weight: 3, color: "#fff" });
+        highlightMk = mk;
+        mk.openTooltip();
+        var ll = mk.getLatLng();
+        if (!m.getBounds().contains(ll)) m.panTo(ll, { animate: true, duration: 0.5 });
+      });
+      row.addEventListener("mouseleave", function() {
+        if (highlightMk) {
+          highlightMk.setStyle({ radius: 6, weight: 1.5, color: highlightMk._radColor });
+          highlightMk.closeTooltip();
+          highlightMk = null;
+        }
+      });
+    });
+  }
+};
 
 })();

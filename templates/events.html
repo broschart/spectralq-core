@@ -3,7 +3,13 @@
 {% block title %}Ereignisse – spectralQ{% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
+  .btn-primary {
+    background: var(--accent3) !important;
+    border-color: var(--accent3) !important;
+  }
   .color-dot {
     width: 20px;
     height: 20px;
@@ -133,19 +139,49 @@
       </div>
 
       <div>
+        <label data-i18n="ev_lbl_project">Projekt</label>
+        <select id="evt-project" class="w-full">
+          <option value="">— Kein Projekt —</option>
+        </select>
+      </div>
+
+      <div>
         <label id="lbl-start" data-i18n="ev_lbl_time_req">Zeitpunkt *</label>
         <div style="display:flex;gap:8px;">
-          <input id="evt-start-d" type="date" style="flex:1;" required />
-          <input id="evt-start-t" type="time" style="width:110px;" />
+          <input id="evt-start-d" type="text" style="flex:1;" required
+                 placeholder="" autocomplete="off" />
+          <input id="evt-start-t" type="text" style="width:110px;"
+                 placeholder="" autocomplete="off" />
         </div>
       </div>
 
       <div id="end-row" style="display:none;">
         <label data-i18n="ev_lbl_end_req">Ende *</label>
         <div style="display:flex;gap:8px;">
-          <input id="evt-end-d" type="date" style="flex:1;" />
-          <input id="evt-end-t" type="time" style="width:110px;" />
+          <input id="evt-end-d" type="text" style="flex:1;"
+                 placeholder="" autocomplete="off" />
+          <input id="evt-end-t" type="text" style="width:110px;"
+                 placeholder="" autocomplete="off" />
         </div>
+      </div>
+
+      <div>
+        <label data-i18n="ev_lbl_location">Ort (optional)</label>
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <input id="evt-location-search" type="text" class="w-full"
+                 data-i18n-placeholder="ev_ph_location" placeholder="Adresse / Ort suchen…"
+                 style="flex:1;" />
+          <button type="button" id="evt-location-btn"
+                  style="padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:var(--accent1);color:#fff;cursor:pointer;font-weight:700;font-size:14px;">&#8981;</button>
+        </div>
+        <div id="evt-location-info" style="display:none;font-size:11px;color:var(--muted);margin-bottom:4px;">
+          <span id="evt-location-name-display"></span>
+          <button type="button" onclick="evtClearLocation()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:11px;margin-left:4px;">&#10005;</button>
+        </div>
+        <div id="evt-map" style="height:180px;border-radius:8px;border:1px solid var(--border);display:none;"></div>
+        <input type="hidden" id="evt-lat" />
+        <input type="hidden" id="evt-lon" />
+        <input type="hidden" id="evt-location-name" />
       </div>
 
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
@@ -499,6 +535,16 @@ window._applyI18n();
       : window.t('ev_lbl_time_req','Zeitpunkt *');
   }
 
+  // Populate project dropdown in modal
+  function _fillProjectDropdown(selectedId) {
+    var sel = document.getElementById("evt-project");
+    var html = '<option value="">— Kein Projekt —</option>';
+    allProjects.forEach(function(p) {
+      html += '<option value="' + p.id + '"' + (String(p.id) === String(selectedId) ? ' selected' : '') + '>' + (p.name || 'Projekt #' + p.id) + '</option>';
+    });
+    sel.innerHTML = html;
+  }
+
   document.getElementById("btn-add").addEventListener("click", () => {
     document.getElementById("evt-id").value = "";
     document.getElementById("modal-title").textContent = window.t('ev_modal_new_title','Neues Ereignis');
@@ -508,6 +554,11 @@ window._applyI18n();
     document.getElementById("evt-color").value   = "#f75f4f";
     setDt("evt-start", "");
     setDt("evt-end", "");
+    evtClearLocation();
+    document.getElementById("evt-location-search").value = "";
+    document.getElementById("evt-map").style.display = "none";
+    if (_evtMap) { _evtMap.remove(); _evtMap = null; }
+    _fillProjectDropdown(getSelectedProjectId());
     syncType();
     showModal("evt-modal");
   });
@@ -523,13 +574,81 @@ window._applyI18n();
     document.getElementById("evt-color").value   = evt.color || "#f75f4f";
     setDt("evt-start", evt.start_dt || "");
     setDt("evt-end", evt.end_dt || "");
+    _fillProjectDropdown(evt.project_id || "");
+    // Location
+    document.getElementById("evt-location-search").value = "";
+    if (evt.lat != null && evt.lon != null) {
+      _evtInitMap();
+      _evtSetLocation(evt.lat, evt.lon, evt.location_name || "");
+      document.getElementById("evt-location-search").value = evt.location_name || "";
+    } else {
+      evtClearLocation();
+      document.getElementById("evt-map").style.display = "none";
+      if (_evtMap) { _evtMap.remove(); _evtMap = null; }
+    }
     syncType();
     showModal("evt-modal");
   }
 
+  // Date/time format from admin settings
+  const _evtDF = localStorage.getItem('vt_date_format') || 'DD.MM.YY';
+  const _evtTF = localStorage.getItem('vt_time_format') || 'HH:mm';
+
+  // Set placeholders to show expected format
+  document.getElementById("evt-start-d").placeholder = _evtDF;
+  document.getElementById("evt-start-t").placeholder = _evtTF;
+  document.getElementById("evt-end-d").placeholder = _evtDF;
+  document.getElementById("evt-end-t").placeholder = _evtTF;
+
+  function _fmtDateField(iso) {
+    if (!iso) return "";
+    return window.fmtDateOnly ? window.fmtDateOnly(iso) : iso.slice(0, 10);
+  }
+  function _fmtTimeField(iso) {
+    if (!iso || !iso.includes("T")) return "";
+    return window.fmtTimeOnly ? window.fmtTimeOnly(iso) : iso.slice(11, 16);
+  }
+  function _parseDateField(val) {
+    // Parse formatted date back to YYYY-MM-DD
+    if (!val) return "";
+    // Try ISO first
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+    const fmt = _evtDF;
+    const dPos = fmt.indexOf("DD"), mPos = fmt.indexOf("MM");
+    const yPos = fmt.indexOf("YYYY") > -1 ? fmt.indexOf("YYYY") : fmt.indexOf("YY");
+    const yLen = fmt.includes("YYYY") ? 4 : 2;
+    // Extract separator
+    const sep = fmt.replace(/[DMY]/g, "").charAt(0) || ".";
+    const parts = val.split(sep);
+    if (parts.length < 3) return val;
+    // Determine order
+    const order = [[dPos, "d"], [mPos, "m"], [yPos, "y"]].sort((a, b) => a[0] - b[0]);
+    let dd = "", mm = "", yy = "";
+    order.forEach((o, i) => {
+      if (o[1] === "d") dd = parts[i];
+      else if (o[1] === "m") mm = parts[i];
+      else yy = parts[i];
+    });
+    if (yy.length === 2) yy = (parseInt(yy) > 70 ? "19" : "20") + yy;
+    return `${yy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+  }
+  function _parseTimeField(val) {
+    if (!val) return "";
+    // Strip AM/PM
+    const upper = val.toUpperCase().trim();
+    const isPM = upper.includes("PM");
+    const isAM = upper.includes("AM");
+    const clean = upper.replace(/[AP]M/g, "").trim();
+    const parts = clean.split(":");
+    let h = parseInt(parts[0]) || 0;
+    const m = parseInt(parts[1]) || 0;
+    if (isPM && h < 12) h += 12;
+    if (isAM && h === 12) h = 0;
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+  }
   function getDt(idBase) {
-    const d = document.getElementById(idBase + "-d").value;
-    const t = document.getElementById(idBase + "-t").value;
+    const d = _parseDateField(document.getElementById(idBase + "-d").value.trim());
+    const t = _parseTimeField(document.getElementById(idBase + "-t").value.trim());
     if (!d) return "";
     return t ? `${d}T${t}` : d;
   }
@@ -539,9 +658,8 @@ window._applyI18n();
       document.getElementById(idBase + "-t").value = "";
       return;
     }
-    const hasTime = iso.includes("T");
-    document.getElementById(idBase + "-d").value = iso.slice(0, 10);
-    document.getElementById(idBase + "-t").value = hasTime ? iso.slice(11, 16) : "";
+    document.getElementById(idBase + "-d").value = _fmtDateField(iso);
+    document.getElementById(idBase + "-t").value = _fmtTimeField(iso);
   }
 
   document.getElementById("evt-form").addEventListener("submit", async e => {
@@ -550,11 +668,13 @@ window._applyI18n();
     const eventType = document.getElementById("evt-type").value;
     const endVal    = getDt("evt-end");
 
-    const projVal = getSelectedProjectId();
+    const projVal = document.getElementById("evt-project").value;
     if (!projVal && !_isSuperadmin) {
-      toast(window.t('ev_no_project','Bitte oben rechts ein Projekt auswählen.'), "error");
+      toast(window.t('ev_no_project','Bitte ein Projekt auswählen.'), "error");
       return;
     }
+    const _latVal = document.getElementById("evt-lat").value;
+    const _lonVal = document.getElementById("evt-lon").value;
     const body = {
       title:       document.getElementById("evt-title").value.trim(),
       description: document.getElementById("evt-desc").value.trim(),
@@ -563,6 +683,9 @@ window._applyI18n();
       start_dt:    getDt("evt-start"),
       end_dt:      eventType === "range" ? (endVal || null) : null,
       project_id:  projVal ? parseInt(projVal) : null,
+      lat:         _latVal ? parseFloat(_latVal) : null,
+      lon:         _lonVal ? parseFloat(_lonVal) : null,
+      location_name: document.getElementById("evt-location-name").value || "",
     };
 
     try {
@@ -596,6 +719,73 @@ window._applyI18n();
   document.getElementById("evt-cancel").addEventListener("click", () => hideModal("evt-modal"));
   document.getElementById("evt-modal").addEventListener("click", e => {
     if (e.target.id === "evt-modal") hideModal("evt-modal");
+  });
+
+  // ── Location Map ──
+  var _evtMap = null, _evtMarker = null;
+
+  function _evtInitMap() {
+    var el = document.getElementById("evt-map");
+    if (_evtMap) { _evtMap.remove(); _evtMap = null; }
+    el.style.display = "block";
+    _evtMap = L.map(el, { zoomControl: true }).setView([48.2, 11.8], 5);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+      maxZoom: 18
+    }).addTo(_evtMap);
+    setTimeout(function() { _evtMap.invalidateSize(); }, 100);
+    // Click on map to set location
+    _evtMap.on("click", function(e) {
+      _evtSetLocation(e.latlng.lat, e.latlng.lng, "");
+      // Reverse geocode
+      fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat=" + e.latlng.lat + "&lon=" + e.latlng.lng)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data && data.display_name) {
+            document.getElementById("evt-location-name").value = data.display_name;
+            document.getElementById("evt-location-name-display").textContent = data.display_name;
+          }
+        }).catch(function() {});
+    });
+  }
+
+  function _evtSetLocation(lat, lon, name) {
+    document.getElementById("evt-lat").value = lat;
+    document.getElementById("evt-lon").value = lon;
+    document.getElementById("evt-location-name").value = name || "";
+    document.getElementById("evt-location-name-display").textContent = name || (lat.toFixed(4) + ", " + lon.toFixed(4));
+    document.getElementById("evt-location-info").style.display = "block";
+    if (!_evtMap) _evtInitMap();
+    if (_evtMarker) _evtMap.removeLayer(_evtMarker);
+    _evtMarker = L.marker([lat, lon]).addTo(_evtMap);
+    _evtMap.setView([lat, lon], 13);
+  }
+
+  window.evtClearLocation = function() {
+    document.getElementById("evt-lat").value = "";
+    document.getElementById("evt-lon").value = "";
+    document.getElementById("evt-location-name").value = "";
+    document.getElementById("evt-location-info").style.display = "none";
+    if (_evtMarker && _evtMap) { _evtMap.removeLayer(_evtMarker); _evtMarker = null; }
+  };
+
+  // Search button
+  document.getElementById("evt-location-btn").addEventListener("click", function() {
+    var q = document.getElementById("evt-location-search").value.trim();
+    if (!q) { if (!_evtMap) _evtInitMap(); return; }
+    fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(q))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data || !data.length) {
+          document.getElementById("evt-location-search").style.borderColor = "#ef4444";
+          return;
+        }
+        document.getElementById("evt-location-search").style.borderColor = "";
+        var lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
+        _evtSetLocation(lat, lon, data[0].display_name || q);
+      }).catch(function() {});
+  });
+  document.getElementById("evt-location-search").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") { e.preventDefault(); document.getElementById("evt-location-btn").click(); }
   });
 
   function showModal(id) { document.getElementById(id).style.display = "flex"; }

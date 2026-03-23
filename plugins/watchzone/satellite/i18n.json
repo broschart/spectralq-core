@@ -28,7 +28,8 @@
     "wz_sat_draw_hint": "Auswahl ziehen zum Zoomen · ESC zum Schließen",
     "wz_btn_image": "Bild",
     "wz_fetch_image": "Satellitenbild abrufen",
-    "wz_live_prefix_satellite": "Satellitenbild:"
+    "wz_live_prefix_satellite": "Satellitenbild:",
+    "wz_satellite_help": "Ruft aktuelle Satellitenbilder (Sentinel-2) für das definierte Gebiet ab und zeigt sie als Echtfarbbild an.<br><br><b>Bedienung:</b> Zone auf der Karte einzeichnen (max. 2° × 2°) und auf „Bild\" klicken. Das System lädt das neueste wolkenfreie Sentinel-2-Bild und zeigt Aufnahmedatum und -zeit. Zoomen, Bild herunterladen oder zwischen Satellitenschicht und Basiskarte umschalten.<br><br><b>Forensische Relevanz:</b> Satellitenbilder liefern visuelle Belege für Veränderungen am Boden — Bauaktivität, Truppenbewegungen, Schadensbewertung, Umweltveränderungen oder Grenzmodifikationen. Der Vergleich von Bildern verschiedener Daten hilft, den Verlauf von Ereignissen zu dokumentieren.<br><br><b>Datenquelle:</b> Copernicus Sentinel-2 (Echtfarben / NDVI) — Copernicus-Zugangsdaten erforderlich."
   },
   "en": {
     "wz_sidebar_satellite": "Satellite",
@@ -59,7 +60,8 @@
     "wz_sat_draw_hint": "Draw selection to zoom in · ESC to close",
     "wz_btn_image": "Image",
     "wz_fetch_image": "Fetch satellite image",
-    "wz_live_prefix_satellite": "Satellite Image:"
+    "wz_live_prefix_satellite": "Satellite Image:",
+    "wz_satellite_help": "Fetches current satellite imagery (Sentinel-2) for the defined area and displays it as a true-colour image.<br><br><b>How to use:</b> Draw a zone on the map (max. 2° x 2°) and click \"Image\". The system loads the latest cloud-free Sentinel-2 image and shows the acquisition date and time. You can zoom, download the image or toggle between the satellite layer and the base map.<br><br><b>Forensic relevance:</b> Satellite imagery provides visual evidence of ground-level changes — construction activity, troop movements, damage assessment, environmental changes or border modifications. Comparing images from different dates helps document the progression of events.<br><br><b>Data source:</b> Copernicus Sentinel-2 (True-Color / NDVI) — requires Copernicus credentials."
   },
   "fr": {
     "wz_sidebar_satellite": "Satellite",
@@ -90,7 +92,8 @@
     "wz_sat_draw_hint": "Déssiner une sélection pour zoomer · ÉCHAP pour fermer",
     "wz_btn_image": "Image",
     "wz_fetch_image": "Image satellite",
-    "wz_live_prefix_satellite": "Image satellite :"
+    "wz_live_prefix_satellite": "Image satellite :",
+    "wz_satellite_help": "Fetches current satellite imagery (Sentinel-2) for the defined area and displays it as a true-colour image.<br><br><b>How to use:</b> Draw a zone on the map (max. 2° x 2°) and click \"Image\". The system loads the latest cloud-free Sentinel-2 image and shows the acquisition date and time. You can zoom, download the image or toggle between the satellite layer and the base map.<br><br><b>Forensic relevance:</b> Satellite imagery provides visual evidence of ground-level changes — construction activity, troop movements, damage assessment, environmental changes or border modifications. Comparing images from different dates helps document the progression of events.<br><br><b>Data source:</b> Copernicus Sentinel-2 (True-Color / NDVI) — requires Copernicus credentials."
   },
   "es": {
     "wz_sidebar_satellite": "Satélite",
@@ -121,6 +124,7 @@
     "wz_sat_draw_hint": "Dibuje una selección para hacer zoom · ESC para cerrar",
     "wz_btn_image": "Imagen",
     "wz_fetch_image": "Imagen satelital",
-    "wz_live_prefix_satellite": "Imagen satelital:"
+    "wz_live_prefix_satellite": "Imagen satelital:",
+    "wz_satellite_help": "Fetches current satellite imagery (Sentinel-2) for the defined area and displays it as a true-colour image.<br><br><b>How to use:</b> Draw a zone on the map (max. 2° x 2°) and click \"Image\". The system loads the latest cloud-free Sentinel-2 image and shows the acquisition date and time. You can zoom, download the image or toggle between the satellite layer and the base map.<br><br><b>Forensic relevance:</b> Satellite imagery provides visual evidence of ground-level changes — construction activity, troop movements, damage assessment, environmental changes or border modifications. Comparing images from different dates helps document the progression of events.<br><br><b>Data source:</b> Copernicus Sentinel-2 (True-Color / NDVI) — requires Copernicus credentials."
   }
 }

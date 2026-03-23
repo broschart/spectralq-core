@@ -14,7 +14,7 @@ class AutoCorrPlugin(AnalysisPlugin):
         "button_id": "",
         "requires_multi_kw": False,
         "popup_handler": "openAutoCorrForKw",
-
+        "modal_template": "auto_corr/_modal.html",
     }
 
     def api_routes(self):

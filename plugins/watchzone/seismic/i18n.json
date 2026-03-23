@@ -23,7 +23,8 @@
     "wz_seismic_col_mag": "Mag",
     "wz_seismic_col_place": "Ort",
     "wz_seismic_col_date": "Datum / Zeit",
-    "wz_seismic_col_depth": "Tiefe"
+    "wz_seismic_col_depth": "Tiefe",
+    "wz_seismic_help": "Erfasst Erdbeben im definierten Gebiet mit Magnitude, Tiefe, Standort und Zeitpunkt.<br><br><b>Bedienung:</b> Zone auf der Karte einzeichnen und auf „Live“ klicken. Alle seismischen Ereignisse der letzten 30 Tage werden aufgelistet. Jedes Ereignis zeigt Magnitude, Tiefe, exakte Koordinaten und einen Link zur USGS-Detailseite. Gemeinschaftsberichte (DYFI — Did You Feel It?) und Wellenformdaten sind verfügbar, wo gemeldet.<br><br><b>Forensische Relevanz:</b> Seismische Daten können helfen, natürliche Erdbeben von unterirdischen Explosionen (z. B. Atomtests oder großflächigen Sprengungen) zu unterscheiden. Flache Ereignisse mit ungewöhnlichen Wellenformsignaturen werden automatisch hervorgehoben. Nützlich für Krisenregionen und Gebiete nahe Nuklearanlagen.<br><br><b>Datenquelle:</b> USGS Earthquake Catalog — kein API-Key erforderlich."
   },
   "en": {
     "wz_sidebar_seismic": "Seismic",
@@ -49,7 +50,8 @@
     "wz_seismic_col_mag": "Mag",
     "wz_seismic_col_place": "Location",
     "wz_seismic_col_date": "Date / Time",
-    "wz_seismic_col_depth": "Depth"
+    "wz_seismic_col_depth": "Depth",
+    "wz_seismic_help": "Records earthquakes within the defined area with magnitude, depth, location and time.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All seismic events from the last 30 days are listed. Each event shows magnitude, depth, exact coordinates and a link to the USGS detail page. Community reports (DYFI — Did You Feel It?) and waveform data are available where reported.<br><br><b>Forensic relevance:</b> Seismic data can help distinguish natural earthquakes from underground explosions (e.g. nuclear tests or large-scale demolitions). Shallow events with unusual waveform signatures are automatically highlighted. Useful for crisis regions and areas near nuclear facilities.<br><br><b>Data source:</b> USGS Earthquake Catalog — no API key required."
   },
   "fr": {
     "wz_sidebar_seismic": "Sismique",
@@ -63,7 +65,7 @@
     "wz_seismic_depth": "Profondeur :",
     "wz_seismic_more": "de plus",
     "wz_seismic_play": "Lecture",
-    "wz_seismic_stop": "Arr\u00eat",
+    "wz_seismic_stop": "Arrêt",
     "wz_seismic_col_mag": "Mag",
     "wz_seismic_col_place": "Lieu",
     "wz_seismic_col_date": "Date / Heure",
@@ -75,7 +77,8 @@
     "wz_seismic_dyfi": "Rapports communautaires (DYFI)",
     "wz_seismic_no_detail": "Aucune donnée détaillée disponible pour cet événement.",
     "wz_seismic_wf_error": "Erreur lors du chargement des détails :",
-    "wz_seismic_felt": "Témoignages :"
+    "wz_seismic_felt": "Témoignages :",
+    "wz_seismic_help": "Records earthquakes within the defined area with magnitude, depth, location and time.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All seismic events from the last 30 days are listed. Each event shows magnitude, depth, exact coordinates and a link to the USGS detail page. Community reports (DYFI — Did You Feel It?) and waveform data are available where reported.<br><br><b>Forensic relevance:</b> Seismic data can help distinguish natural earthquakes from underground explosions (e.g. nuclear tests or large-scale demolitions). Shallow events with unusual waveform signatures are automatically highlighted. Useful for crisis regions and areas near nuclear facilities.<br><br><b>Data source:</b> USGS Earthquake Catalog — no API key required."
   },
   "es": {
     "wz_sidebar_seismic": "Sísmica",
@@ -91,7 +94,7 @@
     "wz_seismic_play": "Reproducir",
     "wz_seismic_stop": "Detener",
     "wz_seismic_col_mag": "Mag",
-    "wz_seismic_col_place": "Ubicaci\u00f3n",
+    "wz_seismic_col_place": "Ubicación",
     "wz_seismic_col_date": "Fecha / Hora",
     "wz_seismic_col_depth": "Prof.",
     "wz_seismic_waveform": "Sismograma",
@@ -101,6 +104,7 @@
     "wz_seismic_dyfi": "Informes comunitarios (DYFI)",
     "wz_seismic_no_detail": "No hay datos detallados disponibles para este evento.",
     "wz_seismic_wf_error": "Error al cargar los detalles:",
-    "wz_seismic_felt": "Informes de percepción:"
+    "wz_seismic_felt": "Informes de percepción:",
+    "wz_seismic_help": "Records earthquakes within the defined area with magnitude, depth, location and time.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All seismic events from the last 30 days are listed. Each event shows magnitude, depth, exact coordinates and a link to the USGS detail page. Community reports (DYFI — Did You Feel It?) and waveform data are available where reported.<br><br><b>Forensic relevance:</b> Seismic data can help distinguish natural earthquakes from underground explosions (e.g. nuclear tests or large-scale demolitions). Shallow events with unusual waveform signatures are automatically highlighted. Useful for crisis regions and areas near nuclear facilities.<br><br><b>Data source:</b> USGS Earthquake Catalog — no API key required."
   }
 }

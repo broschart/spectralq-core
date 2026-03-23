@@ -76,6 +76,14 @@ var WZ = window.WZ;
               ${t('wz_website_add','+ Add')}
             </button>
           </div>
+          <div style="margin-top:10px;">
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Time Focus (${t('wz_optional','optional')})</label>
+            <select id="wz-aws-event"
+              style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:7px;
+                     padding:6px 10px;font-size:12px;color:var(--text);">
+              <option value="">${t('wz_no_time_focus','-- Kein Time Focus --')}</option>
+            </select>
+          </div>
           <div id="wz-aws-err" style="display:none;margin-top:8px;font-size:12px;color:#f87171;font-family:sans-serif;"></div>
         </div>
 
@@ -98,6 +106,27 @@ var WZ = window.WZ;
     modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
     document.body.appendChild(modal);
     document.getElementById('wz-aws-close').onclick = () => modal.remove();
+
+    // ── Load events for time focus dropdown ──
+    (async function() {
+      try {
+        var projectId = document.getElementById('hdr-wz-project')?.value || null;
+        var evUrl = '/api/events' + (projectId ? '?project_id=' + projectId : '');
+        var evR = await fetch(evUrl);
+        if (evR.ok) {
+          var events = await evR.json();
+          var sel = document.getElementById('wz-aws-event');
+          events.forEach(function(ev) {
+            var dateInfo = ev.start_dt || '';
+            if (ev.end_dt) dateInfo += ' \u2013 ' + ev.end_dt;
+            var opt = document.createElement('option');
+            opt.value = ev.id;
+            opt.textContent = ev.title + ' (' + dateInfo + ')';
+            sel.appendChild(opt);
+          });
+        }
+      } catch(e) {}
+    })();
 
     // ── Render countries ──
     const countriesEl = document.getElementById('wz-aws-countries');
@@ -232,6 +261,28 @@ var WZ = window.WZ;
 
       const nameVal = (document.getElementById('wz-aws-name').value || '').trim() || hostname;
       const projectId = document.getElementById('hdr-wz-project')?.value || null;
+      var _wzConfig = { source: 'wayback', url: url, server: serverInfo };
+
+      // Time Focus from event dropdown
+      var _evSelVal = document.getElementById('wz-aws-event')?.value;
+      if (_evSelVal) {
+        try {
+          var _evR2 = await fetch('/api/events');
+          if (_evR2.ok) {
+            var _allEvts = await _evR2.json();
+            var _selEv = _allEvts.find(function(e) { return e.id === parseInt(_evSelVal); });
+            if (_selEv) {
+              _wzConfig.time_focus = { event_id: _selEv.id, title: _selEv.title, from: _selEv.start_dt, to: _selEv.end_dt || _selEv.start_dt };
+              if (_selEv.lat != null && _selEv.lon != null) {
+                _wzConfig.time_focus.lat = _selEv.lat;
+                _wzConfig.time_focus.lon = _selEv.lon;
+                _wzConfig.time_focus.location_name = _selEv.location_name || '';
+              }
+            }
+          }
+        } catch(e) {}
+      }
+
       try {
         const r = await fetch('/api/watchzones', {
           method: 'POST', headers: {'Content-Type':'application/json'},
@@ -239,7 +290,7 @@ var WZ = window.WZ;
             name: nameVal,
             zone_type: 'website',
             geometry: geometry,
-            config: { source: 'wayback', url: url, server: serverInfo },
+            config: _wzConfig,
             project_id: projectId ? parseInt(projectId) : null,
           })
         });
@@ -257,11 +308,14 @@ var WZ = window.WZ;
   };
 
   function _renderWebsiteLive(data) {
-    document.getElementById("wz-live-count").textContent =
+    var ctx = WZ._currentCtx;
+    // Map initial ausblenden (wird erst bei Traceroute sichtbar)
+    if (ctx && ctx.mapRowEl) ctx.mapRowEl.style.display = "none";
+    ctx.countEl.textContent =
       data.count != null ? data.count + " Snapshots" : "";
     if (WZ._liveMarkers) WZ._liveMarkers.clearLayers();
 
-    const content = document.getElementById("wz-live-content");
+    const content = ctx.contentEl;
     const items = data.items || [];
     // Server-Info aus Zone-Config
     const zone = WZ._zones.find(z => z.id === data.zone_id);
@@ -286,10 +340,45 @@ var WZ = window.WZ;
       }
     }
 
-    let html = '<div style="padding:8px;">';
+    var _tf = data.time_focus || null;
+    var _wbDateTo = _tf && _tf.from ? _tf.from.slice(0, 10) : new Date().toISOString().slice(0, 10);
+    var _wbDateLabel = typeof fmtDateOnly === 'function' ? fmtDateOnly(_wbDateTo + "T00:00") : _wbDateTo;
+
+    let html = '<div style="padding:8px;width:100%;box-sizing:border-box;">';
+
+    // Time Focus badge
+    if (_tf) {
+      var _tfFmt = function(d) { return typeof fmtDate === 'function' ? fmtDate(d.length <= 10 ? d + "T00:00" : d) : d; };
+      html += `<div style="margin-bottom:8px;padding:6px 10px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:6px;">
+        <span style="font-size:12px;font-weight:700;color:#f59e0b;">Time Focus: ${WZ._esc(_tf.title || "")}</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:6px;">${_tfFmt(_tf.from || "")}${_tf.to && _tf.to !== _tf.from ? ' \u2013 ' + _tfFmt(_tf.to) : ''}</span>
+      </div>`;
+    }
+    if (data.error_hint) {
+      html += `<div style="margin-bottom:8px;padding:6px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:6px;font-size:11px;color:#ef4444;">${WZ._esc(data.error_hint)}</div>`;
+    }
+
+    var _wbDateFrom = data.date_from ? data.date_from.slice(0,10) : new Date(new Date().getTime() - 29*86400000).toISOString().slice(0,10);
+    var _wbFromLabel = typeof fmtDateOnly === 'function' ? fmtDateOnly(_wbDateFrom + 'T00:00') : _wbDateFrom;
+
     // Heatmap-Kalender + Balkendiagramm
     html += `<div style="background:var(--surface2);border-radius:8px;padding:14px;margin-bottom:12px;">
-      <h4 style="margin:0 0 10px;font-size:13px;font-weight:600;">${t('wz_website_wb_calendar','Wayback Calendar \u2013 last 30 days')}</h4>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <h4 style="margin:0;font-size:13px;font-weight:600;">${t('wz_website_wb_calendar','Wayback Calendar')}</h4>
+        <span style="font-size:12px;color:var(--text);font-weight:600;">${_wbFromLabel}</span>
+        <span style="font-size:11px;color:var(--muted);">\u2013</span>
+        <span style="position:relative;display:inline-block;">
+          <span id="wz-wb-dp-label-${data.zone_id}"
+                style="font-size:12px;padding:3px 10px;border:1px solid var(--border);border-radius:6px;
+                       background:var(--surface);color:var(--text);cursor:pointer;display:inline-block;
+                       user-select:none;white-space:nowrap;font-weight:600;"
+                title="${t('wz_wb_pick_date','Enddatum wählen')}">${_wbDateLabel}</span>
+          <input type="date" id="wz-wb-datepicker-${data.zone_id}"
+                 value="${_wbDateTo}"
+                 max="${new Date().toISOString().slice(0,10)}"
+                 style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;" />
+        </span>
+      </div>
       <div id="wz-wb-heatmap-${data.zone_id}"></div>
       <div id="wz-wb-size-wrap-${data.zone_id}" style="display:none;margin-top:14px;">
         <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">${t('wz_website_page_size','Page Size (KB)')}</div>
@@ -302,7 +391,20 @@ var WZ = window.WZ;
 
     html += '</div>';
     content.innerHTML = html;
-    _loadWebsiteHeatmap(data.zone_id, data.items || []);
+    _loadWebsiteHeatmap(data.zone_id, data.items || [], data.date_to ? data.date_to.slice(0,10) : null, data.date_from ? data.date_from.slice(0,10) : null);
+
+    // Datepicker-Event
+    const _dp = document.getElementById(`wz-wb-datepicker-${data.zone_id}`);
+    const _dpLabel = document.getElementById(`wz-wb-dp-label-${data.zone_id}`);
+    if (_dp) {
+      _dp.addEventListener('change', () => {
+        if (_dpLabel) {
+          const _fd = typeof fmtDateOnly === 'function' ? fmtDateOnly : (s => s);
+          _dpLabel.textContent = _fd(_dp.value);
+        }
+        _loadWebsiteHeatmap(data.zone_id, null, _dp.value);
+      });
+    }
   }
 
   // ── Wayback-Kalender: State + Filter-Logik ──────────────────────────────
@@ -425,6 +527,8 @@ var WZ = window.WZ;
   function _renderWbCharts(zoneId) {
     const container = document.getElementById(`wz-wb-heatmap-${zoneId}`);
     if (!container) return;
+    const _fd  = typeof fmtDateOnly === 'function' ? fmtDateOnly : (s => s);
+    const _fdt = typeof fmtDate === 'function' ? fmtDate : (s => s);
     const { days, allItems, selDays, selHours } = _wbState[zoneId];
     const hasDaySel = !!(selDays && selDays.size);
     const hasHourSel = !!(selHours && selHours.size);
@@ -489,11 +593,12 @@ var WZ = window.WZ;
         } else {
           const cnt = (dayMapFH[cell.date] || []).length;
           const isSel = hasDaySel && selDays.has(cell.date);
+          const _isTfDay = _tf2 && _tf2.from && cell.date === _tf2.from.slice(0,10);
           const opacity = hasDaySel ? (isSel ? 1 : 0.22) : 1;
           const baseAlpha = cnt === 0 ? 0.07 : (0.25 + 0.75 * (cnt / maxDayCount));
-          const bg = `rgba(6,182,212,${baseAlpha.toFixed(2)})`;
-          const border = isSel ? '2px solid rgba(6,182,212,1)' : (cnt > 0 ? '1px solid rgba(6,182,212,0.5)' : '1px solid rgba(6,182,212,0.12)');
-          const title = `${cell.date}${cnt > 0 ? ' \u2013 ' + cnt + ' Snapshot' + (cnt > 1 ? 's' : '') : ' \u2013 ' + t('wz_wb_no_snapshots','no snapshots')}`;
+          const bg = _isTfDay ? `rgba(245,158,11,${Math.max(0.3,baseAlpha).toFixed(2)})` : `rgba(6,182,212,${baseAlpha.toFixed(2)})`;
+          const border = _isTfDay ? '2px solid #f59e0b' : (isSel ? '2px solid rgba(6,182,212,1)' : (cnt > 0 ? '1px solid rgba(6,182,212,0.5)' : '1px solid rgba(6,182,212,0.12)'));
+          const title = `${_fd(cell.date)}${cnt > 0 ? ' \u2013 ' + cnt + ' Snapshot' + (cnt > 1 ? 's' : '') : ' \u2013 ' + t('wz_wb_no_snapshots','no snapshots')}`;
           heatmapHtml += `<div data-wb-date="${cell.date}" title="${WZ._esc(title)}" style="width:${CELL}px;height:${CELL}px;border-radius:3px;background:${bg};border:${border};cursor:pointer;box-sizing:border-box;opacity:${opacity};transition:opacity .12s,border .12s;"></div>`;
         }
       });
@@ -513,9 +618,9 @@ var WZ = window.WZ;
     </div>`;
 
     // ── Tagesbalken-SVG ──────────────────────────────────────────────────────
-    const svgW = 400, svgH = HMAP_H, mt = 8, mr = 8, mb = 28, ml = 26;
+    const svgW = 600, svgH = HMAP_H, mt = 8, mr = 8, mb = 28, ml = 26;
     const chartW = svgW - ml - mr, chartH = svgH - mt - mb;
-    const barSlot = chartW / 30, barW = Math.max(2, barSlot - 1.5);
+    const barSlot = chartW / Math.max(days.length, 1), barW = Math.max(2, barSlot - 1.5);
     const yTicks = maxDayCount <= 1 ? [0,1] : [0, Math.round(maxDayCount/2), maxDayCount];
 
     let svgHtml = `<svg viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none" style="width:100%;height:${HMAP_H}px;display:block;" xmlns="http://www.w3.org/2000/svg">`;
@@ -533,17 +638,31 @@ var WZ = window.WZ;
       const opacity = hasDaySel ? (isSel ? 1 : 0.18) : 1;
       const alpha = cnt > 0 ? (0.30 + 0.70 * (cnt / maxDayCount)).toFixed(2) : '0.08';
       const stroke = isSel ? ` stroke="rgba(6,182,212,1)" stroke-width="1.5"` : '';
-      const title = `${day.date}: ${cnt} Snapshot${cnt !== 1 ? 's' : ''}`;
+      const title = `${_fd(day.date)}: ${cnt} Snapshot${cnt !== 1 ? 's' : ''}`;
       svgHtml += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="rgba(6,182,212,${alpha})" opacity="${opacity}" style="cursor:pointer;" data-wb-date="${day.date}"${stroke}><title>${WZ._esc(title)}</title></rect>`;
-      if (i % 7 === 0 || i === 29) {
+      var _labelStep = Math.max(1, Math.floor(days.length / 6));
+      if (i % _labelStep === 0 || i === days.length - 1) {
         const [,mm,dd] = day.date.split('-');
         svgHtml += `<text x="${(ml+i*barSlot+barSlot/2).toFixed(1)}" y="${(svgH-mb+13).toFixed(1)}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.35)">${dd}.${mm}.</text>`;
       }
     });
+    // Time Focus marker on day bar chart
+    var _z2 = WZ._zones.find(function(zz){return zz.id===zoneId;});
+    var _tf2 = _z2&&_z2.config&&_z2.config.time_focus?_z2.config.time_focus:null;
+    if(!_tf2&&_z2&&_z2.project_id){var _gz2=WZ._zones.filter(function(g){return g.zone_type==="global"&&g.project_id===_z2.project_id;});for(var _gi2=0;_gi2<_gz2.length;_gi2++){if(_gz2[_gi2].config&&_gz2[_gi2].config.time_focus){_tf2=_gz2[_gi2].config.time_focus;break;}}}
+    if(_tf2&&_tf2.from){
+      var _tfDateStr=_tf2.from.slice(0,10);
+      var _tfIdx=days.findIndex(function(d){return d.date===_tfDateStr;});
+      if(_tfIdx>=0){
+        var _tfX2=ml+_tfIdx*barSlot+barSlot/2;
+        svgHtml+=`<line x1="${_tfX2.toFixed(1)}" y1="${mt}" x2="${_tfX2.toFixed(1)}" y2="${(mt+chartH).toFixed(1)}" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,3" opacity="0.8"/>`;
+        svgHtml+=`<text x="${_tfX2.toFixed(1)}" y="${(mt-3).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="700" fill="#f59e0b">${WZ._esc(_tf2.title||"")}</text>`;
+      }
+    }
     svgHtml += `<line x1="${ml}" y1="${(mt+chartH).toFixed(1)}" x2="${ml+chartW}" y2="${(mt+chartH).toFixed(1)}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/></svg>`;
 
     // ── Stundenbalken-SVG ────────────────────────────────────────────────────
-    const hsvgW = 300, hsvgH = HMAP_H, hmt = 8, hmr = 8, hmb = 28, hml = 26;
+    const hsvgW = 400, hsvgH = HMAP_H, hmt = 8, hmr = 8, hmb = 28, hml = 26;
     const hchartW = hsvgW - hml - hmr, hchartH = hsvgH - hmt - hmb;
     const hBarSlot = hchartW / 24, hBarW = Math.max(2, hBarSlot - 1);
     const hYTicks = maxHourCount <= 1 ? [0,1] : [0, Math.round(maxHourCount/2), maxHourCount];
@@ -580,7 +699,7 @@ var WZ = window.WZ;
     if (container.parentElement) container.parentElement.style.position = 'relative';
     container.innerHTML = `
       <div style="position:absolute;top:14px;right:14px;display:flex;align-items:center;gap:8px;font-size:11px;color:#a78bfa;font-weight:400;">
-        ${totalChanges} ${t('wz_wb_changes_on','changes on')} ${activeDays} ${t('wz_wb_days_in_30','days in the last 30 days')}${selBadge}
+        ${totalChanges} ${t('wz_wb_changes_on','changes on')} ${activeDays} ${t('wz_wb_days_in_period','Tagen in ' + days.length + ' Tagen')}${selBadge}
         ${resetBtn}
       </div>
       <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;user-select:none;">
@@ -588,11 +707,11 @@ var WZ = window.WZ;
           ${heatmapHtml}
           ${legendHtml}
         </div>
-        <div style="flex:1;min-width:240px;">
+        <div style="flex:2;min-width:300px;">
           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px;padding-left:${(ml/svgW*100).toFixed(1)}%;">${t('wz_wb_per_day','Changes per Day')}</div>
           ${svgHtml}
         </div>
-        <div style="flex:1;min-width:200px;">
+        <div style="flex:1;min-width:250px;">
           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px;padding-left:${(hml/hsvgW*100).toFixed(1)}%;">${t('wz_wb_by_hour','Changes by Hour')}</div>
           ${tsvg}
         </div>
@@ -652,7 +771,7 @@ var WZ = window.WZ;
             style="border:1px solid var(--border);border-radius:7px;padding:9px 10px;cursor:pointer;
                    display:flex;flex-direction:column;gap:4px;transition:background .12s,border-color .12s;">
             <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-              <span style="font-size:11px;font-weight:700;color:var(--text);white-space:nowrap;">${WZ._esc(it.date)}</span>
+              <span style="font-size:11px;font-weight:700;color:var(--text);white-space:nowrap;">${WZ._esc(_fd(it.date))}</span>
               ${time ? `<span style="font-size:10px;color:var(--muted);white-space:nowrap;">${WZ._esc(time)}</span>` : ''}
               ${titleBadge}
             </div>
@@ -690,6 +809,7 @@ var WZ = window.WZ;
   function _renderWbSizeChart(zoneId) {
     const st = _wbState[zoneId];
     if (!st) return;
+    const _fdt = typeof fmtDate === 'function' ? fmtDate : (s => s);
     const sizeWrap   = document.getElementById(`wz-wb-size-wrap-${zoneId}`);
     const sizeCanvas = document.getElementById(`wz-wb-ch-size-${zoneId}`);
     if (!sizeWrap || !sizeCanvas) return;
@@ -705,31 +825,70 @@ var WZ = window.WZ;
     const tickStyle = { color: 'rgba(148,163,184,.7)', font: { size: 10 } };
     const pageUrl = sizeItems.find(it => it.url)?.url || '';
 
-    // Vertikale Hover-Linie
+    // Vertikale Hover-Linie + Time Focus marker
+    var _z3 = WZ._zones.find(function(zz){return zz.id===zoneId;});
+    var _tf3 = _z3&&_z3.config&&_z3.config.time_focus?_z3.config.time_focus:null;
+    if(!_tf3&&_z3&&_z3.project_id){var _gz3=WZ._zones.filter(function(g){return g.zone_type==="global"&&g.project_id===_z3.project_id;});for(var _gi3=0;_gi3<_gz3.length;_gi3++){if(_gz3[_gi3].config&&_gz3[_gi3].config.time_focus){_tf3=_gz3[_gi3].config.time_focus;break;}}}
+    var _tfDateStr3 = _tf3 && _tf3.from ? _tf3.from.slice(0,10) : null;
+
     const vertLinePlugin = {
       id: 'wbVertLine',
       afterDraw(chart) {
-        if (chart._hoverIdx == null) return;
-        const meta = chart.getDatasetMeta(0);
-        const pt = meta.data[chart._hoverIdx];
-        if (!pt) return;
         const { ctx, chartArea } = chart;
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(pt.x, chartArea.top);
-        ctx.lineTo(pt.x, chartArea.bottom);
-        ctx.strokeStyle = 'rgba(139,92,246,0.7)';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([4, 3]);
-        ctx.stroke();
-        ctx.restore();
+        // Hover line
+        if (chart._hoverIdx != null) {
+          const meta = chart.getDatasetMeta(0);
+          const pt = meta.data[chart._hoverIdx];
+          if (pt) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(pt.x, chartArea.top);
+            ctx.lineTo(pt.x, chartArea.bottom);
+            ctx.strokeStyle = 'rgba(139,92,246,0.7)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 3]);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+        // Time Focus marker
+        if (_tfDateStr3 && sizeItems.length) {
+          var tfIdx = sizeItems.findIndex(function(it) { return it.date === _tfDateStr3; });
+          if (tfIdx < 0) {
+            // Find nearest date
+            for (var _si = 0; _si < sizeItems.length; _si++) {
+              if (sizeItems[_si].date >= _tfDateStr3) { tfIdx = _si; break; }
+            }
+          }
+          if (tfIdx >= 0) {
+            var meta2 = chart.getDatasetMeta(0);
+            var pt2 = meta2.data[tfIdx];
+            if (pt2) {
+              ctx.save();
+              ctx.beginPath();
+              ctx.moveTo(pt2.x, chartArea.top);
+              ctx.lineTo(pt2.x, chartArea.bottom);
+              var _tfC = (_tf3 && _tf3.color) || '#f59e0b';
+              ctx.strokeStyle = _tfC;
+              ctx.lineWidth = 2;
+              ctx.setLineDash([4, 3]);
+              ctx.stroke();
+              // Label
+              ctx.fillStyle = _tfC;
+              ctx.font = 'bold 9px system-ui';
+              ctx.textAlign = 'center';
+              ctx.fillText(_tf3.title || 'Focus', pt2.x, chartArea.top - 4);
+              ctx.restore();
+            }
+          }
+        }
       },
     };
 
     st._sizeChart = new Chart(sizeCanvas, {
       type: 'line',
       data: {
-        labels: sizeItems.map(it => it.date + (it.time ? ' ' + it.time.slice(0,5) : '')),
+        labels: sizeItems.map(it => _fdt(it.date + (it.time ? 'T' + it.time : ''))),
         datasets: [{ data: sizeItems.map(it => +(it.length / 1024).toFixed(1)),
           borderColor: '#8b5cf6', backgroundColor: '#8b5cf618',
           borderWidth: 2, fill: true, tension: 0.3,
@@ -798,7 +957,7 @@ var WZ = window.WZ;
     return m ? parseInt(m[1].slice(8, 10), 10) : -1;
   }
 
-  async function _loadWebsiteHeatmap(zoneId, liveItems) {
+  async function _loadWebsiteHeatmap(zoneId, liveItems, endDate, startDate) {
     const container = document.getElementById(`wz-wb-heatmap-${zoneId}`);
     if (!container) return;
     if (!document.getElementById('wz-spin-style')) {
@@ -808,15 +967,30 @@ var WZ = window.WZ;
       document.head.appendChild(s);
     }
 
-    const today = new Date();
+    const today = endDate ? new Date(endDate + 'T12:00:00') : new Date();
     const todayStr = today.toISOString().slice(0, 10);
-    const d30 = new Date(today); d30.setDate(d30.getDate() - 29);
-    const dateFrom = d30.toISOString().slice(0, 10);
+    var dateFrom;
+    if (startDate) {
+      dateFrom = startDate;
+    } else {
+      const d30 = new Date(today); d30.setDate(d30.getDate() - 29);
+      dateFrom = d30.toISOString().slice(0, 10);
+    }
 
-    // 30-Tage-Array aufbauen
+    // Range-Label aktualisieren
+    const rangeLabel = document.getElementById(`wz-wb-range-label-${zoneId}`);
+    if (rangeLabel) {
+      const _fd = typeof fmtDateOnly === 'function' ? fmtDateOnly : (s => s);
+      rangeLabel.textContent = `${_fd(dateFrom)} \u2013 ${_fd(todayStr)}`;
+    }
+
+    // Day array from dateFrom to todayStr
+    const _dfrom = new Date(dateFrom + 'T12:00:00');
+    const _dto = new Date(todayStr + 'T12:00:00');
+    const _totalDays = Math.round((_dto - _dfrom) / 86400000) + 1;
     const days = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(today); d.setDate(d.getDate() - i);
+    for (let i = 0; i < _totalDays; i++) {
+      const d = new Date(_dfrom); d.setDate(d.getDate() + i);
       const ds = d.toISOString().slice(0, 10);
       days.push({ date: ds, dow: (d.getDay() + 6) % 7 });
     }
@@ -829,18 +1003,22 @@ var WZ = window.WZ;
         <div style="font-size:13px;color:var(--muted);">Loading Wayback data \u2026</div>
       </div>`;
 
-    // History-Daten – bereits laufenden Prefetch nutzen (parallel zu /live gestartet)
+    // History-Daten – bei benutzerdefiniertem Datum immer frisch laden
     let allItems;
     try {
-      const resp = await (WZ._wzWebsiteHistPromise ||
-        fetch(`/api/watchzones/${zoneId}/website-history?from=${dateFrom}&to=${todayStr}`)
-          .then(r => r.ok ? r.json() : null).catch(() => null));
-      WZ._wzWebsiteHistPromise = null;
+      const fetchPromise = endDate
+        ? fetch(`/api/watchzones/${zoneId}/website-history?from=${dateFrom}&to=${todayStr}`)
+            .then(r => r.ok ? r.json() : null).catch(() => null)
+        : (WZ._wzWebsiteHistPromise ||
+            fetch(`/api/watchzones/${zoneId}/website-history?from=${dateFrom}&to=${todayStr}`)
+              .then(r => r.ok ? r.json() : null).catch(() => null));
+      const resp = await fetchPromise;
+      if (!endDate) WZ._wzWebsiteHistPromise = null;
       if (resp) {
         const histItems = (resp.data || []).map(i => ({ ...i, hour: _wbExtractHour(i) }));
         if (histItems.length > 0) { allItems = histItems; }
       }
-    } catch(_) { WZ._wzWebsiteHistPromise = null; }
+    } catch(_) { if (!endDate) WZ._wzWebsiteHistPromise = null; }
 
     // Fallback auf Live-Daten wenn History leer oder fehlgeschlagen
     if (!allItems) {
@@ -866,14 +1044,14 @@ var WZ = window.WZ;
     has_live_map: true,
     mix_global_zones: false,
     default_source: "wayback",
-    open_button_label: "History (30 days)",
+    open_button_label: "History",
     open_button_i18n: "wz_btn_history",
     live_title_prefix: "Wayback:",
     live_title_i18n: "wz_live_prefix_wayback",
-    live_box_max_width: "900px",
+    live_box_max_width: "1200px",
     openStrategy: "spinner",
     skip_loading_indicator: true,
-    marker_color: "var(--accent1)",
+    marker_color: "var(--accent3)",
     zone_badge: function(z) {
       if (z.config && z.config.url) {
         return '<span class="wz-zone-meta" style="color:#06b6d4;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' +
@@ -883,9 +1061,107 @@ var WZ = window.WZ;
     },
     extra_buttons: function(z) {
       return '<button title="' + t('wz_tt_server','Server analysis (traceroute)') + '" onclick="wzOpenTraceroute(' + z.id + ')"' +
-        ' style="background:var(--accent1);color:#fff;border-radius:6px;padding:4px 14px;font-size:12px;font-weight:600;">' +
+        ' style="background:var(--accent3);color:#fff;border-radius:6px;padding:4px 14px;font-size:12px;font-weight:600;">' +
         t('wz_btn_server','Server (Live)') + '</button>';
     },
   });
+
+  // Collect Renderer
+  WZ._collectRenderers["website"] = {
+    renderHTML: function(data, cardId) {
+      var h = "", fmtD = WZ._fmtDate || function(s) { return s ? String(s).slice(0,10) : ""; };
+      if (data.url) h += '<div style="font-size:11px;color:#06b6d4;margin-bottom:6px;word-break:break-all;">' + WZ._esc(data.url) + '</div>';
+      if (data.items && data.items.length) {
+        h += '<div style="position:relative;height:150px;margin-bottom:10px;"><canvas id="' + cardId + '-ws-chart"></canvas></div>';
+        h += '<div style="display:flex;gap:14px;margin-bottom:8px;">';
+        h += '<div style="text-align:center;"><div style="font-size:20px;font-weight:800;color:var(--text);">' + data.items.length + '</div><div style="font-size:9px;color:var(--muted);">Snapshots</div></div>';
+        var _validLens = data.items.filter(function(it) { return it.length > 0; });
+        var totalKb = _validLens.length ? (_validLens.reduce(function(s,it) { return s + it.length; }, 0) / _validLens.length) / 1024 : 0;
+        h += '<div style="text-align:center;"><div style="font-size:20px;font-weight:800;color:var(--text);">' + Math.round(totalKb) + ' KB</div><div style="font-size:9px;color:var(--muted);">\u00d8 Gr\u00f6\u00dfe</div></div>';
+        h += '</div>';
+      } else {
+        if (data.error_hint) {
+          h += '<div style="padding:6px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;font-size:11px;color:#ef4444;">\u26a0 ' + WZ._esc(data.error_hint) + '</div>';
+        } else {
+          h += '<div style="font-size:11px;color:var(--muted);">Keine Snapshots gefunden.</div>';
+        }
+      }
+      return h;
+    },
+    afterRender: function(data, cardId) {
+      if (!window.Chart || !data.items || !data.items.length) return;
+      var canvas = document.getElementById(cardId + "-ws-chart");
+      if (!canvas) return;
+      var fmtD = WZ._fmtDate || function(s) { return s ? String(s).slice(0,10) : ""; };
+      // Group by day: count + avg size
+      var byDay = {};
+      data.items.forEach(function(it) {
+        var d = it.date || "";
+        if (!d && it.timestamp) d = it.timestamp.slice(0,4) + "-" + it.timestamp.slice(4,6) + "-" + it.timestamp.slice(6,8);
+        if (!d) return;
+        if (!byDay[d]) byDay[d] = { count: 0, totalLen: 0 };
+        byDay[d].count++;
+        byDay[d].totalLen += (it.length || 0);
+      });
+      var labels = Object.keys(byDay).sort();
+      var counts = labels.map(function(d) { return byDay[d].count; });
+      var sizes = labels.map(function(d) { return Math.round(byDay[d].totalLen / byDay[d].count / 1024 * 10) / 10; });
+      // Focus time
+      var plugins = [];
+      var tf = data.time_focus;
+      if (tf && tf.from) {
+        var tfFrom = tf.from.slice(0,10), tfTo = (tf.to || tf.from).slice(0,10);
+        plugins.push({ id: 'wsFocus', afterDraw: function(chart) {
+          var xScale = chart.scales.x, ctx2 = chart.ctx;
+          var fi = -1, ti = -1;
+          for (var j = 0; j < labels.length; j++) { if (labels[j] >= tfFrom && fi === -1) fi = j; if (labels[j] <= tfTo) ti = j; }
+          if (fi === -1) return;
+          var x1 = xScale.getPixelForValue(fi), x2 = xScale.getPixelForValue(ti);
+          var top = chart.chartArea.top, bottom = chart.chartArea.bottom;
+          ctx2.save(); ctx2.fillStyle = 'rgba(245,158,11,.1)';
+          ctx2.fillRect(Math.min(x1,x2)-2, top, Math.abs(x2-x1)+4, bottom-top);
+          var xC = (x1+x2)/2; ctx2.beginPath(); ctx2.moveTo(xC,top); ctx2.lineTo(xC,bottom);
+          ctx2.strokeStyle = '#f59e0b'; ctx2.lineWidth = 1.5; ctx2.setLineDash([4,3]); ctx2.stroke();
+          ctx2.fillStyle = '#f59e0b'; ctx2.font = 'bold 9px sans-serif'; ctx2.textAlign = 'center';
+          ctx2.fillText(tf.title || 'Event', xC, top-4); ctx2.restore();
+        }});
+      }
+      new Chart(canvas.getContext("2d"), {
+        type: "bar", data: { labels: labels.map(function(d){return fmtD(d);}), datasets: [
+          { label: "Snapshots", data: counts, backgroundColor: "rgba(6,182,212,.4)", borderColor: "#06b6d4", borderWidth: 1, yAxisID: "yCount" },
+          { label: "Gr\u00f6\u00dfe (KB)", data: sizes, type: "line", borderColor: "#f59e0b", borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.3, yAxisID: "ySize" },
+        ]}, plugins: plugins,
+        options: { responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: true, position: "bottom", labels: { font: { size: 8 }, boxWidth: 8, padding: 4 } } },
+          scales: { x: { ticks: { font: { size: 8 }, color: "#888", maxTicksLimit: 8 }, grid: { display: false } },
+            yCount: { position: "left", ticks: { font: { size: 8 }, color: "#06b6d4", stepSize: 1 }, grid: { color: "rgba(100,100,100,.1)" }, title: { display: true, text: "Snapshots", color: "#06b6d4", font: { size: 9 } } },
+            ySize: { position: "right", ticks: { font: { size: 8 }, color: "#f59e0b" }, grid: { drawOnChartArea: false }, title: { display: true, text: "KB", color: "#f59e0b", font: { size: 9 } } } },
+          interaction: { intersect: false, mode: "index" } }
+      });
+    }
+  };
+
+  // Collect Config
+  WZ._collectConfigs["website"] = {
+    fields: function(saved) {
+      saved = saved || {};
+      var h = '';
+      h += '<label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Von bestehender Website-Zone \u00fcbernehmen</label>';
+      h += '<select class="wz-cc-field" data-key="_import" onchange="var o=this.options[this.selectedIndex];if(o.dataset.url){this.closest(\'[id^=wz-cc-]\').querySelector(\'[data-key=url]\').value=o.dataset.url;}" style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:11px;box-sizing:border-box;margin-bottom:6px;">';
+      h += '<option value="">-- Manuell eingeben --</option>';
+      (WZ._zones || []).forEach(function(z) {
+        if (z.zone_type !== "website" || !z.config || !z.config.url) return;
+        h += '<option value="' + z.id + '" data-url="' + WZ._esc(z.config.url) + '">' + WZ._esc(z.name) + ' (' + WZ._esc(z.config.url) + ')</option>';
+      });
+      h += '</select>';
+      h += '<label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Domain / URL</label>';
+      h += '<input class="wz-cc-field" data-key="url" value="' + WZ._esc(saved.url || "") + '" placeholder="z.B. example.com" style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:11px;box-sizing:border-box;">';
+      return h;
+    },
+    read: function(container) {
+      var inp = container.querySelector('[data-key="url"]');
+      return { url: inp ? inp.value.trim() : "" };
+    }
+  };
 
 })();

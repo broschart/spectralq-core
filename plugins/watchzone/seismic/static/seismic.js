@@ -24,9 +24,13 @@ var WZ = window.WZ;
 
   // ── Seismik rendern ───────────────────────────────────────────────────
   function _renderSeismicLive(data) {
+    var ctx = WZ._currentCtx;
+    if (ctx && ctx.mapEl) ctx.mapEl.style.height = "clamp(450px,75vh,850px)";
+    var _countEl = ctx ? ctx.countEl : document.getElementById("wz-live-count");
+    var _mapRowEl = ctx ? ctx.mapRowEl : document.getElementById("wz-map-row");
     const items = data.items || [];
     _seisItems = items;
-    document.getElementById("wz-live-count").textContent =
+    _countEl.textContent =
       items.length + " " + t('wz_seismic_count','earthquakes (30 days)');
     if (WZ._liveMarkers) WZ._liveMarkers.clearLayers();
     _seisMarkers = [];
@@ -34,42 +38,19 @@ var WZ = window.WZ;
 
     const displayItems = items.slice(0, 200);
 
-    // Karte auf volle Höhe strecken – Box, MapRow und Map müssen alle mitspielen
-    const liveBox = document.getElementById("wz-live-box");
-    if (liveBox) {
-      liveBox.classList.add("wz-map-fill");
-      liveBox.style.display = "flex";
-      liveBox.style.flexDirection = "column";
-      liveBox.style.height = "95vh";
-      liveBox.style.maxHeight = "95vh";
-    }
-    const mapRow = document.getElementById("wz-map-row");
-    if (mapRow) {
-      mapRow.style.display = "flex";
-      mapRow.style.flex = "1 1 0";
-      mapRow.style.minHeight = "0";
-      mapRow.style.height = "100%";
-      mapRow.style.flexShrink = "1";
-    }
-    const mapEl = document.getElementById("wz-live-map");
-    if (mapEl) {
-      mapEl.style.height = "100%";
-      mapEl.style.minHeight = "0";
-      mapEl.style.flex = "1";
-    }
-    // Alles unterhalb der Karte ausblenden
-    var _hideIds = ["wz-live-body","wz-under-map-bar","wz-resize-map","wz-live-sticky"];
-    _hideIds.forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = "none"; });
-
-    // ── Seitenpanel erstellen / wiederverwenden ──
+    // ── Seitenpanel ──
     let panel = document.getElementById("seis-side-panel");
     if (!panel) {
-      panel = document.createElement("div");
-      panel.id = "seis-side-panel";
-      panel.style.cssText = "width:420px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;";
-      mapRow.appendChild(panel);
+      // Fallback: Panel im shared Template erstellen
+      var mapRow = _mapRowEl;
+      if (mapRow) {
+        panel = document.createElement("div");
+        panel.id = "seis-side-panel";
+        panel.style.cssText = "width:420px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;";
+        mapRow.appendChild(panel);
+      }
     }
-    panel.style.display = "flex";
+    if (panel) panel.style.display = "flex";
 
     // Chronologisch sortieren (älteste zuerst)
     const sorted = [...displayItems].sort((a, b) => {
@@ -83,7 +64,7 @@ var WZ = window.WZ;
     let html = '';
     // Play-Bar
     html += `<div id="seis-play-bar" style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <button id="seis-play-btn" onclick="_seisTogglePlay()" style="background:var(--accent1);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
+      <button id="seis-play-btn" onclick="_seisTogglePlay()" style="background:var(--accent3);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
         <span id="seis-play-icon">&#9654;</span> <span id="seis-play-label">${t('wz_seismic_play','Play')}</span>
       </button>
       <div id="seis-play-progress" style="flex:1;height:12px;background:var(--border);border-radius:3px;overflow:hidden;position:relative;">
@@ -315,8 +296,6 @@ var WZ = window.WZ;
   // ── Aufräumen ─────────────────────────────────────────────────────────
   WZ._onLiveClose.push(function() {
     _seisStop();
-    var panel = document.getElementById("seis-side-panel");
-    if (panel) { panel.style.display = "none"; panel.innerHTML = ""; }
   });
 
   // ── Seismogramm laden ─────────────────────────────────────────────────
@@ -430,5 +409,56 @@ var WZ = window.WZ;
     }
   };
 
-  WZ.registerPlugin('seismic', { renderer: _renderSeismicLive, default_source: "usgs" });
+  WZ.registerPlugin('seismic', {
+    renderer: _renderSeismicLive,
+    default_source: "usgs",
+    has_live_map: true,
+    live_title_prefix: t("wz_seismic_title", "Seismik"),
+    live_box_max_width: "1400px",
+    live_box_height: "68vh",
+  });
+
+  // Collect Config
+  WZ._collectConfigs["seismic"] = {
+    fields: function(saved) {
+      saved = saved || {};
+      return '<label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Min. Magnitude</label>'
+        + '<input class="wz-cc-field" data-key="min_magnitude" type="number" step="0.1" value="' + (saved.min_magnitude || "3") + '" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:11px;">';
+    },
+    read: function(container) {
+      var v = container.querySelector('[data-key="min_magnitude"]');
+      return { min_magnitude: v ? parseFloat(v.value) || 3 : 3 };
+    }
+  };
+
+  // Collect Renderer
+  WZ._collectRenderers["seismic"] = {
+    renderHTML: function(data, cardId) {
+      var h = "", fmtD = WZ._fmtDate || function(s) { return s ? String(s).slice(0,10) : ""; };
+      if (!data.items || !data.items.length) {
+        h += '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Keine Erdbeben im Beobachtungszeitraum registriert.</div>';
+        return h;
+      }
+      if (data.items && data.items.length) {
+        h += '<div id="' + cardId + '-map" style="height:400px;border-radius:6px;margin-bottom:8px;"></div>';
+        h += '<table style="width:100%;font-size:11px;border-collapse:collapse;">';
+        h += '<thead><tr style="border-bottom:1px solid var(--border);color:var(--muted);"><th style="text-align:left;padding:3px 6px;">Ort</th><th style="padding:3px 6px;">Datum</th><th style="text-align:right;padding:3px 6px;">Mag.</th><th style="text-align:right;padding:3px 6px;">Tiefe</th></tr></thead><tbody>';
+        data.items.slice(0, 15).forEach(function(it) {
+          var mc = it.magnitude >= 5 ? "#ef4444" : it.magnitude >= 3 ? "#f59e0b" : "#22c55e";
+          h += '<tr style="border-bottom:1px solid rgba(255,255,255,.05);">';
+          h += '<td style="padding:3px 6px;">' + WZ._esc((it.place || it.name || "").substring(0, 40)) + '</td>';
+          h += '<td style="padding:3px 6px;">' + fmtD(it.date || it.time) + '</td>';
+          h += '<td style="padding:3px 6px;text-align:right;color:' + mc + ';font-weight:700;">' + (it.magnitude || "—") + '</td>';
+          h += '<td style="padding:3px 6px;text-align:right;color:var(--muted);">' + (it.depth != null ? it.depth + ' km' : "—") + '</td>';
+          h += '</tr>';
+        });
+        h += '</tbody></table>';
+        if (data.items.length > 15) h += '<div style="font-size:10px;color:var(--muted);margin-top:4px;">+ ' + (data.items.length - 15) + ' weitere</div>';
+      }
+      return h;
+    },
+    afterRender: function(data, cardId, cardEl) {
+      WZ._collectGenericAfterRender({ plugin: "seismic", data: data }, cardId, cardEl);
+    }
+  };
 })();

@@ -25,21 +25,101 @@ class NightlightsPlugin(WatchZonePlugin):
         "has_history": True,
         "panel_template": "nightlights/_panel.html",
         "js_file": "/plugins/watchzone/nightlights/static/nightlights.js",
+        "apa_action": "nightlights_history",
 
     }
+
+    def apa_action_handler(self, action):
+        """Returns dict with: status_msg, report, data_msg, error"""
+        from datetime import datetime, timedelta
+
+        nl_label = action.get("label", "Region")
+        nl_days = min(action.get("days", 180), 365)
+        nl_bbox = action.get("bbox", [])
+
+        if len(nl_bbox) != 4:
+            return {"error": "Nightlights: bbox muss 4 Werte haben [lon_min, lat_min, lon_max, lat_max]"}
+
+        try:
+            from plugins.watchzone.nightlights._transport import fetch_nightlights_history
+
+            date_to = datetime.utcnow().strftime("%Y-%m-%d")
+            date_from = (datetime.utcnow() - timedelta(days=nl_days)).strftime("%Y-%m-%d")
+            nl_data = fetch_nightlights_history(nl_bbox, date_from, date_to)
+
+            if nl_data and nl_data.get("data"):
+                entries = nl_data["data"]
+                values = [e["value"] for e in entries]
+                avg_br = sum(values) / len(values)
+                max_br = max(values)
+                min_br = min(values)
+                max_date = next(e["date"] for e in entries if e["value"] == max_br)
+                min_date = next(e["date"] for e in entries if e["value"] == min_br)
+                first_avg = sum(values[:3]) / min(3, len(values))
+                last_avg = sum(values[-3:]) / min(3, len(values))
+                direction = "steigend" if last_avg > first_avg * 1.05 else ("fallend" if last_avg < first_avg * 0.95 else "stabil")
+                report_parts = [
+                    f"NIGHTTIME LIGHTS (NASA VIIRS) – {nl_label} (bbox: {nl_bbox}):",
+                    f"  Zeitraum: {date_from} bis {date_to}, {len(entries)} Messungen",
+                    f"  Ø Helligkeit: {avg_br:.1f}, Max: {max_br:.1f} am {max_date}, Min: {min_br:.1f} am {min_date}",
+                    f"  Trend: {direction} (Anfang Ø {first_avg:.1f}, Ende Ø {last_avg:.1f})",
+                ]
+                return {
+                    "status_msg": f"Nighttime Lights (NASA VIIRS): {nl_label} ({nl_days}d) …",
+                    "report": "\n".join(report_parts),
+                    "data_msg": f"Nightlights {nl_label}: Ø {avg_br:.1f}, Trend: {direction}",
+                    "error": None,
+                }
+            else:
+                return {
+                    "status_msg": f"Nighttime Lights (NASA VIIRS): {nl_label} ({nl_days}d) …",
+                    "report": f"NIGHTTIME LIGHTS – {nl_label}: Keine Daten im Zeitraum {date_from} bis {date_to}",
+                    "data_msg": f"Nightlights {nl_label}: Keine Daten im Zeitraum",
+                    "error": None,
+                }
+        except Exception as e:
+            return {"error": f"Nightlights-Fehler: {str(e)[:80]}"}
 
     def live_handler(self, zone, config, geo, bbox, user_id):
         from datetime import datetime as _dt, timedelta as _td
         from plugins.watchzone.nightlights._transport import fetch_nightlights_snapshot
         if not bbox:
             return {"error": "Zone hat keine gueltige Geometrie"}
+
+        # config already contains parsed zone.config merged with request params (from app.py)
+        time_focus = config.get("time_focus")
+
         date_str = (_dt.utcnow() - _td(days=2)).strftime("%Y-%m-%d")
         img_url, mean_brightness = fetch_nightlights_snapshot(bbox, date_str)
-        return {
+
+        result = {
             "zone_id": zone.id, "zone_name": zone.name, "zone_type": "nightlights",
             "image_url": img_url, "mean_brightness": mean_brightness,
             "bbox": bbox, "date": date_str,
         }
+
+        # If time_focus is set, fetch 3 images: 7 days before, focus date, 7 days after
+        if time_focus and time_focus.get("from"):
+            try:
+                focus_date = _dt.strptime(time_focus["from"][:10], "%Y-%m-%d")
+                dates = [
+                    ("before", (focus_date - _td(days=1)).strftime("%Y-%m-%d")),
+                    ("focus",  focus_date.strftime("%Y-%m-%d")),
+                    ("after",  (focus_date + _td(days=1)).strftime("%Y-%m-%d")),
+                ]
+                tf_images = []
+                for label, d in dates:
+                    url, bright = fetch_nightlights_snapshot(bbox, d)
+                    tf_images.append({
+                        "label": label, "date": d,
+                        "image_url": url, "brightness": bright,
+                    })
+                result["time_focus"] = time_focus
+                result["time_focus_images"] = tf_images
+            except Exception:
+                pass
+
+        return result
 
     def history_routes(self):
         return [{"suffix": "nightlights-history", "handler": self._history_handler}]
@@ -93,7 +173,16 @@ class NightlightsPlugin(WatchZonePlugin):
             return {"error": str(e)}
 
     def analysis_provider(self):
-        return {"data_types": ["nightlights"], "history_endpoint_suffix": "nightlights-history"}
+        return {
+            "data_types": ["nightlights"],
+            "history_endpoint_suffix": "nightlights-history",
+            "analysis_js": "/plugins/watchzone/nightlights/static/nightlights_analysis.js",
+            "ui_prefix": "nl",
+            "ui_label": "Nighttime Lights (NASA)",
+            "ui_color": "#fbbf24",
+            "zone_types": ["nightlights"],
+            "accepts_global": True,
+        }
 
     @staticmethod
     def _resolve_bbox(zone_id, bbox_input, user_id):

@@ -14,6 +14,7 @@ class ForecastPlugin(AnalysisPlugin):
         "color": "#22d3ee",
         "symbol": "📈",
         "description": "Zeitreihen-Prognose basierend auf historischen Daten.",
+        "apa_method": "forecast",
         "default_show_in": ["popup"],
         "button_id": "",
         "requires_multi_kw": False,

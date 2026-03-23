@@ -30,29 +30,78 @@ def _resolve_wiki_title(term, lang):
         pass
     return None
 
-def _fetch_edits(article, lang, days=30):
+def _fetch_views(article, lang, days=30, date_from=None, date_to=None):
+    """Fetch daily pageview counts for a Wikipedia article."""
+    import requests as _rq
+
+    resolved = _resolve_wiki_title(article, lang)
+    wiki_title = (resolved or article).replace(" ", "_")
+
+    if date_from and date_to:
+        start_str = date_from.replace("-", "") + "00"
+        end_str = date_to.replace("-", "") + "00"
+    else:
+        end_dt = datetime.now(timezone.utc)
+        start_dt = end_dt - timedelta(days=days)
+        start_str = start_dt.strftime("%Y%m%d") + "00"
+        end_str = end_dt.strftime("%Y%m%d") + "00"
+
+    try:
+        url = (f"https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/"
+               f"{lang}.wikipedia/all-access/all-agents/"
+               f"{_rq.utils.quote(wiki_title, safe='')}/daily/{start_str}/{end_str}")
+        r = _rq.get(url, headers={"User-Agent": UA}, timeout=15)
+        if not r.ok:
+            return []
+        items = r.json().get("items", [])
+        return [{"date": it["timestamp"][:4]+"-"+it["timestamp"][4:6]+"-"+it["timestamp"][6:8],
+                 "views": it.get("views", 0)} for it in items]
+    except Exception:
+        return []
+
+
+def _fetch_edits(article, lang, days=30, date_from=None, date_to=None):
     """Fetch revision data for a single article over the given number of days."""
     import requests as _rq
 
     resolved = _resolve_wiki_title(article, lang)
     wiki_title = resolved or article
 
-    end_dt = datetime.now(timezone.utc)
-    start_dt = end_dt - timedelta(days=days)
+    if date_from and date_to:
+        start_dt = datetime.strptime(date_from[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        end_dt = datetime.strptime(date_to[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    else:
+        end_dt = datetime.now(timezone.utc)
+        start_dt = end_dt - timedelta(days=days)
     rv_start = end_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     rv_end = start_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     edits_per_day = Counter()
     size_changes = Counter()  # net size change per day
+    # Autoren-Tracking pro Tag: {date: {user: {"edits": n, "size_delta": n, "reverts": n}}}
+    authors_per_day = {}
+    all_users = set()
     total_revisions = 0
+    total_reverts = 0
     rvcontinue = None
     prev_size = None
+    # Uhrzeiten pro Autor sammeln
+    author_hours = {}   # {user: [hour, ...]}
+    author_reverts = Counter()  # {user: revert_count}
+    # Einzelne Edits für Timeline-PC: {date: [{user, hour, size_delta, revert}]}
+    edits_detail = {}  # date -> list
+
+    _REVERT_TAGS = {"mw-revert", "mw-undo", "mw-rollback", "mw-manual-revert"}
+    import re as _re_rv
+    _REVERT_COMMENT = _re_rv.compile(
+        r"(revert|rv |undo|r[üu]ckg[äa]ngig|annul|d[ée]fair)",
+        _re_rv.IGNORECASE)
 
     try:
         for _ in range(50):
             params = {
                 "action": "query", "prop": "revisions", "titles": wiki_title,
-                "rvprop": "timestamp|size|user", "rvlimit": "500",
+                "rvprop": "timestamp|size|user|comment|tags", "rvlimit": "500",
                 "rvstart": rv_start, "rvend": rv_end, "format": "json",
             }
             if rvcontinue:
@@ -68,26 +117,194 @@ def _fetch_edits(article, lang, days=30):
                 if page_id == "-1":
                     return {"article": article, "wiki_title": wiki_title, "error": "not_found"}
                 for rev in page.get("revisions", []):
-                    ts = rev.get("timestamp", "")[:10]
+                    full_ts = rev.get("timestamp", "")
+                    ts = full_ts[:10]
                     sz = rev.get("size", 0)
+                    user = rev.get("user", "")
+                    comment = rev.get("comment", "")
+                    tags = set(rev.get("tags", []))
+
+                    # Revert-Erkennung
+                    is_revert = bool(
+                        tags & _REVERT_TAGS or
+                        _REVERT_COMMENT.search(comment))
+
+                    # Uhrzeit extrahieren (0-23)
+                    hour = None
+                    if len(full_ts) >= 16:
+                        try:
+                            hour = int(full_ts[11:13])
+                        except ValueError:
+                            pass
+
                     if ts:
                         edits_per_day[ts] += 1
                         total_revisions += 1
+                        if is_revert:
+                            total_reverts += 1
+                        delta = 0
                         if prev_size is not None:
-                            size_changes[ts] += sz - prev_size
+                            delta = sz - prev_size
+                            size_changes[ts] += delta
                         prev_size = sz
+                        if user:
+                            all_users.add(user)
+                            if ts not in authors_per_day:
+                                authors_per_day[ts] = {}
+                            if user not in authors_per_day[ts]:
+                                authors_per_day[ts][user] = {
+                                    "edits": 0, "size_delta": 0,
+                                    "reverts": 0}
+                            authors_per_day[ts][user]["edits"] += 1
+                            authors_per_day[ts][user]["size_delta"] += delta
+                            if is_revert:
+                                authors_per_day[ts][user]["reverts"] += 1
+                                author_reverts[user] += 1
+                            if hour is not None:
+                                if user not in author_hours:
+                                    author_hours[user] = []
+                                author_hours[user].append(hour)
+                                # Einzelne Edits für Timeline
+                                if ts not in edits_detail:
+                                    edits_detail[ts] = []
+                                edits_detail[ts].append({
+                                    "user": user,
+                                    "hour": hour,
+                                    "min": int(full_ts[14:16]) if len(full_ts) >= 16 else 0,
+                                    "size_delta": delta,
+                                    "revert": is_revert,
+                                    "comment": comment[:200] if comment else "",
+                                })
 
             cont = data.get("continue", {})
             rvcontinue = cont.get("rvcontinue")
             if not rvcontinue:
                 break
 
-        series = [{"date": d, "edits": edits_per_day[d], "size_delta": size_changes.get(d, 0)}
-                  for d in sorted(edits_per_day.keys())]
+        # Autoren-Zusammenfassung: Gesamt-Edits pro Autor
+        author_totals = Counter()
+        author_size = Counter()
+        for day_authors in authors_per_day.values():
+            for user, stats in day_authors.items():
+                author_totals[user] += stats["edits"]
+                author_size[user] += stats["size_delta"]
+
+        # Top-Autoren (nach Edit-Anzahl)
+        top_authors = [u for u, _ in author_totals.most_common(20)]
+
+        # Reputation für Top-Autoren abrufen
+        import re as _re_ip
+        author_rep = {}
+        author_age = {}  # {user: age_days}
+        reg_users = [u for u in top_authors
+                     if not _re_ip.match(r"^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-fA-F:]+$", u)]
+        if reg_users:
+            for batch_start in range(0, len(reg_users), 50):
+                batch = reg_users[batch_start:batch_start + 50]
+                try:
+                    ui_resp = _rq.get(api_url, params={
+                        "action": "query", "list": "users",
+                        "ususers": "|".join(batch),
+                        "usprop": "editcount|registration|groups|blockinfo",
+                        "format": "json",
+                    }, headers={"User-Agent": UA}, timeout=15)
+                    if ui_resp.ok:
+                        for u in ui_resp.json().get("query", {}).get("users", []):
+                            name = u.get("name", "")
+                            editcount = u.get("editcount", 0)
+                            reg_date = u.get("registration", "")
+                            groups = [g for g in u.get("groups", [])
+                                      if g not in ("*", "user", "autoconfirmed")]
+                            blocked = "blockid" in u
+                            age_days = None
+                            if reg_date:
+                                try:
+                                    rd = datetime.strptime(
+                                        reg_date, "%Y-%m-%dT%H:%M:%SZ")
+                                    age_days = (datetime.utcnow() - rd).days
+                                except Exception:
+                                    pass
+                            score = 0
+                            if editcount >= 100000: score += 40
+                            elif editcount >= 10000: score += 35
+                            elif editcount >= 1000: score += 28
+                            elif editcount >= 100: score += 18
+                            elif editcount >= 10: score += 8
+                            elif editcount >= 1: score += 3
+                            if age_days is not None:
+                                if age_days >= 3650: score += 30
+                                elif age_days >= 1825: score += 25
+                                elif age_days >= 365: score += 18
+                                elif age_days >= 90: score += 10
+                                elif age_days >= 30: score += 5
+                            if "sysop" in groups or "bureaucrat" in groups:
+                                score += 20
+                            elif "reviewer" in groups or "editor" in groups:
+                                score += 10
+                            elif "patroller" in groups or "rollbacker" in groups:
+                                score += 8
+                            if blocked:
+                                score = max(0, score - 30)
+                            score = min(100, score)
+                            author_rep[name] = score
+                            if age_days is not None:
+                                author_age[name] = age_days
+                except Exception:
+                    pass
+
+        # Alle Tage im Zeitraum generieren (inkl. Tage ohne Edits)
+        all_days = []
+        cur = start_dt
+        while cur <= end_dt:
+            all_days.append(cur.strftime("%Y-%m-%d"))
+            cur += timedelta(days=1)
+
+        series = []
+        for d in all_days:
+            day_data = {
+                "date": d,
+                "edits": edits_per_day.get(d, 0),
+                "size_delta": size_changes.get(d, 0),
+            }
+            # Autoren pro Tag (nur Top-20 für Performance)
+            if d in authors_per_day:
+                day_authors = sorted(
+                    authors_per_day[d].items(),
+                    key=lambda x: -x[1]["edits"])
+                day_data["authors"] = [
+                    {"user": u, "edits": s["edits"],
+                     "size_delta": s["size_delta"]}
+                    for u, s in day_authors[:20]
+                ]
+            # Einzelne Edits für Timeline (max 50 pro Tag)
+            if d in edits_detail:
+                day_data["edits_list"] = edits_detail[d][:50]
+            series.append(day_data)
+
+        # Autoren-Übersicht
+        authors_summary = []
+        for user in top_authors:
+            is_ip = bool(_re_ip.match(
+                r"^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-fA-F:]+$", user))
+            hours = author_hours.get(user, [])
+            avg_hour = round(sum(hours) / len(hours), 1) if hours else None
+            authors_summary.append({
+                "user": user,
+                "edits": author_totals[user],
+                "size_delta": author_size[user],
+                "reputation": author_rep.get(user),
+                "age_days": author_age.get(user),
+                "reverts": author_reverts.get(user, 0),
+                "avg_hour": avg_hour,
+                "is_ip": is_ip,
+            })
 
         return {
             "article": article, "wiki_title": wiki_title, "lang": lang,
-            "total_edits": total_revisions, "series": series,
+            "total_edits": total_revisions,
+            "total_reverts": total_reverts,
+            "series": series,
+            "authors": authors_summary,
         }
     except Exception as exc:
         return {"article": article, "error": str(exc)[:120]}
@@ -117,23 +334,46 @@ class WikipediaPlugin(WatchZonePlugin):
 
     def live_handler(self, zone, config, geo, bbox, user_id):
         articles = config.get("articles", [])
+        if isinstance(articles, str):
+            articles = [a.strip() for a in articles.split(",") if a.strip()]
         lang = config.get("lang", "de")
         if not articles:
             return {"error": "Keine Artikel konfiguriert"}
+
+        time_focus = config.get("time_focus")
+        _tf_from = None
+        _tf_to = None
+
+        if time_focus and time_focus.get("from"):
+            try:
+                focus_date = datetime.strptime(time_focus["from"][:10], "%Y-%m-%d")
+                _tf_from = (focus_date - timedelta(days=15)).strftime("%Y-%m-%d")
+                _tf_to = (focus_date + timedelta(days=15)).strftime("%Y-%m-%d")
+            except ValueError:
+                pass
 
         results = []
         for art in articles[:5]:
             title = art if isinstance(art, str) else art.get("title", "")
             if not title:
                 continue
-            results.append(_fetch_edits(title, lang, days=30))
+            if _tf_from and _tf_to:
+                edit_data = _fetch_edits(title, lang, date_from=_tf_from, date_to=_tf_to)
+                edit_data["views"] = _fetch_views(title, lang, date_from=_tf_from, date_to=_tf_to)
+            else:
+                edit_data = _fetch_edits(title, lang, days=30)
+                edit_data["views"] = _fetch_views(title, lang, days=30)
+            results.append(edit_data)
 
         total_edits = sum(r.get("total_edits", 0) for r in results if "error" not in r)
-        return {
+        result = {
             "zone_id": zone.id, "zone_name": zone.name,
             "zone_type": "wikipedia", "lang": lang,
             "count": total_edits, "articles": results,
         }
+        if time_focus:
+            result["time_focus"] = time_focus
+        return result
 
     def history_routes(self):
         return [
@@ -192,6 +432,15 @@ class WikipediaPlugin(WatchZonePlugin):
         return {"zone_id": z.id, "zone_name": z.name, "articles": results}
 
     def analysis_provider(self):
-        return {"data_types": ["wikipedia"], "history_endpoint_suffix": "wiki-history"}
+        return {
+            "data_types": ["wikipedia"],
+            "history_endpoint_suffix": "wiki-history",
+            "analysis_js": "/plugins/watchzone/wikipedia/static/wikipedia_analysis.js",
+            "ui_prefix": "wiki",
+            "ui_label": "Wikipedia",
+            "ui_color": "#636363",
+            "zone_types": ["wikipedia"],
+            "accepts_global": False,
+        }
 
 PluginManager.register(WikipediaPlugin())

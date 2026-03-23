@@ -475,6 +475,9 @@ class Event(db.Model):
     start_dt = db.Column(db.DateTime, nullable=False)
     end_dt = db.Column(db.DateTime, nullable=True)
     color = db.Column(db.String(20), default="#f75f4f")
+    lat = db.Column(db.Float, nullable=True)
+    lon = db.Column(db.Float, nullable=True)
+    location_name = db.Column(db.String(300), default="")
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
@@ -495,6 +498,9 @@ class Event(db.Model):
             "start_dt": fmt(self.start_dt),
             "end_dt": fmt(self.end_dt),
             "color": self.color,
+            "lat": self.lat,
+            "lon": self.lon,
+            "location_name": self.location_name or "",
             "created_at": self.created_at.isoformat(),
             "project_id": self.project_id,
         }
@@ -575,12 +581,36 @@ class WatchZone(db.Model):
 
     def to_dict(self):
         import json as _j
+        config = _j.loads(self.config) if self.config else {}
+        # Enrich time_focus with current event data (location, times)
+        tf = config.get("time_focus")
+        if tf and tf.get("event_id"):
+            try:
+                evt = Event.query.get(tf["event_id"])
+                if evt:
+                    def _fmt_evt(dt):
+                        if dt is None: return None
+                        if dt.hour == 0 and dt.minute == 0 and dt.second == 0:
+                            return dt.strftime("%Y-%m-%d")
+                        return dt.strftime("%Y-%m-%dT%H:%M")
+                    tf["title"] = evt.title
+                    tf["from"] = _fmt_evt(evt.start_dt)
+                    tf["to"] = _fmt_evt(evt.end_dt) or tf["from"]
+                    if evt.lat is not None and evt.lon is not None:
+                        tf["lat"] = evt.lat
+                        tf["lon"] = evt.lon
+                        tf["location_name"] = evt.location_name or ""
+                    elif "lat" in tf:
+                        del tf["lat"]
+                        del tf["lon"]
+            except Exception:
+                pass
         return {
             "id":         self.id,
             "name":       self.name,
             "zone_type":  self.zone_type,
             "geometry":   _j.loads(self.geometry) if self.geometry else {},
-            "config":     _j.loads(self.config) if self.config else {},
+            "config":     config,
             "active":     self.active,
             "project_id": self.project_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,

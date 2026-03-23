@@ -153,4 +153,37 @@ WZ.registerPlugin("powergrid", {
   default_source: "entsoe",
 });
 
+// Collect Renderer
+WZ._collectRenderers["powergrid"] = {
+  renderHTML: function(data, cardId) {
+    var h = "";
+    h += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;">';
+    if (data.current_mw != null) h += '<div style="text-align:center;"><div style="font-size:22px;font-weight:800;color:#f59e0b;">' + Math.round(data.current_mw).toLocaleString() + '</div><div style="font-size:9px;color:var(--muted);">Aktuell (MW)</div></div>';
+    if (data.avg_mw != null) h += '<div style="text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--text);">' + Math.round(data.avg_mw).toLocaleString() + '</div><div style="font-size:9px;color:var(--muted);">\u00d8 (MW)</div></div>';
+    if (data.min_mw != null) h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:700;color:#22c55e;">' + Math.round(data.min_mw).toLocaleString() + '</div><div style="font-size:9px;color:var(--muted);">Min</div></div>';
+    if (data.max_mw != null) h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:700;color:#ef4444;">' + Math.round(data.max_mw).toLocaleString() + '</div><div style="font-size:9px;color:var(--muted);">Max</div></div>';
+    h += '</div>';
+    if (data.anomaly) h += '<div style="padding:6px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;margin-bottom:8px;font-size:11px;color:#ef4444;">\u26a0 Anomalie erkannt</div>';
+    if (data.series && data.series.length) {
+      h += '<div style="position:relative;height:160px;margin-bottom:8px;"><canvas id="' + cardId + '-pg-chart"></canvas></div>';
+    }
+    if (data.country) h += '<div style="font-size:10px;color:var(--muted);">Land: ' + WZ._esc(data.country) + (data.domain ? ' \u2014 ' + WZ._esc(data.domain) : '') + '</div>';
+    return h;
+  },
+  afterRender: function(data, cardId, cardEl) {
+    if (!window.Chart || !data.series || !data.series.length) return;
+    var fmtD = WZ._fmtDate || function(s) { return s ? String(s).slice(0,10) : ""; };
+    var canvas = document.getElementById(cardId + "-pg-chart");
+    if (!canvas) return;
+    var labels = data.series.map(function(s) { return fmtD(s.date || s.time); });
+    var values = data.series.map(function(s) { return s.value || s.load || s.mw; });
+    new Chart(canvas.getContext("2d"), {
+      type: "line", data: { labels: labels, datasets: [{ label: "Last (MW)", data: values, borderColor: "#f59e0b", borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.3 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { x: { ticks: { font: { size: 8 }, color: "#888", maxTicksLimit: 8 }, grid: { display: false } }, y: { ticks: { font: { size: 8 }, color: "#888" }, grid: { color: "rgba(100,100,100,.1)" }, title: { display: true, text: "MW", color: "#f59e0b", font: { size: 10 } } } },
+        interaction: { intersect: false, mode: "index" } }
+    });
+  }
+};
+
 })();

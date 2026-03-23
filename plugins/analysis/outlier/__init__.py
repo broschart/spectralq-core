@@ -10,6 +10,7 @@ class OutlierPlugin(AnalysisPlugin):
         "color": "#facc15",
         "symbol": "⊘",
         "description": "Erkennung statistischer Ausreißer in Zeitreihen.",
+        "apa_method": "outliers",
         "default_show_in": ["popup"],
         "button_id": "",
         "requires_multi_kw": False,

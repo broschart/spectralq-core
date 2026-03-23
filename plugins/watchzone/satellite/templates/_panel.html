@@ -1,12 +1,11 @@
 <div id="panel-satellite" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_satellite_title">Satellite Observation</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_satellite_source">Source: Copernicus Sentinel-2 (NDVI / True-Color)</span>
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_satellite_desc">Fetches current satellite imagery (Sentinel-2) for the area. "Image" loads the latest true-colour image and displays the acquisition time. Well suited for visually documenting changes on the ground.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_satellite_help">Fetches current satellite imagery (Sentinel-2) for the defined area and displays it as a true-colour image.<br><br><b>How to use:</b> Draw a zone on the map (max. 2° x 2°) and click "Image". The system loads the latest cloud-free Sentinel-2 image and shows the acquisition date and time. You can zoom, download the image or toggle between the satellite layer and the base map.<br><br><b>Forensic relevance:</b> Satellite imagery provides visual evidence of ground-level changes — construction activity, troop movements, damage assessment, environmental changes or border modifications. Comparing images from different dates helps document the progression of events.<br><br><b>Data source:</b> Copernicus Sentinel-2 (True-Color / NDVI) — requires Copernicus credentials.</div>
   </div>
   <div class="wz-main-body">
-    <div id="wz-map-satellite" class="wz-map-container" style="height:500px;"></div>
+    <div id="wz-map-satellite" class="wz-map-container" ></div>
     <div class="wz-hint" id="wz-hint-satellite" data-i18n="wz_satellite_hint">
       Draw observation areas on the map. Sentinel-2 acquisition dates are
       automatically marked in the analysis timeline (under "Additional Sources").

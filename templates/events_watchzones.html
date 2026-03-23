@@ -3,6 +3,20 @@
 {% block title %}Watch Zones – spectralQ{% endblock %}
 
 {% block head %}
+<style>#wz-live-box.wz-live-fullwidth { max-width: 98vw !important; width: 96% !important; }</style>
+<script>
+// Watch for style changes on wz-live-box and re-apply fullwidth if class is set
+document.addEventListener("DOMContentLoaded", function() {
+  var box = document.getElementById("wz-live-box");
+  if (!box) return;
+  new MutationObserver(function() {
+    if (box.classList.contains("wz-live-fullwidth")) {
+      if (box.style.maxWidth !== "98vw") box.style.maxWidth = "98vw";
+      if (box.style.width !== "96%") box.style.width = "96%";
+    }
+  }).observe(box, { attributes: true, attributeFilter: ["style"] });
+});
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -35,7 +49,14 @@
     transition: color .12s, border-color .12s;
   }
   .events-subnav a:hover { color: var(--text); }
-  .events-subnav a.active { color: var(--text); border-bottom-color: var(--accent1); }
+  .events-subnav a.active { color: var(--text); border-bottom-color: var(--accent3); }
+
+  /* Watchzone-Buttons: Akzent 3 */
+  .wz-layout .btn-primary,
+  .wz-main-header .btn-primary {
+    background: var(--accent3);
+    border-color: var(--accent3);
+  }
 
   /* Layout: linke Sidebar + rechts Inhalt */
   .wz-layout {
@@ -72,9 +93,9 @@
     color: var(--text);
   }
   .wz-sidebar-item.active {
-    background: rgba(124,92,191,.12);
-    color: var(--accent1);
-    border-left: 3px solid var(--accent1);
+    background: color-mix(in srgb, var(--accent3) 10%, transparent);
+    color: var(--accent3);
+    border-left: 3px solid var(--accent3);
     padding-left: 15px;
   }
   .wz-sidebar-item svg {
@@ -104,12 +125,86 @@
     flex-direction: column;
   }
   .wz-panel-desc {
-    width: 100%;
-    margin: 2px 0 0;
-    font-size: 12px;
+    display: none;
+  }
+
+  /* „?" Help button */
+  .wz-help-btn {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
     color: var(--muted);
-    line-height: 1.5;
-    order: 10;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background .15s, color .15s;
+    align-self: center;
+  }
+  .wz-help-btn:hover {
+    background: var(--accent3);
+    color: #fff;
+    border-color: var(--accent3);
+  }
+
+  /* Slide-in help panel */
+  .wz-help-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.35);
+    z-index: 9000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s;
+  }
+  .wz-help-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .wz-help-drawer {
+    position: fixed; top: 0; right: 0;
+    width: 400px; max-width: 90vw;
+    height: 100vh;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    box-shadow: -4px 0 24px rgba(0,0,0,.3);
+    z-index: 9001;
+    transform: translateX(100%);
+    transition: transform .3s cubic-bezier(.4,0,.2,1);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .wz-help-drawer.open {
+    transform: translateX(0);
+  }
+  .wz-help-drawer-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .wz-help-drawer-header h3 {
+    margin: 0; font-size: 16px; font-weight: 700; color: var(--text);
+  }
+  .wz-help-drawer-close {
+    width: 32px; height: 32px;
+    border: none; background: none;
+    color: var(--muted); font-size: 20px;
+    cursor: pointer; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wz-help-drawer-close:hover { background: var(--surface2); color: var(--text); }
+  .wz-help-drawer-body {
+    padding: 24px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .wz-help-drawer-body ul {
+    margin: 8px 0;
+    padding-left: 20px;
+  }
+  .wz-help-drawer-body li {
+    margin-bottom: 6px;
   }
   .wz-main-header h2 {
     margin: 0;
@@ -124,8 +219,7 @@
 
   /* Karte */
   .wz-map-container {
-    flex: 1;
-    min-height: 400px;
+    height: 800px;
   }
 
   /* Draw-Buttons auf der Karte */
@@ -138,9 +232,9 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: var(--accent1);
+    background: var(--accent3);
     color: #fff;
-    border: 1px solid var(--accent1);
+    border: 1px solid var(--accent3);
     border-radius: 6px;
     padding: 5px 10px;
     font-size: 11px;
@@ -163,48 +257,58 @@
   }
   .wz-crosshair-h {
     left: 0; right: 0; height: 0;
-    border-top: 1px dashed var(--accent1);
+    border-top: 1px dashed var(--accent3);
   }
   .wz-crosshair-v {
     top: 0; bottom: 0; width: 0;
-    border-left: 1px dashed var(--accent1);
+    border-left: 1px dashed var(--accent3);
   }
 
-  /* Zonen-Liste unter Karte */
+  /* Zonen-Liste unter Karte — 3-spaltig */
   .wz-zone-list {
     padding: 14px 20px;
     border-top: 1px solid var(--border);
     max-height: 50vh;
     overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
   }
+  .wz-zone-list.wz-zone-list-2col { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 1100px) { .wz-zone-list { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 700px) { .wz-zone-list, .wz-zone-list.wz-zone-list-2col { grid-template-columns: 1fr; } }
   .wz-zone-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    border-radius: 6px;
-    margin-bottom: 4px;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
     font-size: 12px;
     background: var(--surface);
     border: 1px solid var(--border);
     cursor: pointer;
-    transition: background .15s;
+    transition: background .15s, border-color .15s;
+    position: relative;
   }
   .wz-zone-row:hover {
-    background: color-mix(in srgb, var(--accent1) 8%, var(--surface));
+    background: color-mix(in srgb, var(--accent3) 8%, var(--surface));
+    border-color: color-mix(in srgb, var(--accent3) 25%, var(--border));
   }
   .wz-zone-row .wz-zone-name {
     flex: 1;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .wz-zone-row .wz-zone-meta {
-    color: var(--muted);
-    font-size: 11px;
+    display: none;
   }
   .wz-zone-row .wz-zone-actions {
     display: flex;
-    gap: 6px;
+    gap: 4px;
+    align-items: center;
   }
   .wz-zone-row .wz-zone-actions button {
     background: none;
@@ -223,6 +327,47 @@
   .wz-zone-row .wz-zone-actions button.delete:hover {
     color: var(--danger);
   }
+  /* "..." menu */
+  .wz-zone-menu {
+    position: relative;
+    display: inline-flex;
+  }
+  .wz-zone-menu-dropdown {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    min-width: 160px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    padding: 4px 0;
+    font-size: 12px;
+  }
+  .wz-zone-menu-dropdown.open { display: block; }
+  .wz-zone-menu-dropdown .wz-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    color: var(--text);
+    transition: background .1s;
+    white-space: nowrap;
+    border: none;
+    background: none;
+    width: 100%;
+    font-size: 12px;
+    text-align: left;
+  }
+  .wz-zone-menu-dropdown .wz-menu-item:hover { background: rgba(255,255,255,.06); }
+  .wz-zone-menu-dropdown .wz-menu-item.danger { color: rgba(239,68,68,.8); }
+  .wz-zone-menu-dropdown .wz-menu-item.danger:hover { background: rgba(239,68,68,.08); }
+  .wz-zone-menu-dropdown .wz-menu-sep {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
 
 
   .wz-hint {
@@ -230,6 +375,22 @@
     font-size: 12px;
     padding: 20px;
     line-height: 1.6;
+  }
+
+  /* Distance measurement popup */
+  .wz-dist-popup .leaflet-popup-content-wrapper {
+    background: rgba(40, 40, 50, .95);
+    color: #e2e8f0;
+    border: 1px solid #8b5cf6;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.5);
+  }
+  .wz-dist-popup .leaflet-popup-tip {
+    background: rgba(40, 40, 50, .95);
+    border: 1px solid #8b5cf6;
+  }
+  .wz-dist-popup .leaflet-popup-close-button {
+    color: rgba(255,255,255,.4);
   }
 
   /* Inline edit */
@@ -329,12 +490,98 @@
              style="width:100%;font-size:12px;padding:5px 10px;border:1px solid var(--border);
                     border-radius:6px;background:var(--bg);color:var(--text);outline:none;" />
     </div>
-    {% for p in wz_plugins %}
-    <div class="wz-sidebar-item" data-panel="{{ p.plugin_id }}" data-search-label="{{ p.meta.label|lower }} {{ p.plugin_id }}" onclick="wzSelectPanel('{{ p.plugin_id }}')">
-      {{ p.meta.icon_svg | safe }}
-      <span data-i18n="wz_sidebar_{{ p.plugin_id }}">{{ p.meta.label }}</span>
+    <div id="wz-sidebar-groups" style="overflow-y:auto;flex:1;">
     </div>
-    {% endfor %}
+    <script>
+    (function() {
+      var _GROUPS = [
+        {id: "transport", label: "Transport", icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 20l20-8L2 4v6l14 2-14 2z"/></svg>', plugins: ["vessel","aircraft","traffic","migration"]},
+        {id: "geo", label: "Geo & Umwelt", icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10"/></svg>', plugins: ["weather","seismic","satellite","satoverpass","ndvi","nightlights","radiation","airquality","osm_changes","powergrid"]},
+        {id: "internet", label: "Internet", icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>', plugins: ["website","certwatch","censys","wayback_cdx","internet_health","celltowers"]},
+        {id: "komm", label: "Kommunikation", icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', plugins: ["telegram_monitor","bluesky_monitor","wikipedia","acled"]},
+        {id: "economy", label: "Wirtschaft", icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>', plugins: ["commodities"]},
+      ];
+      var _ALL_PLUGINS = {
+        {% for p in wz_plugins %}
+        "{{ p.plugin_id }}": {id: "{{ p.plugin_id }}", label: "{{ p.meta.label }}", svg: `{{ p.meta.icon_svg | safe }}`},
+        {% endfor %}
+      };
+      // Find ungrouped plugins
+      var _grouped = {};
+      _GROUPS.forEach(function(g) { g.plugins.forEach(function(pid) { _grouped[pid] = true; }); });
+      var ungrouped = [];
+      Object.keys(_ALL_PLUGINS).forEach(function(pid) { if (!_grouped[pid]) ungrouped.push(pid); });
+      if (ungrouped.length) _GROUPS.push({id: "other", label: "Sonstige", icon: "📦", plugins: ungrouped});
+
+      var container = document.getElementById("wz-sidebar-groups");
+      var _collapsed = JSON.parse(localStorage.getItem("wz_sidebar_collapsed") || "{}");
+
+      function _render() {
+        var _activePanel = "";
+        document.querySelectorAll(".wz-panel").forEach(function(el) { if (el.style.display !== "none") _activePanel = el.id.replace("panel-",""); });
+        var html = '';
+        _GROUPS.forEach(function(g) {
+          var hasPlugins = g.plugins.some(function(pid) { return !!_ALL_PLUGINS[pid]; });
+          if (!hasPlugins) return;
+          var isOpen = !_collapsed[g.id];
+          html += '<div class="wz-sidebar-group" data-group="' + g.id + '">';
+          html += '<div class="wz-sidebar-group-header" onclick="_wzToggleGroup(\'' + g.id + '\')" style="display:flex;align-items:center;gap:8px;padding:14px 18px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);">';
+          html += '<span style="font-size:13px;font-weight:700;color:var(--text);flex:1;">' + g.label + '</span>';
+          html += '<span style="font-size:10px;color:var(--muted);transition:transform .2s;transform:rotate(' + (isOpen ? '0' : '-90') + 'deg);">▼</span>';
+          html += '</div>';
+          html += '<div class="wz-sidebar-group-body" style="display:' + (isOpen ? 'block' : 'none') + ';">';
+          g.plugins.forEach(function(pid) {
+            var p = _ALL_PLUGINS[pid];
+            if (!p) return;
+            var isActive = pid === _activePanel;
+            html += '<div class="wz-sidebar-item' + (isActive ? ' active' : '') + '" data-panel="' + pid + '" data-search-label="' + p.label.toLowerCase() + ' ' + pid + '" onclick="wzSelectPanel(\'' + pid + '\')">';
+            html += p.svg;
+            html += '<span data-i18n="wz_sidebar_' + pid + '">' + p.label + '</span>';
+            html += '</div>';
+          });
+          html += '</div></div>';
+        });
+        container.innerHTML = html;
+      }
+
+      window._wzToggleGroup = function(gid) {
+        _collapsed[gid] = !_collapsed[gid];
+        localStorage.setItem("wz_sidebar_collapsed", JSON.stringify(_collapsed));
+        _render();
+        // Re-apply active state from wzSelectPanel
+        var activePanel = "";
+        document.querySelectorAll(".wz-panel").forEach(function(el) { if (el.style.display !== "none") activePanel = el.id.replace("panel-",""); });
+        if (activePanel && window.wzSelectPanel) {
+          // Just update highlights without re-triggering panel switch
+          document.querySelectorAll(".wz-sidebar-item").forEach(function(el) {
+            el.classList.toggle("active", el.dataset.panel === activePanel);
+          });
+          document.querySelectorAll(".wz-sidebar-group").forEach(function(grp) {
+            var header = grp.querySelector(".wz-sidebar-group-header");
+            var body = grp.querySelector(".wz-sidebar-group-body");
+            if (!header || !body) return;
+            var isClosed = body.style.display === "none";
+            var hasActive = !!grp.querySelector('.wz-sidebar-item[data-panel="' + activePanel + '"]');
+            var show = isClosed && hasActive;
+            var _a3 = getComputedStyle(document.documentElement).getPropertyValue('--accent3').trim();
+            var _a3rgb = _a3.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+            var _a3bg = _a3rgb ? "rgba(" + parseInt(_a3rgb[1],16) + "," + parseInt(_a3rgb[2],16) + "," + parseInt(_a3rgb[3],16) + ",.1)" : "rgba(0,136,204,.1)";
+            header.style.background = show ? _a3bg : "rgba(255,255,255,.02)";
+            var lbl = header.querySelectorAll("span")[1];
+            if (lbl) lbl.style.color = show ? _a3 : "";
+            var badge = header.querySelector(".wz-group-active-badge");
+            if (show) {
+              var ai = grp.querySelector('.wz-sidebar-item[data-panel="' + activePanel + '"] span');
+              if (!badge) { badge = document.createElement("span"); badge.className = "wz-group-active-badge"; badge.style.cssText = "font-size:9px;color:var(--accent3);margin-right:4px;"; header.insertBefore(badge, header.lastElementChild); }
+              badge.textContent = ai ? ai.textContent : activePanel;
+            } else if (badge) { badge.remove(); }
+          });
+        }
+      };
+
+      _render();
+    })();
+    </script>
   </div>
 
   <!-- Hauptbereich -->
@@ -343,16 +590,16 @@
     <div id="panel-global" class="wz-panel">
       <div class="wz-main-header">
         <h2 data-i18n="wz_global_title">Global Zones</h2>
-        <span style="font-size:11px;color:var(--muted);" data-i18n="wz_global_subtitle">Cross-category zones for all observation types</span>
-        <p class="wz-panel-desc" data-i18n="wz_global_desc">Global zones apply simultaneously to all observation categories. Once drawn, the zone automatically appears in every active category – ideal for a permanent observation area you don't want to define multiple times.</p>
+
+        <div class="wz-panel-desc" data-i18n-html="wz_global_desc">Global zones apply simultaneously to all observation categories. Once drawn, the zone automatically appears in every active category &ndash; ideal for a permanent observation area you don&rsquo;t want to define multiple times.<br><br><b>Time Focus:</b> Assign an event (Time Focus) to a global zone via the zone menu (&middot;&middot;&middot; &rarr; Time Focus). All plugins that collect data for this zone will automatically align their analysis around the event date &ndash; showing data before, during and after the event for comparative analysis.<br><br><b>Data Collection ("Sammeln"):</b> Click the &ldquo;Sammeln&rdquo; button on a global zone to collect data from multiple plugins simultaneously. Configure plugin-specific parameters (e.g. countries for Internet Health, commodities, Telegram search terms), then collect all data in one step. Results are displayed in a comprehensive overview with maps, charts, images and tables &ndash; and automatically saved for later review. Use the history button to recall the last collection without re-fetching.<br><br><b>Typical workflow:</b><ol style="margin:6px 0 0 18px;font-size:inherit;"><li>Draw a global zone on the map (rectangle or polygon)</li><li>Name it and optionally assign a Time Focus event</li><li>Click &ldquo;Sammeln&rdquo; &rarr; select and configure plugins &rarr; collect</li><li>Review the aggregated results across all data sources</li><li>Use &ldquo;Live &ouml;ffnen&rdquo; on individual plugin cards for deep analysis</li></ol></div>
       </div>
       <div class="wz-main-body">
-        <div id="wz-map-global" class="wz-map-container" style="height:500px;"></div>
+        <div id="wz-map-global" class="wz-map-container"></div>
         <div class="wz-hint" id="wz-hint-global" data-i18n="wz_global_hint">
           Define cross-category observation zones here that you can reuse across all active categories
           – without having to redraw the zone each time.
         </div>
-        <div class="wz-zone-list" id="wz-zones-global"></div>
+        <div class="wz-zone-list wz-zone-list-2col" id="wz-zones-global"></div>
       </div>
     </div>
 
@@ -380,56 +627,59 @@
   {% endfor %}
 </div>
 
-<!-- Live-Daten Popup -->
-<div id="wz-live-overlay" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.6);
-     align-items:flex-start;justify-content:center;overflow-y:auto;padding:2vh 0;" onclick="if(event.target===this)wzCloseLive()">
-  <div id="wz-live-spinner" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;position:fixed;inset:0;z-index:1;">
-    <div style="width:44px;height:44px;border:4px solid rgba(255,255,255,.15);border-top-color:#06b6d4;border-radius:50%;animation:wz-spin 0.75s linear infinite;"></div>
-    <div id="wz-live-spinner-text" style="font-size:13px;color:rgba(255,255,255,.7);font-family:sans-serif;" data-i18n="wz_spinner_loading">Lade Daten …</div>
-  </div>
-  <div id="wz-live-box" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;
-              width:96%;max-width:1400px;height:95vh;max-height:95vh;display:flex;flex-direction:column;
-              overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.4);transition:max-width .2s;">
-    {# ── Live-Popup Header ── #}
-    <div id="wz-live-header" style="padding:10px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;">
-      <h3 id="wz-live-title" style="margin:0;font-size:15px;font-weight:600;" data-i18n="wz_live_title_default">Live Data</h3>
-      <span id="wz-live-count" style="font-size:11px;color:var(--muted);"></span>
-      <span id="wz-live-hdr-spacer" style="flex:1;"></span>
-      {# Plugin-Header-Buttons werden per JS hierhin injiziert (vor wz-live-hdr-spacer.nextSibling) #}
-      <button id="wz-live-fs-btn" title="Vollbild"
-              style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px;"
-              onclick="wzToggleFullscreen('wz-live-box')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M8 3H5a2 2 0 0 0-2 2v3"/>
-          <path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
-          <path d="M3 16v3a2 2 0 0 0 2 2h3"/>
-          <path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
-        </svg>
-      </button>
-      <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px;"
-              onclick="wzCloseLive()">&#10005;</button>
+<!-- Live-Daten Popup Template (wird per JS geklont) -->
+<template id="wz-popup-tpl">
+  <div data-role="overlay" style="display:flex;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.6);
+       align-items:center;justify-content:center;overflow-y:auto;padding:2vh 0;">
+    <div data-role="spinner" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;position:fixed;inset:0;z-index:1;">
+      <div style="width:44px;height:44px;border:4px solid rgba(255,255,255,.15);border-top-color:#06b6d4;border-radius:50%;animation:wz-spin 0.75s linear infinite;"></div>
+      <div data-role="spinner-text" style="font-size:13px;color:rgba(255,255,255,.7);font-family:sans-serif;" data-i18n="wz_spinner_loading">Lade Daten …</div>
     </div>
-    {# ── Slot: Refresh-Leiste (per Plugin-JS injiziert) ── #}
-    {# ── Karte ── #}
-    <div id="wz-map-row" style="display:flex;flex-shrink:0;">
-      <div id="wz-live-map" style="height:clamp(200px,42vh,560px);min-height:120px;flex:1;overflow:hidden;position:relative;">
+    <div data-role="box" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;
+                width:96%;max-width:1400px;max-height:88vh;display:flex;flex-direction:column;
+                overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.4);transition:max-width .2s;">
+      <div data-role="header" style="padding:10px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;">
+        <h3 data-role="title" style="margin:0;font-size:15px;font-weight:600;" data-i18n="wz_live_title_default">Live Data</h3>
+        <span data-role="count" style="font-size:11px;color:var(--muted);"></span>
+        <span data-role="hdr-spacer" style="flex:1;"></span>
+        <button data-role="wide-btn" title="Volle Breite"
+                style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8l4 4-4 4"/><path d="M6 8l-4 4 4 4"/><line x1="2" y1="12" x2="22" y2="12"/>
+          </svg>
+        </button>
+        <button data-role="fs-btn" title="Vollbild"
+                style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3"/>
+            <path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
+            <path d="M3 16v3a2 2 0 0 0 2 2h3"/>
+            <path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+          </svg>
+        </button>
+        <button data-role="zoom-btn" title="Lupen-Vollbild"
+                style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+          </svg>
+        </button>
+        <button data-role="close-btn" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px;">&#10005;</button>
       </div>
-      {# Seitenpanels werden per Plugin-JS injiziert #}
-    </div>
-    {# ── Slot: Unter-Karte-Buttons (per Plugin-JS injiziert) ── #}
-    <div id="wz-under-map-bar" style="display:none;padding:6px 14px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;justify-content:flex-end;align-items:center;gap:8px;">
-    </div>
-    <div id="wz-resize-map" style="display:none;"></div>
-    {# ── Slot: Plugin-Content zwischen Karte und Liste (per JS) ── #}
-    {# ── Sticky-Header + Liste ── #}
-    <div id="wz-live-sticky" style="display:none;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);"></div>
-    <div id="wz-live-body" style="flex:1;overflow-y:auto;padding:0;min-height:0;">
-      <div id="wz-live-loading" style="text-align:center;padding:30px;color:var(--muted);" data-i18n="wz_loading_live">Loading live data …</div>
-      <div id="wz-live-error" style="display:none;text-align:center;padding:20px;color:var(--danger);"></div>
-      <div id="wz-live-content" style="display:none;padding:0 16px 12px;"></div>
+      <div data-role="map-row" style="display:none;flex-shrink:0;">
+        <div data-role="map" style="height:clamp(200px,42vh,560px);min-height:120px;flex:1;overflow:hidden;position:relative;"></div>
+      </div>
+      <div data-role="under-map-bar" style="display:none;padding:6px 14px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;justify-content:flex-end;align-items:center;gap:8px;"></div>
+      <div data-role="resize-map" style="display:none;"></div>
+      <div data-role="sticky" style="display:none;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);"></div>
+      <div data-role="body" style="flex:1;overflow-y:auto;padding:0;min-height:0;">
+        <div data-role="loading" style="text-align:center;padding:30px;color:var(--muted);" data-i18n="wz_loading_live">Loading live data …</div>
+        <div data-role="error" style="display:none;text-align:center;padding:20px;color:var(--danger);"></div>
+        <div data-role="content" style="display:none;padding:0 16px 12px;"></div>
+      </div>
     </div>
   </div>
-</div>
+</template>
+{# Compat: Legacy-ID-Overlay wird nicht mehr genutzt, Popup wird per Template geklont #}
 
 {% endblock %}
 
@@ -444,12 +694,88 @@
   // Sidebar-Suchfilter
   window.wzFilterSidebar = function(q) {
     q = (q || "").toLowerCase().trim();
+    // Show/hide individual items
     document.querySelectorAll(".wz-sidebar-item[data-search-label]").forEach(function(el) {
       var label = el.getAttribute("data-search-label") || "";
       el.style.display = (!q || label.indexOf(q) !== -1) ? "" : "none";
     });
+    // If searching: expand all groups that have visible items, hide empty groups
+    document.querySelectorAll(".wz-sidebar-group").forEach(function(grp) {
+      var body = grp.querySelector(".wz-sidebar-group-body");
+      var header = grp.querySelector(".wz-sidebar-group-header");
+      if (!body) return;
+      var visibleItems = body.querySelectorAll('.wz-sidebar-item[style=""],.wz-sidebar-item:not([style*="none"])');
+      var hasVisible = Array.from(body.querySelectorAll('.wz-sidebar-item')).some(function(el) {
+        return el.style.display !== "none";
+      });
+      if (q) {
+        // While searching: show group if it has matches, expand it
+        grp.style.display = hasVisible ? "" : "none";
+        if (hasVisible) body.style.display = "block";
+      } else {
+        // No search: restore collapsed state
+        grp.style.display = "";
+        var _collapsed = JSON.parse(localStorage.getItem("wz_sidebar_collapsed") || "{}");
+        var gid = grp.dataset.group;
+        body.style.display = _collapsed[gid] ? "none" : "block";
+      }
+    });
   };
 })();
+</script>
+
+<!-- Fullscreen Loading Spinner (für alle Live-Abrufe) -->
+<div id="wz-loading-overlay" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(15,17,23,.85);
+     align-items:center;justify-content:center;flex-direction:column;gap:18px;backdrop-filter:blur(4px);">
+  <div style="width:44px;height:44px;border:4px solid rgba(255,255,255,.15);border-top-color:#06b6d4;border-radius:50%;animation:wz-spin 0.75s linear infinite;"></div>
+  <div id="wz-loading-text" style="color:rgba(255,255,255,.8);font-size:14px;font-weight:500;text-align:center;max-width:400px;">Lade Daten …</div>
+</div>
+<style>@keyframes wz-spin { to { transform: rotate(360deg); } }</style>
+
+<!-- Help-Drawer (slide-in von rechts) -->
+<div class="wz-help-overlay" id="wz-help-overlay" onclick="wzCloseHelp()"></div>
+<div class="wz-help-drawer" id="wz-help-drawer">
+  <div class="wz-help-drawer-header">
+    <h3 id="wz-help-drawer-title"></h3>
+    <button class="wz-help-drawer-close" onclick="wzCloseHelp()">&times;</button>
+  </div>
+  <div class="wz-help-drawer-body" id="wz-help-drawer-body"></div>
+</div>
+<script>
+function wzOpenHelp(title, html) {
+  document.getElementById("wz-help-drawer-title").textContent = title;
+  document.getElementById("wz-help-drawer-body").innerHTML = html;
+  requestAnimationFrame(function() {
+    document.getElementById("wz-help-overlay").classList.add("open");
+    document.getElementById("wz-help-drawer").classList.add("open");
+  });
+}
+function wzCloseHelp() {
+  document.getElementById("wz-help-overlay").classList.remove("open");
+  document.getElementById("wz-help-drawer").classList.remove("open");
+}
+document.addEventListener("keydown", function(e) { if (e.key === "Escape") wzCloseHelp(); });
+
+// Inject ?-button into every wz-main-header that has a .wz-panel-desc
+document.addEventListener("DOMContentLoaded", function() {
+  document.querySelectorAll(".wz-main-header").forEach(function(header) {
+    var descs = header.querySelectorAll(".wz-panel-desc");
+    if (!descs.length) return;
+    var title = "";
+    var h2 = header.querySelector("h2");
+    if (h2) title = h2.textContent.trim();
+    var html = "";
+    descs.forEach(function(d) { html += "<p>" + d.innerHTML + "</p>"; });
+    var btn = document.createElement("button");
+    btn.className = "wz-help-btn";
+    btn.textContent = "?";
+    btn.title = "Info";
+    btn.onclick = function() { wzOpenHelp(title, html); };
+    // Insert right after the h2 title
+    if (h2 && h2.nextSibling) header.insertBefore(btn, h2.nextSibling);
+    else header.appendChild(btn);
+  });
+});
 </script>
 
 <!-- WZ Namespace -->
@@ -457,12 +783,15 @@
 window.WZ = {
   PLUGIN_IDS: ["global"{% for p in wz_plugins %}, "{{ p.plugin_id }}"{% endfor %}],
   ZONE_COLORS: { global: "#8b5cf6", {% for p in wz_plugins %}"{{ p.plugin_id }}": "{{ p.meta.color }}", {% endfor %} },
+  PLUGIN_LABELS: { global: "Global", {% for p in wz_plugins %}"{{ p.plugin_id }}": "{{ p.meta.label|safe }}", {% endfor %} },
   _renderers: {},
   _plugins: {},
   _onLiveClose: [],
   _onLiveReset: [],
   _onResizeParcoords: [],
   _onFullscreenChange: [],
+  _activePopups: new Map(),   // zoneId → PopupContext
+  _currentCtx: null,          // aktuell geöffneter PopupContext (Compat-Shim)
   registerRenderer: function(t, fn) { this._renderers[t] = fn; },
   registerPlugin: function(id, cfg) {
     this._plugins[id] = cfg;

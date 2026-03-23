@@ -1,11 +1,10 @@
 <div id="panel-censys" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_censys_title">Censys Search</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_censys_source">Source: Censys Search API v2</span>
     <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="wzAddCensys()" data-i18n="wz_censys_add_btn">
       + Add Search
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_censys_desc">Searches for exposed hosts and services on the internet – with geographic filter (country, city) and port filter. "Live" executes the query and shows all found hosts with open ports, service and ASN. Requires a free Censys account (censys.io).</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_censys_help">Searches for exposed hosts and services on the internet using the Censys search engine, with geographic and port-based filtering.<br><br><b>How to use:</b> Create a search query with filters for country, city, port or service type (e.g. "location.country_code=DE and services.port=22"). Click "Live" to execute the query. Results show each host with IP address, open ports, running services, ASN and geographic location.<br><br><b>Forensic relevance:</b> Identifies exposed infrastructure in a region — unprotected servers, open management interfaces, or newly deployed services. Monitoring changes over time can reveal infrastructure build-up, takedowns or shifts in hosting patterns. Useful for tracking command-and-control infrastructure or identifying vulnerable government systems.<br><br><b>Data source:</b> Censys Search API v2 — requires a free Censys account (censys.io).</div>
   </div>
   <div class="wz-main-body">
     <div class="wz-hint" id="wz-hint-censys" data-i18n="wz_censys_hint">
@@ -30,7 +29,7 @@
     <input id="cns-ports" type="text" placeholder="22, 80, 443" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;margin-bottom:14px;" oninput="_wzCnsPreview()">
     <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;" data-i18n="wz_censys_lbl_service">Service filter (optional, e.g. SSH, HTTP, RDP)</label>
     <input id="cns-service" type="text" placeholder="SSH" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;margin-bottom:6px;" oninput="_wzCnsPreview()">
-    <p id="cns-query-preview" style="font-size:11px;color:var(--muted);font-family:monospace;margin:0 0 18px;min-height:16px;word-break:break-all;"></p>
+    <p id="cns-query-preview" style="font-size:11px;color:var(--muted);font-family:monospace;margin:0 0 18px;min-height:16px;word-break:break-all;"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button onclick="document.getElementById('wz-censys-modal').style.display='none'"
               style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:7px 18px;cursor:pointer;" data-i18n="wz_censys_cancel">Cancel</button>

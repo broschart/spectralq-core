@@ -1,9 +1,8 @@
 <div id="panel-wayback_cdx" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_wbf_title">Wayback Archiving Frequency</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_wbf_source">Source: Wayback Machine CDX API</span>
-    <button onclick="_wbfCreateZone()" class="btn btn-sm" style="margin-left:auto;background:var(--accent1);color:#fff;border:none;" data-i18n="wz_wbf_add_url">+ Website hinzufügen</button>
-    <p class="wz-panel-desc" data-i18n="wz_wbf_desc">Shows how often a URL was cached by the Internet Archive. High archiving frequency indicates media attention, coordinated access or deliberate archiving. No API key required.</p>
+    <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="_wbfCreateZone()" data-i18n="wz_wbf_add_url">+ Website hinzufügen</button>
+    <div class="wz-panel-desc" data-i18n-html="wz_wbf_help">Analyses how often a URL has been cached by the Internet Archive over time, revealing patterns in archiving frequency.<br><br><b>How to use:</b> Add a URL and click "Live". The system queries the Wayback Machine CDX API and shows the total number of snapshots, the first and last archive dates, daily average frequency and peak archiving periods.<br><br><b>Forensic relevance:</b> High archiving frequency can indicate media attention, coordinated access campaigns or deliberate preservation efforts. A sudden spike in archiving may point to viral content, controversy or anticipated takedowns. Comparing archiving frequency before and after events helps quantify public interest and media impact.<br><br><b>Data source:</b> Wayback Machine CDX API — no API key required.</div>
   </div>
   <div class="wz-main-body">
     <div id="wz-map-wayback_cdx" class="wz-map-container" style="display:none;"></div>

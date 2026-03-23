@@ -24,7 +24,62 @@ class VesselPlugin(WatchZonePlugin):
         "has_history": False,
         "panel_template": "vessel/_panel.html",
         "js_file": "/plugins/watchzone/vessel/static/vessel.js",
+        "apa_action": "vessel_traffic",
     }
+
+    def apa_action_handler(self, action):
+        """Returns dict with: status_msg, report, data_msg, error"""
+        import json as _j
+        from plugins.watchzone.vessel._transport import fetch_ais_vessels
+
+        vt_bbox = action.get("bbox")
+        vt_zone_id = action.get("zone_id")
+        if not vt_bbox and vt_zone_id:
+            from models import WatchZone
+            from plugins.watchzone._helpers import geojson_to_bbox
+            _wz = WatchZone.query.get(vt_zone_id)
+            if _wz and _wz.geometry:
+                vt_bbox = geojson_to_bbox(_j.loads(_wz.geometry))
+
+        if not vt_bbox:
+            return {"error": "vessel_traffic: keine BBox / Zone angegeben"}
+
+        try:
+            vessels = fetch_ais_vessels(vt_bbox)
+            if vessels:
+                types_cnt = {}
+                flags_cnt = {}
+                anomalous = [v for v in vessels if v.get("anomaly_score", 0) > 0]
+                for v in vessels:
+                    u = v.get("usage", "Unbekannt")
+                    types_cnt[u] = types_cnt.get(u, 0) + 1
+                    f = v.get("flag") or "?"
+                    flags_cnt[f] = flags_cnt.get(f, 0) + 1
+                type_str = ", ".join(f"{k}: {n}" for k, n in sorted(types_cnt.items(), key=lambda x: -x[1])[:5])
+                flag_str = ", ".join(f"{k}: {n}" for k, n in sorted(flags_cnt.items(), key=lambda x: -x[1])[:5])
+                top_anom = [f"{v.get('name') or v.get('mmsi','?')} ({', '.join(v.get('anomaly_flags',[]))})" for v in anomalous[:3]]
+                report_parts = [
+                    f"SCHIFFSVERKEHR (bbox={vt_bbox}):",
+                    f"  {len(vessels)} Schiffe in der Zone",
+                    f"  Typen: {type_str}",
+                    f"  Flaggen: {flag_str}",
+                    f"  Auffällige Schiffe ({len(anomalous)}): {'; '.join(top_anom) if top_anom else 'keine'}",
+                ]
+                return {
+                    "status_msg": f"AIS-Schiffsdaten werden abgerufen (bbox={vt_bbox}) …",
+                    "report": "\n".join(report_parts),
+                    "data_msg": f"AIS: {len(vessels)} Schiffe – {type_str} | {len(anomalous)} auffällig",
+                    "error": None,
+                }
+            else:
+                return {
+                    "status_msg": f"AIS-Schiffsdaten werden abgerufen (bbox={vt_bbox}) …",
+                    "report": f"SCHIFFSVERKEHR (bbox={vt_bbox}): Keine Schiffe in der Zone",
+                    "data_msg": "AIS: Keine Schiffe in der Zone gefunden",
+                    "error": None,
+                }
+        except Exception as e:
+            return {"error": f"AIS-Fehler: {str(e)[:120]}"}
 
     def live_handler(self, zone, config, geo, bbox, user_id):
         from plugins.watchzone.vessel._transport import fetch_ais_vessels

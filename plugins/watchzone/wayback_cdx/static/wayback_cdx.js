@@ -9,16 +9,17 @@ var t = window._t || function(k, fb) { return fb; };
 var _wbfChart = null;
 
 function _renderWaybackCDXLive(data) {
+  var ctx = WZ._currentCtx;
   var daily = data.daily || [];
   var total = data.count || 0;
 
-  document.getElementById("wz-live-count").textContent =
+  ctx.countEl.textContent =
     total + " " + t("wz_wbf_snapshots", "Snapshots") +
     " \u00b7 " + (data.days_with_data || 0) + " " + t("wz_wbf_days", "days");
 
   if (WZ._liveMarkers) WZ._liveMarkers.clearLayers();
 
-  var content = document.getElementById("wz-live-content");
+  var content = ctx.contentEl;
 
   if (data.error) {
     content.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444;">' + _esc(data.error) + '</div>';
@@ -28,7 +29,7 @@ function _renderWaybackCDXLive(data) {
   var dateFrom = data.date_from || "";
   var dateTo = data.date_to || "";
 
-  var html = '<div style="padding:12px 16px;overflow-y:auto;">';
+  var html = '<div style="padding:12px 0;overflow-y:auto;">';
 
   // Date range picker + URL
   html += '<div style="margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
@@ -37,10 +38,12 @@ function _renderWaybackCDXLive(data) {
   html += '<span style="font-size:12px;font-family:monospace;color:var(--text);word-break:break-all;">' + _esc(data.url || "?") + '</span>';
   html += '</div>';
   html += '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">';
-  html += '<input type="date" id="wbf-date-from" value="' + _esc(dateFrom) + '" style="font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);">';
+  html += '<span style="font-size:11px;color:var(--muted);">' + _fmtD(dateFrom) + '</span>';
+  html += '<input type="date" id="wbf-date-from" value="' + _esc(dateFrom) + '" style="font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);width:28px;opacity:.6;" title="' + _fmtD(dateFrom) + '">';
   html += '<span style="color:var(--muted);font-size:11px;">\u2013</span>';
-  html += '<input type="date" id="wbf-date-to" value="' + _esc(dateTo) + '" style="font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);">';
-  html += '<button id="wbf-reload-btn" onclick="wbfReloadRange()" style="font-size:11px;font-weight:600;padding:4px 10px;border:1px solid var(--accent1);border-radius:6px;background:var(--accent1);color:#fff;cursor:pointer;white-space:nowrap;">' + t("wz_wbf_apply","Apply") + '</button>';
+  html += '<input type="date" id="wbf-date-to" value="' + _esc(dateTo) + '" style="font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);width:28px;opacity:.6;" title="' + _fmtD(dateTo) + '">';
+  html += '<span style="font-size:11px;color:var(--muted);">' + _fmtD(dateTo) + '</span>';
+  html += '<button id="wbf-reload-btn" onclick="wbfReloadRange()" style="font-size:11px;font-weight:600;padding:4px 10px;border:1px solid var(--accent3);border-radius:6px;background:var(--accent3);color:#fff;cursor:pointer;white-space:nowrap;">' + t("wz_wbf_apply","Apply") + '</button>';
   html += '</div></div>';
 
   // Stats row
@@ -55,17 +58,22 @@ function _renderWaybackCDXLive(data) {
   if (data.peak > 0) {
     html += '<div style="text-align:center;">' +
       '<div style="font-size:16px;font-weight:700;color:#ef4444;">' + data.peak + '</div>' +
-      '<div style="font-size:10px;color:var(--muted);">' + t("wz_wbf_peak","Peak") + ' ' + (data.peak_date||"").slice(5) + '</div></div>';
+      '<div style="font-size:10px;color:var(--muted);">' + t("wz_wbf_peak","Peak") + ' ' + _fmtD(data.peak_date) + '</div></div>';
   }
   if (data.first_date) {
     html += '<div style="text-align:center;">' +
-      '<div style="font-size:13px;font-weight:600;color:var(--muted);">' + _esc(data.first_date) + '</div>' +
+      '<div style="font-size:13px;font-weight:600;color:var(--muted);">' + _fmtD(data.first_date) + '</div>' +
       '<div style="font-size:10px;color:var(--muted);">' + t("wz_wbf_first","First") + '</div></div>';
   }
   if (data.last_date) {
     html += '<div style="text-align:center;">' +
-      '<div style="font-size:13px;font-weight:600;color:var(--muted);">' + _esc(data.last_date) + '</div>' +
+      '<div style="font-size:13px;font-weight:600;color:var(--muted);">' + _fmtD(data.last_date) + '</div>' +
       '<div style="font-size:10px;color:var(--muted);">' + t("wz_wbf_last","Last") + '</div></div>';
+  }
+  if (data.domain_total_pages != null) {
+    html += '<div style="text-align:center;">' +
+      '<div style="font-size:16px;font-weight:700;color:#8b5cf6;">' + data.domain_total_pages.toLocaleString() + '</div>' +
+      '<div style="font-size:10px;color:var(--muted);">' + t("wz_wbf_domain_pages","Domain-Seiten (gesamt)") + '</div></div>';
   }
   html += '</div></div>';
 
@@ -73,7 +81,7 @@ function _renderWaybackCDXLive(data) {
   if (daily.length > 2) {
     html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;">';
     html += '<div style="font-size:12px;font-weight:600;margin-bottom:6px;">' + t("wz_wbf_header","Archiving frequency") + '</div>';
-    html += '<canvas id="wbf-chart" width="600" height="160" style="width:100%;height:160px;"></canvas>';
+    html += '<div style="position:relative;height:160px;"><canvas id="wbf-chart"></canvas></div>';
     html += '</div>';
   }
 
@@ -82,11 +90,140 @@ function _renderWaybackCDXLive(data) {
       t("wz_wbf_empty","No Wayback snapshots for this URL.") + '</div>';
   }
 
+  // Site tree
+  if (data.site_tree) {
+    var st = data.site_tree;
+    html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-top:10px;">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
+    html += '<span style="font-size:12px;font-weight:600;">' + t("wz_wbf_site_tree","Website-Struktur") + '</span>';
+    html += '<span style="font-size:11px;color:var(--muted);">' + (st.total_urls || 0) + ' URLs</span>';
+    html += '</div>';
+    // Mime type breakdown (clickable filter)
+    if (st.mime_counts) {
+      html += '<div id="wbf-mime-filter" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">';
+      var mc = st.mime_counts;
+      Object.keys(mc).forEach(function(m) {
+        var col = m === "HTML" ? "#06b6d4" : m === "Bilder" ? "#22c55e" : m === "JS" ? "#f59e0b" : m === "CSS" ? "#8b5cf6" : m === "PDF" ? "#ef4444" : m === "Daten" ? "#f97316" : "#888";
+        html += '<button class="wbf-mime-btn" data-mime="' + _esc(m) + '" style="font-size:10px;padding:2px 10px;border-radius:10px;border:1px solid ' + col + ';background:' + col + '20;color:' + col + ';cursor:pointer;font-weight:600;" title="Filter: ' + _esc(m) + '">' + _esc(m) + ': ' + mc[m] + '</button>';
+      });
+      html += '<button class="wbf-mime-btn" data-mime="all" style="font-size:10px;padding:2px 10px;border-radius:10px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;">Alle</button>';
+      html += '</div>';
+    }
+    // Render tree
+    html += '<div id="wbf-tree" style="font-size:11px;font-family:monospace;max-height:300px;overflow-y:auto;"></div>';
+    html += '</div>';
+  }
+
   html += '</div>';
   content.innerHTML = html;
 
   // Render chart
   _renderChart(daily, total);
+
+  // Render site tree (interactive with MIME filter)
+  if (data.site_tree && data.site_tree.tree) {
+    var treeEl = document.getElementById("wbf-tree");
+    var _wbfMimeFilter = "all";
+    var _MIME_COLORS = { HTML: "#06b6d4", Bilder: "#22c55e", JS: "#f59e0b", CSS: "#8b5cf6", PDF: "#ef4444", Daten: "#f97316", Sonstige: "#888" };
+
+    function _wbfRenderTree() {
+      if (!treeEl) return;
+      treeEl.innerHTML = "";
+
+      // Build domain base URL for links
+      var _wbfDomain = data.url || "";
+      if (_wbfDomain && _wbfDomain.indexOf("://") === -1) _wbfDomain = "https://" + _wbfDomain;
+      _wbfDomain = _wbfDomain.replace(/\/+$/, "");
+
+      function _buildNode(nodeData, name, depth, parentPath) {
+        var children = nodeData.children || {};
+        var mime = nodeData.mime;
+        var childKeys = Object.keys(children).sort();
+        var isLeaf = childKeys.length === 0;
+        var fullPath = parentPath + "/" + name;
+
+        // Filter: skip if leaf doesn't match mime filter
+        if (_wbfMimeFilter !== "all") {
+          if (isLeaf && mime && mime !== _wbfMimeFilter) return null;
+          if (!isLeaf) {
+            var hasMatch = false;
+            function _checkMatch(n) {
+              var ck = Object.keys(n.children || {});
+              if (ck.length === 0 && n.mime === _wbfMimeFilter) { hasMatch = true; return; }
+              ck.forEach(function(k) { if (!hasMatch) _checkMatch(n.children[k]); });
+            }
+            _checkMatch(nodeData);
+            if (!hasMatch) return null;
+          }
+        }
+
+        var div = document.createElement("div");
+        div.style.paddingLeft = (depth * 16) + "px";
+        var row = document.createElement("div");
+        row.style.cssText = "display:flex;align-items:center;gap:4px;padding:2px 0;cursor:" + (isLeaf ? "default" : "pointer") + ";color:var(--text);";
+        var mimeCol = mime ? (_MIME_COLORS[mime] || "#888") : "#06b6d4";
+        var mimeBadge = mime ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;background:' + mimeCol + '20;color:' + mimeCol + ';margin-left:4px;">' + _esc(mime) + '</span>' : '';
+        // Wayback link for leaf nodes
+        var nameHtml;
+        if (isLeaf && mime && nodeData.url) {
+          var wbUrl = "https://web.archive.org/web/*/" + nodeData.url;
+          nameHtml = '<a href="' + _esc(wbUrl) + '" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;" title="' + _esc(nodeData.url) + '">' + _esc(name) + '</a>';
+        } else {
+          nameHtml = '<span>' + _esc(name) + '</span>';
+        }
+        row.innerHTML = (isLeaf
+          ? '<span style="color:' + mimeCol + ';width:12px;text-align:center;">\u2022</span>'
+          : '<span style="color:#06b6d4;width:12px;text-align:center;font-size:8px;">\u25b6</span>')
+          + nameHtml
+          + mimeBadge
+          + (childKeys.length ? '<span style="color:var(--muted);font-size:9px;margin-left:4px;">(' + childKeys.length + ')</span>' : '');
+        div.appendChild(row);
+        if (!isLeaf) {
+          var childDiv = document.createElement("div");
+          childDiv.style.display = "none";
+          childKeys.forEach(function(k) {
+            var childNode = _buildNode(children[k], k, depth + 1, fullPath);
+            if (childNode) childDiv.appendChild(childNode);
+          });
+          if (childDiv.children.length) {
+            div.appendChild(childDiv);
+            row.addEventListener("click", function() {
+              var open = childDiv.style.display !== "none";
+              childDiv.style.display = open ? "none" : "block";
+              row.querySelector("span").textContent = open ? "\u25b6" : "\u25bc";
+            });
+          }
+        }
+        return div;
+      }
+
+      var rootKeys = Object.keys(data.site_tree.tree).sort();
+      var rootDiv = document.createElement("div");
+      rootDiv.style.cssText = "font-weight:700;color:#06b6d4;margin-bottom:4px;";
+      rootDiv.textContent = "\ud83c\udf10 / (" + rootKeys.length + " Verzeichnisse)" + (_wbfMimeFilter !== "all" ? " \u2014 Filter: " + _wbfMimeFilter : "");
+      treeEl.appendChild(rootDiv);
+      rootKeys.forEach(function(k) {
+        var node = _buildNode(data.site_tree.tree[k], k, 1, "");
+        if (node) treeEl.appendChild(node);
+      });
+    }
+
+    _wbfRenderTree();
+
+    // MIME filter click handlers
+    document.querySelectorAll(".wbf-mime-btn").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        var mime = btn.getAttribute("data-mime");
+        _wbfMimeFilter = mime;
+        // Highlight active
+        document.querySelectorAll(".wbf-mime-btn").forEach(function(b) {
+          b.style.fontWeight = b.getAttribute("data-mime") === mime ? "800" : "600";
+          b.style.opacity = b.getAttribute("data-mime") === mime ? "1" : "0.5";
+        });
+        _wbfRenderTree();
+      });
+    });
+  }
 }
 
 function _renderChart(daily, total) {
@@ -96,9 +233,25 @@ function _renderChart(daily, total) {
 
   if (_wbfChart) { _wbfChart.destroy(); _wbfChart = null; }
 
-  var labels = daily.map(function(d) { return d.date; });
-  var values = daily.map(function(d) { return d.count; });
-  var avg = total / Math.max(daily.length, 1);
+  // Fill gaps — include days with zero snapshots
+  var dateMap = {};
+  daily.forEach(function(d) { dateMap[d.date] = d.count; });
+  var sortedDates = daily.map(function(d) { return d.date; }).sort();
+  var labels = [], values = [];
+  if (sortedDates.length >= 2) {
+    var cur = new Date(sortedDates[0] + "T12:00:00");
+    var end = new Date(sortedDates[sortedDates.length - 1] + "T12:00:00");
+    while (cur <= end) {
+      var ds = cur.toISOString().slice(0, 10);
+      labels.push(ds);
+      values.push(dateMap[ds] || 0);
+      cur.setDate(cur.getDate() + 1);
+    }
+  } else {
+    labels = sortedDates;
+    values = daily.map(function(d) { return d.count; });
+  }
+  var avg = total / Math.max(labels.length, 1);
   var avgLine = values.map(function() { return Math.round(avg * 10) / 10; });
 
   _wbfChart = new Chart(canvas.getContext("2d"), {
@@ -130,7 +283,7 @@ function _renderChart(daily, total) {
       maintainAspectRatio: false,
       plugins: { legend: { display: true, labels: { font: { size: 10 }, boxWidth: 10 } } },
       scales: {
-        x: { ticks: { maxTicksLimit: 12, font: { size: 9 }, color: "#888" }, grid: { display: false } },
+        x: { ticks: { maxTicksLimit: 12, font: { size: 9 }, color: "#888", callback: function(v, i) { return window.fmtDateOnly ? window.fmtDateOnly(labels[i] + "T00:00") : labels[i]; } }, grid: { display: false } },
         y: { min: 0, ticks: { font: { size: 9 }, color: "#888", stepSize: 1 }, grid: { color: "rgba(100,100,100,.1)" } },
       },
       interaction: { intersect: false, mode: "index" },
@@ -166,6 +319,12 @@ window.wbfReloadRange = async function() {
     if (btn) { btn.disabled = false; btn.textContent = t("wz_wbf_apply","Apply"); }
   }
 };
+
+function _fmtD(s) {
+  if (!s) return "";
+  if (window.fmtDateOnly) return window.fmtDateOnly(String(s).replace(" ", "T"));
+  return String(s).slice(0, 10);
+}
 
 function _esc(s) {
   if (!s) return "";

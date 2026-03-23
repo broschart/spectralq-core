@@ -22,7 +22,15 @@
     "wz_wiki_total": "Gesamt",
     "wz_wiki_daily_avg": "Tagesdurchschnitt",
     "wz_wiki_open_article": "Artikel öffnen",
-    "wz_wiki_bytes": "Bytes"
+    "wz_wiki_bytes": "Bytes",
+    "wz_wiki_parcoords": "Autoren-Analyse",
+    "wz_wiki_pc_hint": "Achsen ziehen zum Filtern",
+    "wz_wiki_timeline": "Edit-Timeline",
+    "wz_wiki_authors": "Autoren",
+    "wz_wiki_change_end": "Enddatum ändern",
+    "wz_wiki_loading": "Lade Daten …",
+    "wz_wiki_pc_age": "Profilalter (Tage)",
+    "wz_wiki_help": "Verfolgt Bearbeitungen und Seitenaufrufe bestimmter Wikipedia-Artikel über die Zeit.<br><br><b>Bedienung:</b> Wikipedia-Artikel-URL hinzufügen und auf „Live“ klicken. Das System zeigt Bearbeitungsanzahl und Timeline der letzten 30 Tage, Seitengrößenänderungen und eine Autorenanalyse einschließlich Kontoalter. Parallele Koordinaten filtern nach Bearbeitungsgröße, Autor oder Datum.<br><br><b>Forensische Relevanz:</b> Wikipedia-Artikel über Konflikte, politische Persönlichkeiten oder Organisationen werden oft in koordinierten Kampagnen bearbeitet. Plötzliche Spitzen bei Bearbeitungsaktivität — besonders durch neue Konten — können auf Informationsoperationen hindeuten. Seitenaufruf-Anstiege korrelieren mit Medienereignissen und öffentlicher Aufmerksamkeit. Die Nachverfolgung, wer was wann bearbeitet, gibt Einblick in Narrativkontrollversuche.<br><br><b>Datenquelle:</b> Wikipedia / Wikimedia API — kein API-Key erforderlich."
   },
   "en": {
     "wz_sidebar_wikipedia": "Wikipedia",
@@ -47,7 +55,15 @@
     "wz_wiki_total": "Total",
     "wz_wiki_daily_avg": "Daily average",
     "wz_wiki_open_article": "Open article",
-    "wz_wiki_bytes": "Bytes"
+    "wz_wiki_bytes": "Bytes",
+    "wz_wiki_parcoords": "Author Analysis",
+    "wz_wiki_pc_hint": "Drag axes to filter",
+    "wz_wiki_timeline": "Edit Timeline",
+    "wz_wiki_authors": "Authors",
+    "wz_wiki_change_end": "Change end date",
+    "wz_wiki_loading": "Loading data …",
+    "wz_wiki_pc_age": "Account Age (Days)",
+    "wz_wiki_help": "Tracks edits and page views of specific Wikipedia articles over time.<br><br><b>How to use:</b> Add a Wikipedia article URL and click \"Live\". The system shows the edit count and timeline over the last 30 days, page size changes, and an author analysis including account age. Use parallel coordinates to filter by edit size, author or date.<br><br><b>Forensic relevance:</b> Wikipedia articles about conflicts, political figures or organisations are often edited in coordinated campaigns. Sudden spikes in edit activity — especially by new accounts — can indicate information operations. Page view surges correlate with media events and public attention. Tracking who edits what and when provides insight into narrative control attempts.<br><br><b>Data source:</b> Wikipedia / Wikimedia API — no API key required."
   },
   "fr": {
     "wz_sidebar_wikipedia": "Wikipédia",
@@ -72,7 +88,15 @@
     "wz_wiki_total": "Total",
     "wz_wiki_daily_avg": "Moyenne journalière",
     "wz_wiki_open_article": "Ouvrir l’article",
-    "wz_wiki_bytes": "octets"
+    "wz_wiki_bytes": "octets",
+    "wz_wiki_parcoords": "Analyse des auteurs",
+    "wz_wiki_pc_hint": "Glisser les axes pour filtrer",
+    "wz_wiki_timeline": "Chronologie des modifications",
+    "wz_wiki_authors": "Auteurs",
+    "wz_wiki_change_end": "Changer la date de fin",
+    "wz_wiki_loading": "Chargement des données …",
+    "wz_wiki_pc_age": "Âge du profil (jours)",
+    "wz_wiki_help": "Tracks edits and page views of specific Wikipedia articles over time.<br><br><b>How to use:</b> Add a Wikipedia article URL and click \"Live\". The system shows the edit count and timeline over the last 30 days, page size changes, and an author analysis including account age. Use parallel coordinates to filter by edit size, author or date.<br><br><b>Forensic relevance:</b> Wikipedia articles about conflicts, political figures or organisations are often edited in coordinated campaigns. Sudden spikes in edit activity — especially by new accounts — can indicate information operations. Page view surges correlate with media events and public attention. Tracking who edits what and when provides insight into narrative control attempts.<br><br><b>Data source:</b> Wikipedia / Wikimedia API — no API key required."
   },
   "es": {
     "wz_sidebar_wikipedia": "Wikipedia",
@@ -97,6 +121,14 @@
     "wz_wiki_total": "Total",
     "wz_wiki_daily_avg": "Promedio diario",
     "wz_wiki_open_article": "Abrir artículo",
-    "wz_wiki_bytes": "Bytes"
+    "wz_wiki_bytes": "Bytes",
+    "wz_wiki_parcoords": "Análisis de autores",
+    "wz_wiki_pc_hint": "Arrastrar ejes para filtrar",
+    "wz_wiki_timeline": "Cronología de ediciones",
+    "wz_wiki_authors": "Autores",
+    "wz_wiki_change_end": "Cambiar fecha final",
+    "wz_wiki_loading": "Cargando datos …",
+    "wz_wiki_pc_age": "Antigüedad del perfil (días)",
+    "wz_wiki_help": "Tracks edits and page views of specific Wikipedia articles over time.<br><br><b>How to use:</b> Add a Wikipedia article URL and click \"Live\". The system shows the edit count and timeline over the last 30 days, page size changes, and an author analysis including account age. Use parallel coordinates to filter by edit size, author or date.<br><br><b>Forensic relevance:</b> Wikipedia articles about conflicts, political figures or organisations are often edited in coordinated campaigns. Sudden spikes in edit activity — especially by new accounts — can indicate information operations. Page view surges correlate with media events and public attention. Tracking who edits what and when provides insight into narrative control attempts.<br><br><b>Data source:</b> Wikipedia / Wikimedia API — no API key required."
   }
 }

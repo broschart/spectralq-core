@@ -143,9 +143,14 @@
           <input id="inp-accent2" type="color" value="#4f8ef7"
                  style="width:48px;height:34px;padding:2px 3px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);" />
         </div>
+        <div>
+          <label style="display:block;margin-bottom:4px;font-size:12px;" data-i18n="lbl_accent3">Akzent 3 (Mint)</label>
+          <input id="inp-accent3" type="color" value="#0088cc"
+                 style="width:48px;height:34px;padding:2px 3px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);" />
+        </div>
         <button id="btn-accent-reset" class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:16px;" data-i18n="btn_accent_reset">Zurücksetzen</button>
       </div>
-      <div class="text-muted text-sm" style="margin-top:4px;" data-i18n="accent_help">Akzent 1 für primäre Aktionen (Buttons, Navigation). Akzent 2 für sekundäre Elemente.</div>
+      <div class="text-muted text-sm" style="margin-top:4px;" data-i18n="accent_help">Akzent 1 für primäre Aktionen (Buttons, Navigation). Akzent 2 für sekundäre Elemente. Akzent 3 (Mint) für Hervorhebungen und Selektionen.</div>
     </div>
   </div>
 </div>
@@ -621,8 +626,9 @@ window._mergeI18n({
     lbl_accent_colors: "Akzentfarben",
     lbl_accent1: "Akzent 1 (primär)",
     lbl_accent2: "Akzent 2 (sekundär)",
+    lbl_accent3: "Akzent 3 (Mint)",
     btn_accent_reset: "Zurücksetzen",
-    accent_help: "Akzent 1 für primäre Aktionen (Buttons, Navigation). Akzent 2 für sekundäre Elemente.",
+    accent_help: "Akzent 1 für primäre Aktionen (Buttons, Navigation). Akzent 2 für sekundäre Elemente. Akzent 3 (Mint) für Hervorhebungen und Selektionen.",
     lbl_preview: "Vorschau:",
     lbl_system_default: "Als Systemstandard festlegen (gilt für alle Nutzer ohne eigene Einstellung)",
     card_workflow: "Abruf-Workflow",
@@ -789,6 +795,7 @@ window._mergeI18n({
     lbl_accent_colors: "Accent colors",
     lbl_accent1: "Accent 1 (primary)",
     lbl_accent2: "Accent 2 (secondary)",
+    lbl_accent3: "Accent 3 (Mint)",
     btn_accent_reset: "Reset",
     accent_help: "Accent 1 for primary actions (buttons, navigation). Accent 2 for secondary elements.",
     lbl_preview: "Preview:",
@@ -957,6 +964,7 @@ window._mergeI18n({
     lbl_accent_colors: "Couleurs d'accentuation",
     lbl_accent1: "Accent 1 (primaire)",
     lbl_accent2: "Accent 2 (secondaire)",
+    lbl_accent3: "Accent 3 (Menthe)",
     btn_accent_reset: "Réinitialiser",
     accent_help: "Accent 1 pour les actions principales (boutons, navigation). Accent 2 pour les éléments secondaires.",
     lbl_preview: "Aperçu :",
@@ -1125,6 +1133,7 @@ window._mergeI18n({
     lbl_accent_colors: "Colores de acento",
     lbl_accent1: "Acento 1 (primario)",
     lbl_accent2: "Acento 2 (secundario)",
+    lbl_accent3: "Acento 3 (Menta)",
     btn_accent_reset: "Restablecer",
     accent_help: "Acento 1 para acciones principales (botones, navegación). Acento 2 para elementos secundarios.",
     lbl_preview: "Vista previa:",
@@ -2120,6 +2129,7 @@ window._applyI18n();
       if (ps.query_language) document.getElementById("inp-query-lang").value  = ps.query_language;
       if (ps.accent1) document.getElementById("inp-accent1").value = ps.accent1;
       if (ps.accent2) document.getElementById("inp-accent2").value = ps.accent2;
+      if (ps.accent3) document.getElementById("inp-accent3").value = ps.accent3;
     } catch(_) {
       /* Fallback: Systemstandard */
       try {
@@ -2131,6 +2141,7 @@ window._applyI18n();
         if (gs.query_language) document.getElementById("inp-query-lang").value  = gs.query_language;
         if (gs.accent1) document.getElementById("inp-accent1").value = gs.accent1;
         if (gs.accent2) document.getElementById("inp-accent2").value = gs.accent2;
+        if (gs.accent3) document.getElementById("inp-accent3").value = gs.accent3;
       } catch(__) {}
     }
     updateFmtPreview();
@@ -2141,25 +2152,45 @@ window._applyI18n();
   function _applyAccentPreview() {
     const a1 = document.getElementById("inp-accent1").value;
     const a2 = document.getElementById("inp-accent2").value;
+    const a3 = document.getElementById("inp-accent3").value;
     document.documentElement.style.setProperty("--accent1", a1);
     document.documentElement.style.setProperty("--accent2", a2);
+    document.documentElement.style.setProperty("--accent3", a3);
     window._VT_ACCENT1 = a1;
     window._VT_ACCENT2 = a2;
+    window._VT_ACCENT3 = a3;
+  }
+  function _autoSaveAccents() {
+    _applyAccentPreview();
+    const a1 = document.getElementById("inp-accent1").value;
+    const a2 = document.getElementById("inp-accent2").value;
+    const a3 = document.getElementById("inp-accent3").value;
+    api("/api/settings", { method: "POST", body: JSON.stringify({ key: "accent1", value: a1 }) });
+    api("/api/settings", { method: "POST", body: JSON.stringify({ key: "accent2", value: a2 }) });
+    api("/api/settings", { method: "POST", body: JSON.stringify({ key: "accent3", value: a3 }) });
+    if (_fmtGlobalOn) {
+      api("/api/admin/settings", { method: "POST", body: JSON.stringify({ accent1: a1, accent2: a2, accent3: a3 }) });
+    }
   }
   document.getElementById("inp-accent1").addEventListener("input", _applyAccentPreview);
   document.getElementById("inp-accent2").addEventListener("input", _applyAccentPreview);
+  document.getElementById("inp-accent3").addEventListener("input", _applyAccentPreview);
+  document.getElementById("inp-accent1").addEventListener("change", _autoSaveAccents);
+  document.getElementById("inp-accent2").addEventListener("change", _autoSaveAccents);
+  document.getElementById("inp-accent3").addEventListener("change", _autoSaveAccents);
 
   /* Akzentfarben: Standardwerte */
   const _ACCENT_DEFAULTS = {
-    dark:  { accent1: "#7c5cbf", accent2: "#4f8ef7" },
-    light: { accent1: "#7c3aed", accent2: "#2563eb" },
+    dark:  { accent1: "#7c5cbf", accent2: "#4f8ef7", accent3: "#0088cc" },
+    light: { accent1: "#7c3aed", accent2: "#2563eb", accent3: "#0078b4" },
   };
   document.getElementById("btn-accent-reset").addEventListener("click", () => {
     const theme = document.documentElement.getAttribute("data-theme") || "dark";
     const d = _ACCENT_DEFAULTS[theme] || _ACCENT_DEFAULTS.dark;
     document.getElementById("inp-accent1").value = d.accent1;
     document.getElementById("inp-accent2").value = d.accent2;
-    _applyAccentPreview();
+    document.getElementById("inp-accent3").value = d.accent3;
+    _autoSaveAccents();
   });
 
   /* Speichern */
@@ -2174,6 +2205,7 @@ window._applyI18n();
       const ql = document.getElementById("inp-query-lang").value;
       const a1 = document.getElementById("inp-accent1").value;
       const a2 = document.getElementById("inp-accent2").value;
+      const a3 = document.getElementById("inp-accent3").value;
       /* Persönliche Einstellung speichern */
       await api("/api/settings", { method: "POST", body: JSON.stringify({ key: "date_format", value: df }) });
       await api("/api/settings", { method: "POST", body: JSON.stringify({ key: "time_format", value: tf }) });
@@ -2182,9 +2214,10 @@ window._applyI18n();
       await api("/api/settings", { method: "POST", body: JSON.stringify({ key: "query_language", value: ql }) });
       await api("/api/settings", { method: "POST", body: JSON.stringify({ key: "accent1", value: a1 }) });
       await api("/api/settings", { method: "POST", body: JSON.stringify({ key: "accent2", value: a2 }) });
+      await api("/api/settings", { method: "POST", body: JSON.stringify({ key: "accent3", value: a3 }) });
       /* Superadmin: ggf. als Systemstandard */
       if (_fmtGlobalOn) {
-        await api("/api/admin/settings", { method: "POST", body: JSON.stringify({ date_format: df, time_format: tf, trends_tz: parseInt(tz, 10), ui_language: lg, query_language: ql, accent1: a1, accent2: a2 }) });
+        await api("/api/admin/settings", { method: "POST", body: JSON.stringify({ date_format: df, time_format: tf, trends_tz: parseInt(tz, 10), ui_language: lg, query_language: ql, accent1: a1, accent2: a2, accent3: a3 }) });
       }
       /* Sprache sofort anwenden */
       localStorage.setItem("vt_ui_lang", lg);

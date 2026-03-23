@@ -10,6 +10,7 @@ class SsimPlugin(AnalysisPlugin):
         "color": "#60a5fa",
         "symbol": "▣",
         "description": "Selbstähnlichkeitsmatrix zur Erkennung wiederkehrender Muster in Zeitreihen.",
+        "apa_method": "self_similarity",
         "default_show_in": ["popup"],
         "button_id": "",
         "requires_multi_kw": False,

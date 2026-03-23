@@ -1,0 +1,49 @@
+<script>
+(function() {
+  'use strict';
+
+  window.openAutoCorrForKw = async function(kwId) {
+    toast(t('an_ac_searching','Suche korrelierte Keywords\u2026'), "ok");
+    try {
+      const res = await api(`/api/auto-correlate/${kwId}`);
+      if (res.error) { toast(res.error, "error"); return; }
+      if (!res.top || !res.top.length) { toast(t('an_ac_none','Keine korrelierten Keywords gefunden.'), "error"); return; }
+      const loaded = [];
+      const lagInfo = [];
+      for (const match of res.top) {
+        if (selectedIds.has(match.id)) {
+          loaded.push(`${match.keyword} (r=${match.correlation}, bereits aktiv)`);
+          if (match.best_lag) lagInfo.push({ id: match.id, lag: match.best_lag });
+          continue;
+        }
+        if (selectedIds.size >= MAX_KW) break;
+        await addToSelection(match.id);
+        const lagStr = match.best_lag ? `, lag=${match.best_lag}` : '';
+        loaded.push(`${match.keyword} (r=${match.best_lag_r || match.correlation}${lagStr})`);
+        if (match.best_lag) lagInfo.push({ id: match.id, lag: match.best_lag });
+      }
+      await refreshChart();
+      if (lagInfo.length) {
+        const entries = Object.values(rawData).filter(e => e.data.length > 0);
+        const refIdx = entries.findIndex(e => e.kwId === kwId);
+        if (refIdx >= 0) {
+          for (const li of lagInfo) {
+            const matchIdx = entries.findIndex(e => e.kwId === li.id);
+            if (matchIdx < 0) continue;
+            const [i, j] = refIdx < matchIdx ? [refIdx, matchIdx] : [matchIdx, refIdx];
+            const pairKey = `${i}_${j}`;
+            const lag = refIdx < matchIdx ? li.lag : -li.lag;
+            corrShiftMap[pairKey] = lag;
+          }
+          buildCorrelation();
+          updateChartShifts();
+        }
+      }
+      toast(`Auto Correlate: ${loaded.join(", ")}`, "ok");
+    } catch (e) {
+      toast("Fehler: " + e.message, "error");
+    }
+  };
+
+})();
+</script>

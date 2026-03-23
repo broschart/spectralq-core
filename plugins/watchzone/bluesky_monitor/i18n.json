@@ -12,7 +12,8 @@
     "wz_bsm_peak": "Peak",
     "wz_bsm_empty": "Keine Ergebnisse fuer diese Keywords.",
     "wz_bsm_no_creds": "Bluesky-Zugangsdaten fehlen (Handle + App-Password unter Plugins).",
-    "wz_bsm_header": "Posts (180 Tage)"
+    "wz_bsm_header": "Posts (180 Tage)",
+    "wz_bsm_help": "Überwacht Keyword-Erwähnungen im sozialen Netzwerk Bluesky und verfolgt Beitragsvolumen und Diskursmuster über die Zeit.<br><br><b>Bedienung:</b> Keyword-Gruppen mit Suchbegriffen erstellen und auf „Live“ klicken. Das System zeigt das Beitragsvolumen über die Zeit mit Tagesdurchschnitten und Spitzenerkennung. Trendlinien zeigen, ob ein Thema an Fahrt gewinnt oder verliert.<br><br><b>Forensische Relevanz:</b> Als zunehmend populäre Alternative zu X/Twitter wird Bluesky relevant für die Verfolgung öffentlicher Diskurse, besonders unter Journalisten, Aktivisten und Policy-Communities. Die Erkennung von Diskursverschiebungen, viralen Narrativen und koordinierten Posting-Mustern hilft bei der Bewertung öffentlicher Resonanz und der Identifikation potenzieller Einflusskampagnen.<br><br><b>Datenquelle:</b> Bluesky / AT Protocol — Bluesky-Zugangsdaten erforderlich (Handle + App-Passwort)."
   },
   "en": {
     "wz_sidebar_bluesky_monitor": "Bluesky",
@@ -27,20 +28,23 @@
     "wz_bsm_peak": "Peak",
     "wz_bsm_empty": "No results for these keywords.",
     "wz_bsm_no_creds": "Bluesky credentials missing (handle + app password in Plugins).",
-    "wz_bsm_header": "Posts (180 days)"
+    "wz_bsm_header": "Posts (180 days)",
+    "wz_bsm_help": "Monitors keyword mentions on the Bluesky social network, tracking post volume and discourse patterns over time.<br><br><b>How to use:</b> Create keyword groups with search terms and click \"Live\". The system shows post volume over time with daily averages and peak detection. Trend lines reveal whether a topic is gaining or losing traction.<br><br><b>Forensic relevance:</b> As an increasingly popular alternative to X/Twitter, Bluesky is becoming relevant for tracking public discourse, especially among journalists, activists and policy communities. Detecting discourse shifts, viral narratives and coordinated posting patterns helps assess public resonance and identify potential influence campaigns.<br><br><b>Data source:</b> Bluesky / AT Protocol — requires Bluesky credentials (handle + app password)."
   },
   "fr": {
     "wz_sidebar_bluesky_monitor": "Bluesky",
     "wz_bsm_title": "Moniteur Bluesky",
     "wz_bsm_source": "Source : Bluesky / AT Protocol",
     "wz_bsm_empty": "Aucun resultat.",
-    "wz_bsm_no_creds": "Identifiants Bluesky manquants."
+    "wz_bsm_no_creds": "Identifiants Bluesky manquants.",
+    "wz_bsm_help": "Monitors keyword mentions on the Bluesky social network, tracking post volume and discourse patterns over time.<br><br><b>How to use:</b> Create keyword groups with search terms and click \"Live\". The system shows post volume over time with daily averages and peak detection. Trend lines reveal whether a topic is gaining or losing traction.<br><br><b>Forensic relevance:</b> As an increasingly popular alternative to X/Twitter, Bluesky is becoming relevant for tracking public discourse, especially among journalists, activists and policy communities. Detecting discourse shifts, viral narratives and coordinated posting patterns helps assess public resonance and identify potential influence campaigns.<br><br><b>Data source:</b> Bluesky / AT Protocol — requires Bluesky credentials (handle + app password)."
   },
   "es": {
     "wz_sidebar_bluesky_monitor": "Bluesky",
     "wz_bsm_title": "Monitor Bluesky",
     "wz_bsm_source": "Fuente: Bluesky / AT Protocol",
     "wz_bsm_empty": "Sin resultados.",
-    "wz_bsm_no_creds": "Faltan las credenciales de Bluesky."
+    "wz_bsm_no_creds": "Faltan las credenciales de Bluesky.",
+    "wz_bsm_help": "Monitors keyword mentions on the Bluesky social network, tracking post volume and discourse patterns over time.<br><br><b>How to use:</b> Create keyword groups with search terms and click \"Live\". The system shows post volume over time with daily averages and peak detection. Trend lines reveal whether a topic is gaining or losing traction.<br><br><b>Forensic relevance:</b> As an increasingly popular alternative to X/Twitter, Bluesky is becoming relevant for tracking public discourse, especially among journalists, activists and policy communities. Detecting discourse shifts, viral narratives and coordinated posting patterns helps assess public resonance and identify potential influence campaigns.<br><br><b>Data source:</b> Bluesky / AT Protocol — requires Bluesky credentials (handle + app password)."
   }
 }

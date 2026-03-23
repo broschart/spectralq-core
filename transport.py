@@ -106,7 +106,7 @@ def _get_credential(key, env_var, user_id=None):
                     if obj and obj.value:
                         return obj.value
                 return ""  # own_key aber kein eigener Schlüssel gesetzt
-            # admin_key: direkt zur globalen Setting
+            # admin_key: nur globale Setting (Superadmin-Schlüssel)
             obj = AppSetting.query.filter_by(key=key, user_id=None).first()
             if obj and obj.value:
                 return obj.value

@@ -20,6 +20,7 @@
       --border: #2e3147;
       --accent1: #7c5cbf;
       --accent2: #4f8ef7;
+      --accent3: #0088cc;
       --accent: var(--accent2);
       --text: #e2e4ef;
       --muted: #6b7280;
@@ -45,6 +46,7 @@
       --border: #d1d5db;
       --accent1: #7c3aed;
       --accent2: #2563eb;
+      --accent3: #0078b4;
       --accent: var(--accent2);
       --text: #1f2937;
       --muted: #6b7280;
@@ -337,7 +339,7 @@
 </head>
 <body>
 
-<nav>
+<nav{% if embed %} style="display:none;"{% endif %}>
   <span class="brand">
     {% if site_logo_url %}
       <img src="{{ site_logo_url }}" alt="Logo" style="height:32px;width:auto;display:block;" />
@@ -347,16 +349,15 @@
   </span>
   <a href="/start" id="nav-dashboard"><span data-i18n="nav_start">Start</span><sup id="nav-alert-badge" style="display:none;background:var(--danger);color:#fff;border-radius:8px;font-size:10px;font-weight:700;padding:1px 5px;margin-left:3px;"></sup></a>
   <a href="/projects" id="nav-projects"><span data-i18n="nav_projects">Projekte</span><sup id="nav-proj-quota" style="display:none;color:var(--muted);font-size:10px;margin-left:2px;"></sup></a>
-  <a href="/analysis" id="nav-analysis" data-i18n="nav_analysis">Analyse</a>
   <a href="/events" id="nav-events" data-i18n="nav_events">Ereignisse</a>
+  <a href="/analysis" id="nav-analysis" data-i18n="nav_analysis">Analyse</a>
   <a href="/alerts" id="nav-alerts" data-i18n="nav_alerts">Alerts</a>
-  <a href="/keywords" id="nav-keywords"><span data-i18n="nav_keywords">Keywords</span><sup id="nav-kw-quota" style="display:none;color:var(--muted);font-size:10px;margin-left:2px;"></sup></a>
   <a href="/statistik" id="nav-statistik" style="margin-left:auto;position:relative;padding-bottom:6px;" data-tip=""><span data-i18n="nav_statistik">Statistik</span>
     <span id="nav-llm-bar" style="position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:2px;background:var(--border);overflow:hidden;">
       <span id="nav-llm-fill" style="display:block;height:100%;border-radius:2px;transition:width .4s,background .4s;width:0;background:var(--accent1);"></span>
     </span>
   </a>
-  <button id="global-wide-btn" title="Breitbildmodus"
+  <button id="global-wide-btn" title="Vollbildmodus"
           style="width:26px;height:26px;border-radius:50%;display:inline-flex;
                  align-items:center;justify-content:center;
                  background:none;border:1px solid var(--border);color:var(--muted);
@@ -366,8 +367,8 @@
           onmouseout="if(!this.classList.contains('active')){this.style.borderColor='var(--border)';this.style.color='var(--muted)'}">
     <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
          stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="1" y="3" width="14" height="10" rx="1.5"/>
-      <polyline points="4,7 1.5,8 4,9"/><polyline points="12,7 14.5,8 12,9"/>
+      <path d="M2 6V3.5A1.5 1.5 0 0 1 3.5 2H6"/><path d="M10 2h2.5A1.5 1.5 0 0 1 14 3.5V6"/>
+      <path d="M14 10v2.5a1.5 1.5 0 0 1-1.5 1.5H10"/><path d="M6 14H3.5A1.5 1.5 0 0 1 2 12.5V10"/>
     </svg>
   </button>
   <button id="global-lupe-btn" title="Bildschirmlupe"
@@ -427,6 +428,14 @@
         <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="5.5" cy="5.5" r="2.5"/><path d="M1 13c0-2.485 2.015-4.5 4.5-4.5S10 10.515 10 13"/><circle cx="12" cy="5" r="2"/><path d="M14.5 12c0-2.071-1.343-3.5-2.5-3.5"/></svg>
         <span data-i18n="nav_users">Benutzer</span>
       </a>
+      <a href="/waitlist" id="nav-waitlist"
+         style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;
+                color:var(--text);text-decoration:none;border-bottom:none;
+                transition:background .1s;"
+         onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 3h12M2 7h8M2 11h10"/><circle cx="13" cy="11" r="2"/></svg>
+        <span data-i18n="nav_waitlist">Registrierungen</span>
+      </a>
       {% endif %}
       <a href="/plugins" id="nav-plugins"
          style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;
@@ -475,6 +484,11 @@
   <img class="theme-logo" src="/static/sq3.png" data-dark="/static/sq3.png" data-light="/static/sq1.png" alt="spectralQ" style="height:48px;width:auto;opacity:.5;margin-bottom:6px;" />
   <div style="font-size:10px;color:var(--muted);letter-spacing:.04em;">spectralQ Core Edition &middot; &copy; {{ current_year | default(2026) }} <a href="https://broschart.net" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);">Steven Broschart</a></div>
   <div style="font-size:9px;color:var(--muted);opacity:.6;margin-top:3px;" data-i18n="footer_license">Open-Source unter AGPL-3.0 mit Plugin-Exception</div>
+  <div style="font-size:9px;color:var(--muted);opacity:.5;margin-top:2px;">
+    <a href="https://spectralq.au" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);">spectralq.au</a>
+    &middot;
+    <a href="https://broschart.net" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);">broschart.net</a>
+  </div>
 </footer>
 
 <div id="toast-container"></div>
@@ -526,7 +540,7 @@
   // Active nav link
   const path = location.pathname;
   document.querySelectorAll("nav a[id^='nav-']").forEach(a => {
-    if ((path.startsWith("/keywords") && a.id === "nav-keywords") ||
+    if ((path === "/" && a.id === "nav-analysis") ||
         (path.startsWith("/analysis") && a.id === "nav-analysis") ||
         (path.startsWith("/events") && a.id === "nav-events") ||
         (path.startsWith("/statistik") && a.id === "nav-statistik") ||
@@ -705,12 +719,21 @@
     });
   })();
 
-  // ── Breitbildmodus ─────────────────────────────────────────────────────────
+  // ── Fullscreen-Modus (echter Browser-Fullscreen) ───────────────────────────
   var _globalWide = false;
-  document.getElementById("global-wide-btn").addEventListener("click", function() {
-    _globalWide = !_globalWide;
+  var _wideBtn = document.getElementById("global-wide-btn");
+  _wideBtn.title = "Vollbildmodus";
+  _wideBtn.addEventListener("click", function() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen().catch(function(){});
+    }
+  });
+  document.addEventListener("fullscreenchange", function() {
+    _globalWide = !!document.fullscreenElement;
     document.body.classList.toggle("global-wide-active", _globalWide);
-    this.classList.toggle("active", _globalWide);
+    _wideBtn.classList.toggle("active", _globalWide);
     // Lupe deaktivieren falls aktiv
     if (_globalWide && _globalLupe) {
       _globalLupe = false;
@@ -736,13 +759,9 @@
     document.getElementById("global-lupe-panel").classList.toggle("open", _globalLupe);
     document.body.classList.toggle("global-lupe-active", _globalLupe);
     this.classList.toggle("active", _globalLupe);
-    // Breitbild deaktivieren falls aktiv
-    if (_globalLupe && _globalWide) {
-      _globalWide = false;
-      document.body.classList.remove("global-wide-active");
-      var wb = document.getElementById("global-wide-btn");
-      wb.classList.remove("active");
-      wb.style.borderColor = "var(--border)"; wb.style.color = "var(--muted)";
+    // Fullscreen deaktivieren falls aktiv
+    if (_globalLupe && document.fullscreenElement) {
+      document.exitFullscreen();
     }
     // Charts/Layout anpassen lassen
     setTimeout(function() { window.dispatchEvent(new Event("resize")); }, 100);
@@ -864,6 +883,7 @@ window._VT_LANG = localStorage.getItem('vt_ui_lang') || 'de';
 /* Akzentfarben als JS-Werte (für Canvas/SVG-Kontexte wo CSS-Variablen nicht greifen) */
 window._VT_ACCENT1 = getComputedStyle(document.documentElement).getPropertyValue('--accent1').trim() || '#7c5cbf';
 window._VT_ACCENT2 = getComputedStyle(document.documentElement).getPropertyValue('--accent2').trim() || '#4f8ef7';
+window._VT_ACCENT3 = getComputedStyle(document.documentElement).getPropertyValue('--accent3').trim() || '#0088cc';
 window._VT_I18N = {};
 window.t = function(key, fallback) {
   var d = window._VT_I18N[window._VT_LANG] || window._VT_I18N['de'] || {};
@@ -905,6 +925,7 @@ window._mergeI18n({
     kw_no_project_msg: 'Bitte zuerst ein Projekt anlegen.',
     kw_no_project_desc: 'Um mit der Analyse zu starten, wird ein Projekt ben\u00f6tigt. Dort werden alle Keywords und Ergebnisse organisiert.',
     kw_no_project_btn: 'Projekt anlegen',
+    wz_diff_open_archive: 'Archivierte Website aufrufen',
     footer_license: 'Open-Source unter AGPL-3.0 mit Plugin-Exception',
   },
   en: {
@@ -917,6 +938,7 @@ window._mergeI18n({
     kw_no_project_msg: 'Please create a project first.',
     kw_no_project_desc: 'A project is required to start analysing. All keywords and results are organised there.',
     kw_no_project_btn: 'Create project',
+    wz_diff_open_archive: 'Open archived website',
     footer_license: 'Open-source under AGPL-3.0 with Plugin Exception',
   },
   fr: {
@@ -929,6 +951,7 @@ window._mergeI18n({
     kw_no_project_msg: 'Veuillez d\u2019abord cr\u00e9er un projet.',
     kw_no_project_desc: 'Un projet est n\u00e9cessaire pour commencer l\u2019analyse. Tous les mots-cl\u00e9s et r\u00e9sultats y sont organis\u00e9s.',
     kw_no_project_btn: 'Cr\u00e9er un projet',
+    wz_diff_open_archive: 'Ouvrir le site archiv\u00e9',
     footer_license: 'Open-source sous AGPL-3.0 avec exception Plugin',
   },
   es: {
@@ -941,6 +964,7 @@ window._mergeI18n({
     kw_no_project_msg: 'Por favor, crea primero un proyecto.',
     kw_no_project_desc: 'Se necesita un proyecto para empezar el an\u00e1lisis. All\u00ed se organizan todas las palabras clave y resultados.',
     kw_no_project_btn: 'Crear proyecto',
+    wz_diff_open_archive: 'Abrir sitio web archivado',
     footer_license: 'C\u00f3digo abierto bajo AGPL-3.0 con excepci\u00f3n de plugins',
   }
 });
@@ -1016,6 +1040,19 @@ window._applyI18n();
       document.documentElement.style.setProperty('--accent2', data.accent2);
       window._VT_ACCENT2 = data.accent2;
     }
+    if (data.accent3) {
+      localStorage.setItem('vt_accent3', data.accent3);
+      document.documentElement.style.setProperty('--accent3', data.accent3);
+      window._VT_ACCENT3 = data.accent3;
+    }
+  }).then(function() {
+    // Persönliche Einstellungen überschreiben globale
+    return fetch('/api/settings').then(function(r) { return r.ok ? r.json() : null; }).then(function(ps) {
+      if (!ps) return;
+      if (ps.accent1) { document.documentElement.style.setProperty('--accent1', ps.accent1); window._VT_ACCENT1 = ps.accent1; }
+      if (ps.accent2) { document.documentElement.style.setProperty('--accent2', ps.accent2); window._VT_ACCENT2 = ps.accent2; }
+      if (ps.accent3) { document.documentElement.style.setProperty('--accent3', ps.accent3); window._VT_ACCENT3 = ps.accent3; }
+    }).catch(function() {});
   }).catch(function() {});
 })();
 </script>

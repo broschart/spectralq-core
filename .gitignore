@@ -42,3 +42,7 @@ Thumbs.db
 
 # Playwright
 playwright-browsers/
+
+# Claude Code
+CLAUDE.md
+.claude/

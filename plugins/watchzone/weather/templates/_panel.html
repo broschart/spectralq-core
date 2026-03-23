@@ -7,12 +7,11 @@
 <div id="panel-weather" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_weather_title">Weather &amp; Water Level</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_weather_source">Source: DWD / NOAA</span>
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_weather_desc">Fetches weather and water level data (DWD/NOAA) for the drawn area. Useful for correlating weather events with other observations – e.g. storms with increased vessel traffic or flood risk.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_weather_help">Fetches current weather conditions and water level data for the defined area, including temperature, humidity, wind speed/direction, air pressure, visibility and precipitation.<br><br><b>How to use:</b> Draw a zone on the map and click "Live". The system shows current conditions, active weather warnings with severity levels, and a 7-day history with precipitation and gust visualisations.<br><br><b>Forensic relevance:</b> Weather data provides crucial context for other observations. Storms correlate with vessel traffic changes and flood risk. Low visibility or fog may explain gaps in satellite imagery. Extreme weather events can trigger infrastructure damage or displacement. Cross-referencing weather with conflict or transport data helps build complete situational awareness.<br><br><b>Data sources:</b> DWD (Deutscher Wetterdienst) / NOAA — no API key required.</div>
   </div>
   <div class="wz-main-body">
-    <div id="wz-map-weather" class="wz-map-container" style="height:500px;"></div>
+    <div id="wz-map-weather" class="wz-map-container" ></div>
     <div class="wz-hint" id="wz-hint-weather" data-i18n="wz_weather_hint">
       Draw observation areas on the map for which weather and water level data should be fetched.
     </div>

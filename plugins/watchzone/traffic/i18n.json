@@ -17,7 +17,8 @@
     "wz_traffic_roads": "Strassen",
     "wz_traffic_severity": "Schwere",
     "wz_traffic_more": "weitere",
-    "wz_traffic_no_key": "TomTom API-Key fehlt. Bitte unter Plugins eintragen."
+    "wz_traffic_no_key": "TomTom API-Key fehlt. Bitte unter Plugins eintragen.",
+    "wz_traffic_help": "Überwacht Verkehrsvorfälle, Staus, Unfälle und Straßensperrungen im definierten Gebiet in Echtzeit.<br><br><b>Bedienung:</b> Zone auf der Karte einzeichnen und auf „Live“ klicken. Alle aktuellen Vorfälle werden mit Schweregrad, Typ und Standort aufgelistet. Der Flow-Index zeigt die Gesamtverkehrsdichte im Vergleich zu normalen Bedingungen.<br><br><b>Forensische Relevanz:</b> Anomalien in der Verkehrsdichte können auf Großereignisse, Demonstrationen, Militärkonvois, Evakuierungen oder Sicherheitsabsperrungen hindeuten. Plötzliche Straßensperrungen ohne bekannte Bauaktivität können auf Sicherheitsvorfälle hinweisen.<br><br><b>Datenquelle:</b> TomTom Traffic API — API-Key erforderlich."
   },
   "en": {
     "wz_sidebar_traffic": "Traffic",
@@ -37,7 +38,8 @@
     "wz_traffic_roads": "Roads",
     "wz_traffic_severity": "Severity",
     "wz_traffic_more": "more",
-    "wz_traffic_no_key": "TomTom API key missing. Please add it under Plugins."
+    "wz_traffic_no_key": "TomTom API key missing. Please add it under Plugins.",
+    "wz_traffic_help": "Monitors traffic incidents, congestion, accidents and road closures in the defined area in real time.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All current incidents are listed with severity level, type and location. The Flow Index shows overall traffic density compared to normal conditions.<br><br><b>Forensic relevance:</b> Anomalies in traffic density can indicate major events, demonstrations, military convoys, evacuations or security cordons. Sudden road closures that don't match known construction activity may point to security incidents.<br><br><b>Data source:</b> TomTom Traffic API — requires an API key."
   },
   "fr": {
     "wz_sidebar_traffic": "Trafic",
@@ -54,7 +56,8 @@
     "wz_traffic_length": "Longueur",
     "wz_traffic_severity": "Gravite",
     "wz_traffic_more": "de plus",
-    "wz_traffic_no_key": "Cle API TomTom manquante."
+    "wz_traffic_no_key": "Cle API TomTom manquante.",
+    "wz_traffic_help": "Monitors traffic incidents, congestion, accidents and road closures in the defined area in real time.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All current incidents are listed with severity level, type and location. The Flow Index shows overall traffic density compared to normal conditions.<br><br><b>Forensic relevance:</b> Anomalies in traffic density can indicate major events, demonstrations, military convoys, evacuations or security cordons. Sudden road closures that don't match known construction activity may point to security incidents.<br><br><b>Data source:</b> TomTom Traffic API — requires an API key."
   },
   "es": {
     "wz_sidebar_traffic": "Trafico",
@@ -71,6 +74,7 @@
     "wz_traffic_length": "Longitud",
     "wz_traffic_severity": "Gravedad",
     "wz_traffic_more": "mas",
-    "wz_traffic_no_key": "Falta la clave API de TomTom."
+    "wz_traffic_no_key": "Falta la clave API de TomTom.",
+    "wz_traffic_help": "Monitors traffic incidents, congestion, accidents and road closures in the defined area in real time.<br><br><b>How to use:</b> Draw a zone on the map and click \"Live\". All current incidents are listed with severity level, type and location. The Flow Index shows overall traffic density compared to normal conditions.<br><br><b>Forensic relevance:</b> Anomalies in traffic density can indicate major events, demonstrations, military convoys, evacuations or security cordons. Sudden road closures that don't match known construction activity may point to security incidents.<br><br><b>Data source:</b> TomTom Traffic API — requires an API key."
   }
 }

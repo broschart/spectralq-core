@@ -438,6 +438,76 @@
   window.openDecompForKw = openDecomp;
   window._decompose = decompose;
 
+  /**
+   * Chart-Hook: Fügt Trend/Seasonal/Residual-Datasets ins Hauptchart ein.
+   * Wird von analysis.html aufgerufen wenn Decomposition aktiv ist.
+   */
+  window._decompChartHook = function(datasets, model) {
+    if (!datasets.length) return;
+    var vals = datasets[0].data;
+    var res  = decompose(vals, 30, 3, model);
+    datasets[0].borderWidth = 1.5;
+    datasets[0].borderColor = datasets[0].borderColor.replace(/[\da-f]{2}$/i, "") + "88";
+    datasets.push({
+      label: "Trend",
+      data: res.trend,
+      borderColor: "#f7d44f",
+      backgroundColor: "#f7d44f22",
+      borderWidth: 2.5,
+      tension: 0.35,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      fill: false,
+      spanGaps: true,
+      yAxisID: "y",
+    });
+    datasets.push({
+      label: "Seasonal",
+      data: res.seasonal,
+      borderColor: "#4ff79e",
+      backgroundColor: "#4ff79e22",
+      borderWidth: 1.5,
+      tension: 0.35,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      fill: false,
+      spanGaps: true,
+      yAxisID: "y2",
+    });
+    datasets.push({
+      label: "Residual",
+      data: res.residual,
+      borderColor: "#c44ff7",
+      backgroundColor: "#c44ff722",
+      borderWidth: 1,
+      tension: 0.35,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      fill: false,
+      spanGaps: true,
+      yAxisID: "y2",
+    });
+  };
+
+  /**
+   * AI-Hook: Liefert Decomposition-Kontext und Extras für die KI-Analyse.
+   * Gibt {context, extras} zurück.
+   */
+  window._decompAiHook = function(series, model) {
+    var vals = series[0].data.map(function(p) { return p.value; });
+    var res  = decompose(vals, 30, 3, model);
+    var modelLabel = model === 'additive' ? 'Additiv (T+S+R)' : 'Multiplikativ (T\u00d7S\u00d7R)';
+    return {
+      context: 'Decomposition aktiv \u2013 Modell: ' + modelLabel,
+      extras: { dc: {
+        model: model,
+        trend:    series[0].data.map(function(p, i) { return { date: p.date, value: res.trend[i] != null ? +res.trend[i].toFixed(2) : null }; }),
+        seasonal: series[0].data.map(function(p, i) { return { date: p.date, value: res.seasonal[i] != null ? +res.seasonal[i].toFixed(4) : null }; }),
+        residual: series[0].data.map(function(p, i) { return { date: p.date, value: res.residual[i] != null ? +res.residual[i].toFixed(4) : null }; }),
+      }},
+    };
+  };
+
   // ── Event-Listener ────────────────────────────────────────────
   document.getElementById('btn-dc-close').addEventListener('click', closeDecomp);
   document.getElementById('dc-overlay').addEventListener('click', e => {

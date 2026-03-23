@@ -1,12 +1,11 @@
 <div id="panel-vessel" class="wz-panel" style="display:none;">
   <div class="wz-main-header">
     <h2 data-i18n="wz_vessel_title">Vessel Tracking</h2>
-    <span style="font-size:11px;color:var(--muted);" data-i18n="wz_vessel_source">Source: VesselFinder / AISHub</span>
     </button>
-    <p class="wz-panel-desc" data-i18n="wz_vessel_desc">Monitors vessel movements (AIS) within a user-drawn maritime area. Draw a zone on the map, then click "Live" – the view shows all vessels in the area with name, heading and speed in real time.</p>
+    <div class="wz-panel-desc" data-i18n-html="wz_vessel_help">Monitors vessel movements via AIS (Automatic Identification System) within a user-drawn maritime area.<br><br><b>How to use:</b> Draw a zone on the map, then click "Live". The view lists all vessels in the area with name, type, flag state, heading, speed and destination in real time.<br><br><b>Anomaly detection:</b> Unusual behaviour — such as unexpected stops, course deviations or dark periods (AIS switched off) — is automatically flagged. This helps identify smuggling routes, sanctions evasion or illegal fishing activity.<br><br><b>Data source:</b> VesselFinder / AISHub — no API key required.</div>
   </div>
   <div class="wz-main-body">
-    <div id="wz-map-vessel" class="wz-map-container" style="height:500px;"></div>
+    <div id="wz-map-vessel" class="wz-map-container" ></div>
     <div class="wz-hint" id="wz-hint-vessel" data-i18n="wz_vessel_hint">
       Draw rectangles or polygons on the map to define maritime areas.
       VesselFinder data shows vessel movements in real time.
